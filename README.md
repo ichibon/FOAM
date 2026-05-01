@@ -17,7 +17,7 @@ This README is the entry point for the entire project. Every major decision — 
 | Phase | Status |
 |-------|--------|
 | Documentation & Planning | 🟡 In Progress |
-| Brand Identity | 🔴 Not Started |
+| Brand Identity | 🟡 In Progress |
 | Design System & Wireframes | 🟡 In Progress |
 | MVP Development | 🔴 Not Started |
 | Detailer Recruitment (Atlanta) | 🔴 Not Started |

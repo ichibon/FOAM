@@ -22,61 +22,47 @@ These three words are the test. Before any visual decision ships — color, type
 
 ## 01 — Typography Direction
 
-### The Decision: Geometric Sans + Display Weight Contrast
+### The Decision: High-Contrast Serif Wordmark + Clean Sans Body
 
-No serifs. No script. No decorative novelty fonts.
+The logo has spoken. The FOAM wordmark uses a high-contrast serif — thick strokes, elegant curves, the distinctive "f" curl that makes it instantly recognizable. This is the brand's display typeface identity. The app UI system builds around it.
 
-Here's why. FOAM serves two audiences who are both fundamentally mobile-first and action-oriented. A detailer between jobs checking their next booking doesn't have patience for type that requires effort to read. A customer booking in a parking lot needs instant clarity. Serifs add friction on small screens. Scripts signal the wrong category entirely — this is a business tool, not a wedding vendor app.
+**Two-typeface system:**
+- **Display/Headlines:** A high-contrast serif matching the logo's character — bold, distinctive, premium without being stuffy
+- **Body/Interface:** A clean geometric sans for all functional UI text — readable, fast, gets out of the way
 
-What FOAM needs is a geometric sans-serif that feels **modern, credible, and human** — with enough personality that it doesn't disappear into generic tech territory.
+### Logo Typeface — Display & Headlines
 
-### Primary Typeface — Display & Headlines
+The FOAM wordmark appears to be set in a high-contrast serif in the style of **Playfair Display** or **Cormorant Garamond** — characterized by dramatic thick-to-thin stroke contrast, bracketed serifs, and elegant letterform curves. The "f" has a distinctive curl terminal that functions as an ownable brand mark.
 
-**Outfit** (Google Fonts, free)
+**Recommended digital match:** **Playfair Display** (Google Fonts, free)
+- Weight used in logo: Bold (700) to Extra Bold (800)
+- The thick/thin contrast reads beautifully at display sizes on mobile
+- Works in both Roman and Italic — the Roman weight is the primary brand voice
 
-Why Outfit specifically: Geometric skeleton with subtly humanist proportions. Wide apertures read well at small sizes. The letterforms have just enough warmth to avoid feeling robotic, and just enough precision to feel like it was designed for a platform that means business. At heavy weights (700-800) it commands attention without screaming. The capital letters are particularly strong for short headlines and UI labels.
-
-Alternatives if Outfit is unavailable: **Plus Jakarta Sans** (slightly more premium feel, excellent at display sizes) or **DM Sans** (cleaner, more neutral — less personality but extremely legible).
+**Alternative:** Cormorant Garamond (slightly more refined, less contrast) or Freight Display (more contemporary feel).
 
 **Usage:**
 - App name treatments: 800 weight
 - Onboarding headlines: 700 weight
-- Feature callouts and marketing headlines: 700-800 weight
-- UI navigation labels: 600 weight
+- Feature callouts: 700 weight
+- Marketing headlines: 700-800 weight
 
 ### Secondary Typeface — Body & Interface
 
 **Inter** (Google Fonts, free)
 
-Yes, Inter is everywhere. That's because it's the best-optimized typeface for digital interfaces at body sizes and it earns its place here. The distinction is that Outfit handles everything attention-grabbing and Inter handles everything functional. Two typefaces with clear lane assignments creates coherence, not competition.
+Clean, highly legible at small sizes, designed specifically for screens. Pairs well with a high-contrast serif by providing the neutral counterpoint. The serif does the personality work; Inter does the clarity work.
 
 **Usage:**
 - Body copy: 400 weight
 - UI labels and form fields: 400-500 weight
-- Data, numbers, stats: 500-600 weight (tabular variant when available)
+- Data, numbers, stats: 500-600 weight (tabular variant)
 - Fine print and captions: 400 weight
 
-### Type Scale — Mobile First
-
-Base: 16px. Ratio: 1.25 (Major Third) — creates clear visual hierarchy without requiring too many size stops.
-
+```css
+--font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+--font-body:    'Inter', system-ui, -apple-system, sans-serif;
 ```
-Display:     40px / 800 / -0.04em  — App name, splash screens
-H1:          32px / 700 / -0.03em  — Section heroes, onboarding titles
-H2:          24px / 700 / -0.02em  — Card headlines, screen titles
-H3:          20px / 600 / -0.01em  — Sub-section headers
-H4:          18px / 600 /  0em     — Component headers
-Body L:      16px / 400 /  0em     — Primary reading text
-Body M:      14px / 400 /  0em     — Supporting text, descriptions
-Body S:      13px / 400 / +0.01em  — Captions, metadata
-Label:       11px / 600 / +0.08em  — All caps labels ONLY
-```
-
-**Non-negotiable rules:**
-- Body text never drops below 13px
-- ALL CAPS used only for Label size with minimum +0.06em letter-spacing
-- Line height for body: 1.5x font size. For headlines: 1.2x.
-- Never use more than 4 font sizes on a single screen
 
 ---
 
@@ -93,54 +79,51 @@ FOAM's palette is built around three psychological goals:
 
 ### The Core Palette
 
-#### Primary Background — Near Black
+#### Primary Brand Blue — FOAM Blue
 ```
-Dark Mode Base:   #0D0D0D   (not pure black — less harsh, more considered)
-Dark Mode Surface: #161616
-Dark Mode Elevated: #1F1F1F
-Dark Mode Card:    #252525
-```
-
-Pure black feels like a void. #0D0D0D feels like depth. The difference is subtle on screen and significant in perception. Dark mode is the primary experience for FOAM — it matches the energy of the brand and the context of use (often outdoors, often in direct sun where dark UIs reduce glare).
-
-#### Accent — Electric Cobalt Blue
-```
-Primary Accent:    #2563EB   (Cobalt Blue)
-Accent Bright:     #3B82F6   (lighter for dark backgrounds)
-Accent Hover:      #1D4ED8   (darker for pressed states)
-Accent Subtle:     rgba(37, 99, 235, 0.15)  (backgrounds, chips, tags)
+Primary Accent:    #339DC7   (FOAM Blue — extracted from brand logo)
+Accent Bright:     #3DAFD6   (lighter for dark backgrounds)
+Accent Hover:      #2B85A9   (darker for pressed states)
+Accent Subtle:     rgba(51, 157, 199, 0.15)  (backgrounds, chips, tags)
 ```
 
-**Why this blue specifically:**
+**Why this blue:** This is the existing Foam Auto Spa brand color — a warm, medium sky blue that sits at the intersection of clean and approachable. Unlike cold tech blues, this color has warmth and human energy to it. It's distinctive in a category full of either aggressive dark palettes or sterile corporate blues. The color has brand heritage from the original business and carries it forward into the app with continuity.
 
-Most detailing apps reach for teal or green (cleanliness) or orange (energy). Both are expected. Cobalt blue is unexpected in this category, which makes it ownable.
-
-Psychologically, this specific blue sits at the intersection of **trust and momentum** — it has the confidence of a financial app without the stuffiness. It reads as smart, fast, and premium. It also has exceptional contrast on dark backgrounds, making every CTA pop without feeling neon or aggressive.
-
-This is the only accent color in the system. One accent, used with discipline, is more powerful than three competing for attention.
-
-#### Neutral Grays
+#### Dark Teal — FOAM Dark
 ```
-Text Primary:     #F5F5F5   (off-white — not pure white, reads softer)
-Text Secondary:   #A3A3A3
-Text Tertiary:    #666666
-Text Disabled:    #3D3D3D
-Border Subtle:    #2A2A2A
-Border Default:   #363636
-Border Strong:    #4A4A4A
+Dark Background:   #0F2F3C   (FOAM Dark Teal — extracted from brand logo)
+Dark Elevated:     #164558
+Dark Surface:      #1C5268
 ```
 
-Warm-neutral grays, not cool-blue grays. Warm grays feel more human and pair well with the cobalt accent without competing.
+This dark teal is richer and more distinctive than a generic near-black. It has depth, warmth, and brand identity baked in — it looks like FOAM, not like every other dark-mode app.
+
+#### Light Blue — FOAM Light
+```
+Light Background:  #E1F0F7   (FOAM Light — extracted from brand logo)
+```
+
+Used as a subtle background tint on light mode surfaces and as the distinct Rain Coverage feature color.
+
+#### Neutral Grays (Teal-tinted)
+```
+Text Primary:     #F5F5F5   (off-white)
+Text Secondary:   #A3C4CF   (teal-tinted secondary — stays on brand in dark mode)
+Text Tertiary:    #6A9BAA
+Text Disabled:    #3D6B7A
+Border Subtle:    #1E5D72
+Border Default:   #2B7A96
+```
+
+Grays with a slight teal tint rather than neutral grays — keeps the palette cohesive across light and dark modes without fighting the brand color.
 
 #### Semantic Colors
 ```
 Success:          #22C55E   (Green — payment received, job complete)
 Warning:          #F59E0B   (Amber — upcoming appointment, low inventory)
 Error:            #EF4444   (Red — payment failed, cancellation)
-Rain Coverage:    #60A5FA   (Sky blue — distinct from primary, used only for Rain feature)
+Rain Coverage:    #E1F0F7   (Light Blue — distinct, used only for Rain feature)
 ```
-
-**Rain Coverage gets its own distinct color** — sky blue (#60A5FA) rather than the primary cobalt. This matters because Rain Coverage is a special feature with emotional weight. The lighter, airier blue signals protection and sky without being confused with a primary action.
 
 ### Light Mode Palette
 
@@ -220,51 +203,38 @@ Marketing: Photography leads. Illustration only as supplementary graphic element
 
 ---
 
-## 04 — Logo Concept Direction
+## 04 — Logo
 
-### What the Logo Has to Do
+### The Logo Is Decided
 
-FOAM's logo needs to work in three contexts with very different requirements:
+The FOAM wordmark from Foam Auto Spa carries forward as the official FOAM app logo. No redesign needed. The existing logo is strong, distinctive, and already has brand equity in the detailing world.
 
-1. **App icon** — 1024x1024px reduced to 60x60px on a home screen, often next to 20 other icons
-2. **Wordmark** — in-app headers, marketing materials, press kit
-3. **Small format** — notification badges, favicon, partner co-branding
+**What makes it work:**
+The high-contrast serif wordmark — set in bold with dramatic thick-to-thin stroke variation — has presence and authority without feeling aggressive. The lowercase treatment gives it warmth and approachability. The distinctive "f" with its curved terminal is a natural standalone mark for app icons and small-format use. "AUTO SPA" in spaced uppercase light caps reads as a clean, confident subtitle treatment that can be dropped for the platform version of the brand.
 
-This means the logo cannot rely on detail, complexity, or color to carry its meaning. It has to work in one color. It has to work at 16px. And it still has to feel like FOAM.
+### The Six Official Colorways
 
-### Primary Direction: Bold Wordmark with a Graphic Mark
+| Variant | Background | Logo Color | Use Case |
+|---------|-----------|-----------|---------|
+| Color on Light | #E1F0F7 | #339DC7 | Marketing, light UI contexts |
+| Color on Dark | #0F2F3C | #339DC7 | App dark mode, dark marketing |
+| White on Color | #339DC7 | White | CTAs, social avatars, buttons |
+| White on Dark | #0F2F3C | White | App headers, dark backgrounds |
+| Black on White | White | Black | Print, documents, press kit |
+| White on Black | Black | White | High contrast, accessibility |
 
-**The wordmark:**
-FOAM set in Outfit 800 weight, all caps, with slightly tightened tracking (-0.03em). The weight alone creates confidence. The geometry of the letterforms in Outfit at heavy weight has an inherent architectural quality that works well for a platform brand.
+### App Icon Treatment
 
-The word FOAM itself is an asset. It's short (4 letters), memorable, visually balanced, and has an implicit connection to the car care world without being literal about it. The wordmark should let the word carry the weight.
+The standalone "f" — isolated from the wordmark — is the primary app icon mark. Set on the FOAM Dark Teal (#0F2F3C) background. The curl of the "f" is distinctive enough at 60x60px to be immediately recognizable on a home screen alongside 20 other app icons.
 
-**The graphic mark — two directions to explore:**
+### Logo Rules
 
-*Direction A: The Water Bead*
-A highly abstracted water bead — the physics of water on a clean, hydrophobic surface. This is the most iconic visual cue in the detailing world. A perfectly formed sphere or spheroid, simplified to a geometric form (circle with subtle dimensional quality or a lens-shaped mark). Used alone as the app icon, alongside the wordmark for full lockup. This mark is ownable because nobody else has claimed it at this level of abstraction.
-
-*Direction B: The "F" Mark*
-A modified "F" from the Outfit typeface, treated as a contained mark — either in a rounded square (for app icon use) or as a freestanding letterform with a subtle graphic element that references motion or shine. Cleaner, more conventional. Lower risk. Less distinctive than Direction A.
-
-**Recommendation:** Explore Direction A first. The water bead concept is genuinely ownable in this category, connects to both the brand name and the industry without being cliché, and works at every size. If it can't be executed at high quality, Direction B is the reliable fallback.
-
-### Logo Rules (Non-Negotiable Before Design Begins)
-
-- Minimum clear space: the height of the "F" in the wordmark on all four sides
-- Minimum display size: 80px wide for wordmark, 24px wide for mark-only
-- Never stretch, skew, outline, or add drop shadows to the logo
-- Primary version: white on dark. Secondary: dark on light. Never on busy photography without a backing treatment.
-- Never recreate the logo in a different typeface for "this one use case"
-- App icon: graphic mark on dark background only — never the full wordmark at icon size
-
-### What to Avoid
-
-- Water droplets rendered literally or in 3D — too illustrative, too expected
-- Car silhouettes in or around the mark — too limiting, too literal
-- Shine rays or sparkle motifs — used by every car care brand since 1970
-- Gradients in the primary logo — beautiful in digital, impossible to reproduce in print or embroidery
-- Overlapping letterforms or letters that share strokes — illegible at small sizes
+- Never stretch, skew, rotate, or add effects to the logo
+- Never recreate the wordmark in a different typeface
+- Never place the logo on busy photography without a backing treatment
+- Minimum clear space: the cap height of the "f" on all four sides
+- Minimum digital size: 80px wide for wordmark, 24px for mark-only
+- Never use the full wordmark at app icon size — "f" mark only at small formats
 
 ---
 
@@ -274,13 +244,17 @@ A modified "F" from the Outfit typeface, treated as a contained mark — either 
 
 The system only works if the elements stay in their lanes.
 
-**Outfit Bold** commands. It headlines, it labels navigation, it sets the tone in the first second of any screen.
+**Playfair Display Bold** commands. It headlines, it sets the tone in the first second of any screen.
 
 **Inter Regular/Medium** executes. It delivers information clearly and gets out of the way.
 
 **Cobalt Blue (#2563EB)** acts. It is the only color on screen that is asking you to do something.
 
-**Near-Black backgrounds** contain. They create the stage on which everything else performs.
+**Inter Regular/Medium** executes. It delivers information clearly and gets out of the way.
+
+**FOAM Blue (#339DC7)** acts. It is the only color on screen that is asking you to do something.
+
+**Dark Teal backgrounds (#0F2F3C)** contain. They create the stage on which everything else performs — richer and more distinctive than generic near-black.
 
 **Photography** proves. It shows real work by real people and makes the platform's promise feel credible.
 
@@ -292,4 +266,20 @@ That's the brief. That's the system. Hold the line.
 
 ---
 
-*Document Status: Complete. Update only when a brand identity decision is formally changed and approved. Do not make visual exceptions without updating this document.*
+## Color Reference Card
+
+| Token | Hex | Use |
+|-------|-----|-----|
+| FOAM Blue | #339DC7 | Primary accent, CTAs, links, active states |
+| FOAM Blue Bright | #3DAFD6 | Accent on dark backgrounds |
+| FOAM Blue Hover | #2B85A9 | Pressed/hover states |
+| FOAM Blue Subtle | rgba(51,157,199,0.15) | Chips, tags, subtle backgrounds |
+| FOAM Dark Teal | #0F2F3C | Primary dark background |
+| FOAM Light Blue | #E1F0F7 | Light mode background, Rain Coverage feature |
+| Success | #22C55E | Completed jobs, received payments |
+| Warning | #F59E0B | Upcoming appointments, alerts |
+| Error | #EF4444 | Failed payments, cancellations |
+
+---
+
+*Document Status: Complete. Reflects confirmed brand direction including logo, color, and typeface decisions locked May 2026.*

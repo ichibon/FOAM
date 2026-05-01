@@ -23,22 +23,23 @@ Mobile-first. No desktop breakpoints for V1. If a responsive web view is needed 
 
 ### Dark Mode (Primary)
 ```
-Background Primary:     #0D0D0D
-Background Secondary:   #161616
-Background Elevated:    #1F1F1F
-Surface:                #252525
-Border Subtle:          #2A2A2A
-Border Default:         #363636
+Background Primary:     #0F2F3C   (FOAM Dark Teal — brand dark background)
+Background Secondary:   #0D3A4A
+Background Elevated:    #164558
+Surface:                #1C5268
+Border Subtle:          #1E5D72
+Border Default:         #2B7A96
 
 Text Primary:           #F5F5F5
-Text Secondary:         #A3A3A3
-Text Tertiary:          #666666
-Text Disabled:          #3D3D3D
+Text Secondary:         #A3C4CF
+Text Tertiary:          #6A9BAA
+Text Disabled:          #3D6B7A
 
-Accent Primary:         #3B82F6   (Cobalt Blue — on dark backgrounds)
-Accent Hover:           #2563EB   (pressed/hover state)
-Accent Subtle:          rgba(37, 99, 235, 0.15)  (chips, tags, backgrounds)
-Rain Coverage:          #60A5FA   (Sky Blue — Rain Coverage feature only)
+Accent Primary:         #339DC7   (FOAM Blue — primary brand color)
+Accent Bright:          #3DAFD6   (lighter variant for dark backgrounds)
+Accent Hover:           #2B85A9   (pressed/hover state)
+Accent Subtle:          rgba(51, 157, 199, 0.15)  (chips, tags, backgrounds)
+Rain Coverage:          #E1F0F7   (Light Blue — Rain Coverage feature only)
 Success:                #22C55E
 Warning:                #F59E0B
 Error:                  #EF4444
@@ -59,10 +60,10 @@ Text Secondary:         #525252
 Text Tertiary:          #A3A3A3
 Text Disabled:          #D4D4D4
 
-Accent Primary:         #2563EB   (Cobalt Blue — on light backgrounds)
-Accent Hover:           #1D4ED8   (pressed/hover state)
-Accent Subtle:          rgba(37, 99, 235, 0.10)  (chips, tags, backgrounds)
-Rain Coverage:          #60A5FA   (Sky Blue — Rain Coverage feature only)
+Accent Primary:         #339DC7   (FOAM Blue — primary brand color)
+Accent Hover:           #2B85A9   (pressed/hover state)
+Accent Subtle:          rgba(51, 157, 199, 0.10)  (chips, tags, backgrounds)
+Rain Coverage:          #E1F0F7   (Light Blue — Rain Coverage feature only)
 Success:                #16A34A
 Warning:                #D97706
 Error:                  #DC2626
@@ -88,18 +89,19 @@ Label:        11px / 500 weight / 0.5px tracking / uppercase
 
 ### Font Family
 
-**Display & Headlines:** Outfit (Google Fonts)
-- Weights used: 600, 700, 800
-- Used for: App name, onboarding headlines, feature callouts, navigation labels, all attention-grabbing text
-- Fallback: Plus Jakarta Sans, system-ui
+**Display & Headlines:** Playfair Display (Google Fonts, free)
+- Weights used: 700, 800 (Bold, Extra Bold)
+- High-contrast serif matching the FOAM wordmark character
+- Used for: Onboarding headlines, feature callouts, marketing headlines, display text
+- Fallback: Cormorant Garamond, Georgia, serif
 
-**Body & Interface:** Inter (Google Fonts)
+**Body & Interface:** Inter (Google Fonts, free)
 - Weights used: 400, 500, 600
 - Used for: Body copy, UI labels, form fields, data and numbers, captions
 - Fallback: system-ui, -apple-system, sans-serif
 
 ```css
---font-display: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+--font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
 --font-body:    'Inter', system-ui, -apple-system, sans-serif;
 ```
 

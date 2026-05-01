@@ -94,6 +94,9 @@ Complete feature list for MVP (V1) and V2, broken down by user role (customer, d
 
 ### 🏗️ Architecture
 
+#### [`/MD/architecture/ARCHITECTURE.md`](/MD/architecture/ARCHITECTURE.md)
+The full system overview — architectural philosophy, system diagram, tech stack with rationale, application architecture (single app / three roles), backend design (Supabase RLS, Edge Functions), payment money flow, notification delivery stack, media storage buckets, security threat model, authentication flow, environment setup, and scalability path. Read this first before touching any backend code or infrastructure.
+
 #### [`/MD/architecture/CAPABILITY_LAYER.md`](/MD/architecture/CAPABILITY_LAYER.md)
 The functional systems powering the platform — booking engine, payment infrastructure, notification system, weather API, location and routing, media storage, CRM engine, reporting, and review system. Reference this when designing backend logic or integrating third-party services.
 
@@ -172,7 +175,7 @@ Load `VISION.md` and `CORE_CONCEPTS.md` as context first. Then load whichever do
 Check `CORE_CONCEPTS.md` and `FEATURES.md` first. If the answer isn't there, document the decision in the relevant file after it's made.
 
 **Writing code?**
-Reference `DATA_MODEL.md` for schema, `CAPABILITY_LAYER.md` for system logic, and `DESIGN_SYSTEM.md` for component specs.
+Start with `ARCHITECTURE.md` for the full system map, then `DATA_MODEL.md` for schema, `CAPABILITY_LAYER.md` for system logic, and `DESIGN_SYSTEM.md` for component specs.
 
 **Designing a screen?**
 Start with `INTERACTION_PRINCIPLES.md` for behavior, `DESIGN_SYSTEM.md` for visual specs, and `MICROCOPY.md` for every word on the screen.
@@ -188,10 +191,10 @@ These are open questions that need resolution before or during development:
 
 - [x] **App name** — FOAM ✅
 - [x] **Brand identity** — Brand DNA, Visual Identity, Message Hierarchy, Social Guide, and Brand Story complete ✅
-- [ ] **Design System accent colors** — Update DESIGN_SYSTEM.md color variables with Cobalt Blue (#2563EB) and Outfit/Inter typefaces from VISUAL_IDENTITY.md
+- [x] **Design System accent colors** — Cobalt Blue (#2563EB) and Outfit/Inter locked in DESIGN_SYSTEM.md ✅
 - [ ] **Legal review** — Rain Coverage membership structure needs attorney review before launch
 - [ ] **React Native vs PWA** — Confirm approach for cross-platform development in Replit
-- [ ] **iOS first or simultaneous** — iOS confirmed as primary; Android timeline to be locked
+- [ ] **Android timeline** — iOS confirmed as primary; Android launch date to be set
 
 ---
 
@@ -199,33 +202,42 @@ These are open questions that need resolution before or during development:
 
 ```
 /
-├── README.md                          ← You are here
+├── README.md                               ← You are here
 ├── /MD
 │   ├── /product
 │   │   ├── VISION.md
 │   │   ├── CORE_CONCEPTS.md
 │   │   └── FEATURES.md
 │   ├── /architecture
+│   │   ├── ARCHITECTURE.md                 ← Start here for backend work
 │   │   ├── CAPABILITY_LAYER.md
 │   │   └── DATA_MODEL.md
 │   ├── /design
 │   │   ├── DESIGN_SYSTEM.md
 │   │   ├── INTERACTION_PRINCIPLES.md
 │   │   └── MICROCOPY.md
-│   ├── /ai
-│   │   └── AI_RULES.md
 │   ├── /brand
-│   │   ├── BRAND_DNA.md               ← Placeholder only
-│   │   ├── VISUAL_IDENTITY.md         ← Not created yet
-│   │   ├── BRAND_MESSAGE_HIERARCHY.md ← Not created yet
-│   │   ├── SOCIAL_MEDIA_BRAND_GUIDE.md← Not created yet
-│   │   └── BRAND_STORY.md             ← Not created yet
+│   │   ├── BRAND_DNA.md
+│   │   ├── VISUAL_IDENTITY.md
+│   │   ├── BRAND_MESSAGE_HIERARCHY.md
+│   │   ├── SOCIAL_MEDIA_BRAND_GUIDE.md
+│   │   └── BRAND_STORY.md
+│   ├── /ai
+│   │   ├── AI_RULES.md
+│   │   └── AI_CONFIDENCE_MODEL.md
 │   └── /strategy
 │       ├── COMPETITIVE_ANALYSIS.md
 │       ├── GO_TO_MARKET.md
 │       ├── PRICING_STRATEGY.md
-│       └── ROADMAP.md
-└── /src                               ← App source code (coming)
+│       ├── ROADMAP.md
+│       └── AEO_SEO_GEO.md
+├── /wiki                                   ← GitHub Wiki source files
+│   ├── Home.md
+│   ├── Start-Here.md
+│   ├── _Sidebar.md
+│   ├── wiki-setup.sh
+│   └── WIKI_SETUP_INSTRUCTIONS.md
+└── /src                                    ← App source code (coming)
 ```
 
 ---

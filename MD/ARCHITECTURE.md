@@ -6,13 +6,15 @@
 
 ## Architectural Philosophy
 
-FOAM is built on three principles that drive every technical decision:
+FOAM is built on four principles that drive every technical decision:
 
 **1. Mobile-native from day one.** The product lives on a phone. Every architectural choice — from API response shape to image compression to notification delivery — is optimized for a mobile client on a variable network connection, not a desktop browser.
 
-**2. Supply-side first.** The detailer experience is the product's moat. The architecture prioritizes the reliability and depth of the operator OS — booking engine, payment infrastructure, crew management — before scaling the customer discovery layer.
+**2. Supply-side first.** The operator experience is the product's moat. The architecture prioritizes the reliability and depth of the operator OS — booking engine, payment infrastructure, team management — before scaling the customer discovery layer.
 
-**3. Build for the loop, not the feature.** The core loop is: customer books → detailer fulfills → payment processes → review submitted. Every system exists to make that loop fast, reliable, and repeatable. Features that don't serve the loop are V2.
+**3. Build for the loop, not the feature.** The core loop is: customer books → operator fulfills → payment processes → review submitted. Every system exists to make that loop fast, reliable, and repeatable. Features that don't serve the loop are V2.
+
+**4. One platform, two service models.** Mobile (operator comes to customer) and fixed location (customer goes to operator) are both first-class citizens. The architecture handles both booking flows, both discovery modes, and hybrid operators running both simultaneously — without separate codebases or separate databases.
 
 ---
 
@@ -68,9 +70,9 @@ FOAM is built on three principles that drive every technical decision:
 
 ## Application Architecture
 
-### Single App, Three Role-Based Experiences
+### Single App, Four Role-Based Experiences
 
-One React Native app. One download. Three completely distinct navigation experiences driven by the authenticated user's role.
+One React Native app. One download. Four completely distinct navigation experiences driven by the authenticated user's role.
 
 ```
 App Entry
@@ -79,26 +81,71 @@ App Entry
     │
     └── Authenticated
             │
-            ├── role: 'customer'  → Customer Navigator
-            │       ├── Discover Tab
+            ├── role: 'customer'      → Customer Navigator
+            │       ├── Discover Tab  (mobile + fixed, unified feed)
             │       ├── Bookings Tab
             │       ├── Messages Tab (V2)
             │       └── Profile Tab
             │
-            ├── role: 'detailer'  → Detailer Navigator
-            │       ├── Today Tab
+            ├── role: 'operator'      → Operator Navigator
+            │       ├── Today Tab     (unified calendar — mobile + fixed)
             │       ├── Bookings Tab
             │       ├── Customers Tab
             │       ├── Business Tab
             │       └── Profile Tab
             │
-            └── role: 'crew'      → Crew Navigator
+            ├── role: 'manager'       → Manager Navigator
+            │       ├── Today Tab     (team + own jobs overview)
+            │       ├── Team Tab      (assign jobs, track members)
+            │       ├── Bookings Tab
+            │       ├── Business Tab
+            │       └── Profile Tab
+            │
+            └── role: 'team_member'   → Team Member Navigator
                     ├── My Jobs Tab
                     ├── Earnings Tab
                     └── Profile Tab
 ```
 
-Role is stored in the `users` table and embedded in the Supabase JWT as a custom claim. The React Native app reads the claim on auth and routes to the correct navigator. Role cannot be self-modified — crew accounts are provisioned by owner accounts.
+Role is stored in the `users` table and embedded in the Supabase JWT as a custom claim. The React Native app reads the claim on auth and routes to the correct navigator.
+
+### Operator Configuration Layer
+
+Within the `operator` role, the app behavior adapts based on `operation_type` on the `detailer_profiles` table:
+
+```
+operator.operation_type
+    │
+    ├── 'mobile'   → Show service radius config, travel time buffers
+    │                Hide bay management, location hours
+    │
+    ├── 'fixed'    → Show location address, hours, bay count, walk-in toggle
+    │                Hide service radius, travel time buffers
+    │
+    └── 'hybrid'   → Show all of the above
+                     Unified calendar with mobile + fixed job types
+                     Channel revenue breakdown in Business tab
+```
+
+### Two Booking Flows
+
+**Mobile booking flow (customer side):**
+```
+Enter service address
+    → Query detailers whose service_radius covers that address
+    → Select detailer → select service → pick time → pay
+    → Booking record: service_type = 'mobile', service_address = customer address
+```
+
+**Fixed location booking flow (customer side):**
+```
+Browse nearby fixed locations (by proximity to customer)
+    → Select location → select service → pick drop-off time → pay or mark walk-in
+    → Booking record: service_type = 'fixed', service_address = operator location address
+```
+
+**Discovery unified feed:**
+Both mobile detailers and fixed locations return in the same discovery query. Client renders them in a single list/map. Filter chips let customer narrow by service type.
 
 ### State Management
 

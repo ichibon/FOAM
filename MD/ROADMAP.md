@@ -24,7 +24,8 @@ Build what proves the loop first. Build what creates lock-in second. Build what 
 - [ ] Payment collection and payout flow end-to-end
 - [ ] Push notification and SMS infrastructure (Twilio)
 - [ ] React Native (Expo) project scaffolded
-- [ ] Role-based navigation (customer / detailer / crew) working
+- [ ] Role-based navigation (customer / operator / manager / team_member) working
+- [ ] Both service model booking flows working (mobile + fixed location)
 - [ ] App submitted to App Store and Google Play for review
 
 ### GTM
@@ -40,14 +41,18 @@ Build what proves the loop first. Build what creates lock-in second. Build what 
 **Goal:** First real bookings. Prove transaction loop. Gather signal.
 
 ### Product (Must Be Live)
-- [ ] Detailer profile setup and service menu builder
-- [ ] Customer booking flow end-to-end
-- [ ] Real-time availability and calendar management
+- [ ] Operator profile setup — operation type config (mobile, fixed, hybrid)
+- [ ] Mobile operator service menu and availability
+- [ ] Fixed location operator bay config and operating hours
+- [ ] Unified customer discovery (mobile detailers + fixed locations in one feed)
+- [ ] Customer booking flow — mobile version
+- [ ] Customer booking flow — fixed location version
 - [ ] Payment collection, tipping, and payout
 - [ ] Automated appointment reminders (push + SMS)
 - [ ] Post-job review request flow
 - [ ] Before/after photo uploads
-- [ ] Crew member basic experience (job view, navigation, completion)
+- [ ] Team manager job assignment experience
+- [ ] Team member job view, navigation, and completion
 - [ ] Rating and review system
 
 ### GTM

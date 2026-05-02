@@ -14,41 +14,52 @@ email           text UNIQUE NOT NULL
 phone           text
 full_name       text
 avatar_url      text
-role            text NOT NULL  -- 'customer' | 'detailer' | 'crew'
+role            text NOT NULL  -- 'customer' | 'operator' | 'manager' | 'team_member'
 created_at      timestamptz DEFAULT now()
 updated_at      timestamptz DEFAULT now()
 ```
 
 ### detailer_profiles
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-user_id         uuid REFERENCES users(id)
-business_name   text
-bio             text
-service_radius  integer  -- miles
-home_base_lat   decimal
-home_base_lng   decimal
-stripe_account_id text  -- Stripe Connect account
-is_active       boolean DEFAULT true
-is_verified     boolean DEFAULT false
-avg_rating      decimal(3,2)
-total_reviews   integer DEFAULT 0
-created_at      timestamptz DEFAULT now()
-updated_at      timestamptz DEFAULT now()
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+user_id             uuid REFERENCES users(id)
+business_name       text
+bio                 text
+operation_type      text NOT NULL DEFAULT 'mobile'  -- 'mobile' | 'fixed' | 'hybrid'
+-- Mobile fields
+service_radius      integer  -- miles; used when operation_type = 'mobile' | 'hybrid'
+home_base_lat       decimal
+home_base_lng       decimal
+-- Fixed location fields
+location_address    text     -- used when operation_type = 'fixed' | 'hybrid'
+location_lat        decimal
+location_lng        decimal
+location_hours      jsonb    -- { mon: {open:'08:00',close:'18:00'}, tue: ... }
+bay_count           integer DEFAULT 1  -- simultaneous jobs at fixed location
+accepts_walkins     boolean DEFAULT false
+-- Shared
+stripe_account_id   text
+is_active           boolean DEFAULT true
+is_verified         boolean DEFAULT false
+avg_rating          decimal(3,2)
+total_reviews       integer DEFAULT 0
+created_at          timestamptz DEFAULT now()
+updated_at          timestamptz DEFAULT now()
 ```
 
-### crew_members
+### team_members
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-user_id         uuid REFERENCES users(id)
-owner_id        uuid REFERENCES detailer_profiles(id)
-display_name    text
-is_active       boolean DEFAULT true
+id                          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+user_id                     uuid REFERENCES users(id)
+manager_id                  uuid REFERENCES detailer_profiles(id)
+display_name                text
+team_role                   text NOT NULL DEFAULT 'member'  -- 'manager' | 'member'
+is_active                   boolean DEFAULT true
 can_view_customer_contact   boolean DEFAULT false
 can_reschedule_jobs         boolean DEFAULT false
 can_view_team_earnings      boolean DEFAULT false
-commission_rate decimal(5,2)  -- percentage
-created_at      timestamptz DEFAULT now()
+commission_rate             decimal(5,2)
+created_at                  timestamptz DEFAULT now()
 ```
 
 ### customer_profiles
@@ -118,25 +129,27 @@ price_adjustment decimal(10,2)  -- added to or subtracted from base price
 
 ### bookings
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-customer_id     uuid REFERENCES customer_profiles(id)
-detailer_id     uuid REFERENCES detailer_profiles(id)
-crew_member_id  uuid REFERENCES crew_members(id) NULLABLE
-vehicle_id      uuid REFERENCES vehicles(id)
-package_id      uuid REFERENCES service_packages(id)
-status          text  -- 'requested' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
-scheduled_at    timestamptz NOT NULL
+id                      uuid PRIMARY KEY DEFAULT gen_random_uuid()
+customer_id             uuid REFERENCES customer_profiles(id)
+detailer_id             uuid REFERENCES detailer_profiles(id)
+team_member_id          uuid REFERENCES team_members(id) NULLABLE
+vehicle_id              uuid REFERENCES vehicles(id)
+package_id              uuid REFERENCES service_packages(id)
+service_type            text NOT NULL DEFAULT 'mobile'  -- 'mobile' | 'fixed'
+status                  text  -- 'requested' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+scheduled_at            timestamptz NOT NULL
 estimated_duration_mins integer
-service_address text
-service_lat     decimal
-service_lng     decimal
-subtotal        decimal(10,2)
-tip_amount      decimal(10,2) DEFAULT 0
-platform_fee    decimal(10,2)
-total           decimal(10,2)
-is_recurring    boolean DEFAULT false
-recurrence_rule text NULLABLE  -- 'weekly' | 'biweekly' | 'monthly'
-parent_booking_id uuid NULLABLE  -- for recurring bookings
+service_address         text  -- customer address for mobile, operator address for fixed
+service_lat             decimal
+service_lng             decimal
+bay_number              integer NULLABLE  -- for fixed location jobs
+subtotal                decimal(10,2)
+tip_amount              decimal(10,2) DEFAULT 0
+platform_fee            decimal(10,2)
+total                   decimal(10,2)
+is_recurring            boolean DEFAULT false
+recurrence_rule         text NULLABLE  -- 'weekly' | 'biweekly' | 'monthly'
+parent_booking_id       uuid NULLABLE  -- for recurring bookings
 notes           text
 created_at      timestamptz DEFAULT now()
 updated_at      timestamptz DEFAULT now()
@@ -204,6 +217,25 @@ rating          integer NOT NULL  -- 1-5
 body            text
 created_at      timestamptz DEFAULT now()
 ```
+
+---
+
+## Fixed Location Capacity
+
+### fixed_location_slots
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id     uuid REFERENCES detailer_profiles(id)
+slot_date       date NOT NULL
+slot_time       time NOT NULL
+bay_number      integer NOT NULL DEFAULT 1
+status          text NOT NULL DEFAULT 'available'  -- 'available' | 'booked' | 'blocked'
+booking_id      uuid REFERENCES bookings(id) NULLABLE
+created_at      timestamptz DEFAULT now()
+UNIQUE (detailer_id, slot_date, slot_time, bay_number)
+```
+
+This table manages capacity for fixed location operators. Each row represents one bay at one time slot on one date. When a customer books a fixed location appointment, a slot row is marked as booked and linked to the booking. Walk-in jobs create a slot record on arrival. Operators can block slots for maintenance or closures.
 
 ---
 

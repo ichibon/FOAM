@@ -1,64 +1,114 @@
 # Core Concepts
 
-## The Three Roles
+## The Roles
+
+FOAM serves four distinct user types across two sides of the marketplace.
+
+---
 
 ### Customer
-A person who owns a vehicle and wants it cleaned, detailed, or maintained by a professional who comes to them. They value convenience, trust, and consistency. They book through the app, pay through the app, and build loyalty with their preferred detailer over time.
+A vehicle owner who wants professional detailing — either by having someone come to them, or by dropping their car at a nearby location. They value convenience, trust, and consistency. They book through the app, pay through the app, and build loyalty with their preferred operator over time.
 
-### Detailer (Owner/Operator)
-A mobile detailing professional — solo or with a crew — who uses the app as their complete business operating system. They manage bookings, payments, customer relationships, service menus, marketing, and crew from a single place. The app is not a lead gen tool for them. It is their business infrastructure.
+The customer doesn't think in mobile vs. fixed terms — they think about what's convenient right now. FOAM shows them all options and lets them decide.
 
-### Crew Member (Technician)
-An employee or contractor working under a detailer/owner account. They have a limited, focused experience — see assigned jobs, navigate to locations, complete jobs, track earnings. They operate within permissions set by the owner. They do not access business financials or customer relationship data unless explicitly granted.
+---
+
+### Operator (Detailer / Owner)
+Any professional running a detailing business — solo mobile, fixed location, or hybrid. The operator uses FOAM as their complete business OS: bookings, payments, customer relationships, service menus, team management, and reporting in one place.
+
+Operators configure their profile based on how they work:
+
+| Operation Type | How it works | Customer comes to them? |
+|---------------|-------------|------------------------|
+| Mobile | Travels to the customer's location | No — operator goes to customer |
+| Fixed Location | Operates at a physical location | Yes — customer drops off car |
+| Hybrid | Does both | Both models active simultaneously |
+
+The operator's JTBD shifts based on type:
+- **Mobile:** Run my day across locations without chaos
+- **Fixed:** Fill my bays and keep customers coming back
+- **Hybrid:** See everything across both channels in one place
+
+---
+
+### Team Manager
+An operator running a team of detailers — mobile, fixed, or hybrid. The manager has all operator capabilities PLUS team-specific tools: assign jobs to team members, track their location, split commissions, and see performance across the whole operation.
+
+The manager's experience is a command center — not just a job list. They need visibility over everything happening across their operation at any given moment.
+
+---
+
+### Team Member
+A detailer working under a manager. Focused, limited experience — see assigned jobs, navigate to locations, complete jobs, document work, track earnings. They operate within permissions set by the manager. No access to business financials, customer relationships, or team management unless explicitly granted.
+
+---
+
+## The Two Service Models
+
+FOAM operates both service models simultaneously. Customers see both in discovery and choose what works for them.
+
+### Mobile Service
+- Operator travels to the customer's location
+- Customer enters their address during booking
+- Booking flow: Select operator → select service → enter location → pick time → pay
+- Operator experience: Calendar organized around time and geography, travel time buffers between jobs
+
+### Fixed Location Service
+- Customer travels to the operator's location
+- Operator has a verified physical address and operating hours
+- Booking flow: Select location → select service → select vehicle → pick drop-off time → pay (or walk in)
+- Operator experience: Calendar organized around bay capacity and slots, multiple simultaneous jobs possible
+
+### Hybrid Operators
+Run both models from a single profile and a single calendar. FOAM handles the complexity — the operator sees one unified view of all jobs across both channels. Mobile jobs show location pins and travel buffers. Fixed location jobs show bay assignments and drop-off times. Revenue reporting breaks down by channel.
 
 ---
 
 ## The Marketplace Model
 
-This is a two-sided marketplace with a supply-first strategy.
+Two-sided marketplace with a supply-first strategy.
 
-**Supply side** (detailers) is built and activated first. Detailers are onboarded with the full operator OS — scheduling, payments, CRM — before customer discovery is live. This means when the customer side turns on, the supply side is already trained, reliable, and ready.
+**Supply side** (operators) is built and activated first. Operators onboard with the full business OS before customer discovery goes live. When the customer side turns on, supply is already trained, reliable, and ready.
 
-**Demand side** (customers) discovers detailers through location-based search, ratings, reviews, and portfolio photos. The customer experience is designed for trust and repeat behavior, not one-time transactions.
+**Demand side** (customers) discovers operators through a unified location-based search that returns both mobile detailers and fixed locations. Customers filter by service type, distance, rating, and availability. The discovery experience is designed for trust and repeat behavior, not one-time transactions.
 
 ---
 
 ## The Operating System Concept
 
-Most booking apps are thin transaction layers. This platform is a business OS. The distinction matters:
+Most booking apps are thin transaction layers. FOAM is a business OS. The distinction matters:
 
-- A booking app gets a detailer their next job
-- A business OS makes a detailer impossible to run without
+- A booking app gets an operator their next job
+- A business OS makes an operator impossible to run without
 
-The goal is that a detailer who has used this platform for 90 days has their entire customer history, vehicle notes, earnings data, crew records, and business performance inside the app. Leaving isn't just inconvenient — it's losing their business memory.
+The goal is that an operator who has used FOAM for 90 days has their entire customer history, vehicle notes, earnings data, team records, and business performance inside the app. Leaving isn't just inconvenient — it's losing their business memory.
 
 ---
 
 ## The Permission Architecture
 
-Owner accounts are master accounts. Crew accounts are subordinate and linked to an owner. Owners control:
+Manager accounts are master accounts. Team member accounts are subordinate and linked to a manager. Managers control:
 
-- What crew members can see (customer contact info, earnings, team stats)
-- What crew members can do (reschedule jobs, mark complete, message customers)
+- What team members can see (customer contact info, earnings, team stats)
+- What team members can do (reschedule jobs, mark complete, message customers)
 - How tips and commissions are split
+- Which jobs each team member is assigned to
 
-This matters because detailers are protective of their customer relationships. The platform earns their trust by making them the gatekeeper, not the app.
+Operators are protective of their customer relationships. The platform earns their trust by making them the gatekeeper.
 
 ---
 
 ## The Rain Protection Concept
 
-A customer membership feature — approximately $7.99/month — that covers the cost of an exterior wash if measurable rain falls within 72 hours of a completed detail. Triggered automatically via weather API by zip code and appointment timestamp. No claims to file. The app just knows.
+A customer membership feature — $7.99/month — that covers the cost of an exterior wash if measurable rain falls within 72 hours of a completed detail. Triggered automatically via weather API by zip code and appointment timestamp. No claims to file. The app just knows.
 
-This is not technically insurance. It is a service guarantee and retention mechanism. Customers stay subscribed because the protection has real emotional value. When triggered, the customer rebooks through the app — staying in the ecosystem.
-
-Legal framing: service guarantee / membership benefit. Not insurance. Requires legal review before launch.
+Applies to mobile and fixed location services equally. Legal framing: service guarantee / membership benefit. Not insurance. Requires legal review before launch.
 
 ---
 
 ## The Recurring Appointment Model
 
-Customers can set up recurring appointments — weekly, bi-weekly, monthly. Recurring bookings get a reduced platform fee for the detailer ($8 vs $10 standard), incentivizing detailers to encourage subscription behavior from their customers. Predictable income for detailers. Predictable clean car for customers.
+Customers can set up recurring appointments — weekly, bi-weekly, monthly. Works for both mobile (detailer comes to same location on schedule) and fixed (customer drops off on a recurring schedule). Recurring bookings get a reduced platform fee for operators.
 
 ---
 
@@ -66,15 +116,15 @@ Customers can set up recurring appointments — weekly, bi-weekly, monthly. Recu
 
 | Tier | Monthly Fee | Standard Booking Fee | Recurring Booking Fee |
 |------|-------------|---------------------|----------------------|
-| Starter | $29-39 | $10 | $8 |
-| Pro | $69-89 | $8 | $6 |
-| Crew | $149-199 | $6 | $5 |
+| Starter | $34/mo | $10 | $8 |
+| Pro | $79/mo | $8 | $6 |
+| Crew | $174/mo | $6 | $5 |
 
-Additional crew members beyond 3: $20-25/month per tech.
+Additional team members beyond 3: $20-25/month per member.
 Annual plans available at all tiers (2 months free).
 
 ---
 
 ## Geographic Strategy
 
-Hyper-local before horizontal. Atlanta launches first. Full market saturation — detailer density, customer awareness, brand recognition — before expansion to a second city. The mistake most marketplaces make is expanding too early with too little density in any single market. Density is the product.
+Hyper-local before horizontal. Atlanta launches first — both mobile operators and fixed locations. Full market saturation before expansion to a second city. Density is the product on both sides of the service model.

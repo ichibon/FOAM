@@ -1,12 +1,12 @@
 # FOAM — Project README
 
-> The operating system for mobile auto detailing. Where customers find and book the best detailers, and detailers run their entire business.
+> The operating system for auto detailing — where customers find and book the best mobile detailers and local shops, and operators run their entire business from one place.
 
 ---
 
 ## What This Is
 
-A mobile-first marketplace app with three distinct experiences — customers, detailers, and crew — built on a single codebase. Inspired by the experience model of The Cut (barbershop app), purpose-built for the mobile auto detailing industry.
+A mobile-first marketplace platform with distinct experiences for customers, mobile detailers, independent shop operators, and crew — built on a single codebase. Inspired by the experience model of The Cut (barbershop app), purpose-built for the full auto detailing industry: mobile operators who travel to the customer, and the independent shops that serve customers who come to them.
 
 This README is the entry point for the entire project. Every major decision — product, design, architecture, strategy, brand — lives in the `/MD` folder as a structured markdown file. When in doubt, check the docs before asking or assuming.
 
@@ -17,10 +17,10 @@ This README is the entry point for the entire project. Every major decision — 
 | Phase | Status |
 |-------|--------|
 | Documentation & Planning | 🟡 In Progress |
-| Brand Identity | 🟡 In Progress |
+| Brand Identity | 🔴 Not Started |
 | Design System & Wireframes | 🟡 In Progress |
 | MVP Development | 🔴 Not Started |
-| Detailer Recruitment (Atlanta) | 🔴 Not Started |
+| Operator Recruitment (Atlanta) | 🔴 Not Started |
 | Soft Launch | 🎯 Target: July 2025 |
 | Public Launch | 🎯 Target: August 2025 |
 
@@ -45,19 +45,23 @@ This README is the entry point for the entire project. Every major decision — 
 
 ---
 
-## The Three User Roles
+## The User Roles
 
-**Customer** — Finds detailers by location, books services, pays in-app, builds a relationship with their detailer over time. Free to use.
+**Customer** — Finds mobile detailers and local shops by location, chooses whether someone comes to them or they drop their car off, books services, pays in-app, and builds a relationship with their preferred operator over time. Free to use.
 
-**Detailer / Owner** — Uses the platform as a complete business OS. Manages bookings, payments, customers, service menu, crew, and business performance from a single app. Pays a monthly subscription + per-booking platform fee.
+**Operator (Mobile Detailer)** — Uses the platform as a complete business OS. Manages bookings, route logistics, payments, customers, service menu, crew, and business performance from a single app. Pays a monthly subscription plus a per-booking platform fee.
 
-**Crew Member** — Subordinate account linked to an owner. Sees assigned jobs, navigates to locations, marks jobs complete, tracks personal earnings. Access controlled by owner.
+**Operator (Shop Owner / Fixed Location)** — Uses the platform as a complete shop OS. Manages bookings, bay assignments, walk-in flow, drop-off scheduling, payments, customers, and business performance from one place. Same subscription tiers as mobile operators, with shop-specific features (bay management, operating hours, walk-in toggle, location verification).
+
+**Operator (Hybrid)** — Runs both a mobile operation and a fixed location from a single FOAM profile. Unified calendar, dual-channel revenue reporting, and a single customer-facing listing that appears in both service model search results.
+
+**Crew Member** — Subordinate account linked to an owner. Sees assigned jobs, navigates to locations or bays, marks jobs complete, tracks personal earnings. Access controlled by the owner.
 
 ---
 
 ## Monetization Summary
 
-### Detailer Subscriptions
+### Operator Subscriptions
 | Tier | Monthly | Standard Booking Fee | Recurring Booking Fee |
 |------|---------|---------------------|----------------------|
 | Starter | $29–39 | $10 | $8 |
@@ -65,7 +69,8 @@ This README is the entry point for the entire project. Every major decision — 
 | Crew | $149–199 | $6 | $5 |
 
 Annual plans available at all tiers (2 months free).
-Additional crew beyond 3: $20–25/month per tech.
+Additional crew members beyond 3: $20–25/month per tech.
+Applies equally to mobile operators and shop operators.
 
 ### Customer
 - Free to book
@@ -82,26 +87,26 @@ All documentation lives in the `/MD` folder. Here's what exists and what each fi
 ### 📦 Product
 
 #### [`/MD/product/VISION.md`](/MD/product/VISION.md)
-The north star. Why this exists, what problem it solves, the founder's edge, and Year 1 success metrics. Start here if you're new to the project.
+The north star. Why this exists, what problem it solves across both mobile and shop operator types, the founder's edge, and Year 1 success metrics. Start here if you're new to the project.
 
 #### [`/MD/product/CORE_CONCEPTS.md`](/MD/product/CORE_CONCEPTS.md)
-The foundational mechanics of the platform — the three roles, the marketplace model, the OS concept, the permission architecture, Rain Coverage, recurring appointments, and geographic strategy. Reference this when making any product decision.
+The foundational mechanics of the platform — the four user roles, both service models (mobile and fixed location), the marketplace model, the OS concept, the permission architecture, Rain Coverage, recurring appointments, and geographic strategy. Reference this when making any product decision.
 
 #### [`/MD/product/FEATURES.md`](/MD/product/FEATURES.md)
-Complete feature list for MVP (V1) and V2, broken down by user role (customer, detailer, crew). Includes a priority table (P0/P1/P2) for build order. Reference this during development sprints and scope conversations.
+Complete feature list for MVP (V1) and V2, broken down by user role (customer, operator, crew). Includes mobile-specific features, fixed location-specific features, and hybrid operator features. Priority table (P0/P1/P2) for build order. Reference this during development sprints and scope conversations.
 
 ---
 
 ### 🏗️ Architecture
 
 #### [`/MD/architecture/ARCHITECTURE.md`](/MD/architecture/ARCHITECTURE.md)
-The full system overview — architectural philosophy, system diagram, tech stack with rationale, application architecture (single app / three roles), backend design (Supabase RLS, Edge Functions), payment money flow, notification delivery stack, media storage buckets, security threat model, authentication flow, environment setup, and scalability path. Read this first before touching any backend code or infrastructure.
+The full system overview — architectural philosophy, system diagram, tech stack with rationale, application architecture (single app / multiple roles), backend design (Supabase RLS, Edge Functions), payment money flow, notification delivery stack, media storage buckets, security threat model, authentication flow, environment setup, and scalability path. Read this first before touching any backend code or infrastructure.
 
 #### [`/MD/architecture/CAPABILITY_LAYER.md`](/MD/architecture/CAPABILITY_LAYER.md)
-The functional systems powering the platform — booking engine, payment infrastructure, notification system, weather API, location and routing, media storage, CRM engine, reporting, and review system. Reference this when designing backend logic or integrating third-party services.
+The functional systems powering the platform — booking engine (mobile and fixed location flows), payment infrastructure, notification system, weather API, location and routing, media storage, CRM engine, reporting, and review system. Reference this when designing backend logic or integrating third-party services.
 
 #### [`/MD/architecture/DATA_MODEL.md`](/MD/architecture/DATA_MODEL.md)
-Full Supabase/PostgreSQL schema. All tables, columns, types, and relationships for users, bookings, payments, crew, vehicles, reviews, subscriptions, inventory, and rain protection. Reference this when writing database queries, building API routes, or setting up Supabase.
+Full Supabase/PostgreSQL schema. All tables, columns, types, and relationships for users, bookings, payments, crew, vehicles, reviews, subscriptions, inventory, and rain protection. Covers both mobile and fixed location booking flows. Reference this when writing database queries, building API routes, or setting up Supabase.
 
 ---
 
@@ -111,48 +116,48 @@ Full Supabase/PostgreSQL schema. All tables, columns, types, and relationships f
 The visual foundation — color system (dark and light mode with full Cobalt Blue accent palette), typography (Outfit + Inter), spacing system, border radius, elevation/shadow, component library specs (buttons, inputs, cards, bottom sheets), iconography, and motion summary. Reference this in UXPilot and when writing component styles.
 
 #### [`/MD/design/INTERACTION_PRINCIPLES.md`](/MD/design/INTERACTION_PRINCIPLES.md)
-How the app behaves — core UX principles, navigation structure for all three roles, key interaction flows (booking, job management, crew assignment), gesture vocabulary, motion and animation timing, empty states, loading states, and accessibility requirements. The Cut is the experience benchmark. Reference this before designing or building any screen.
+How the app behaves — core UX principles, navigation structure for all roles, key interaction flows (booking for mobile and drop-off, job management, bay management, crew assignment), gesture vocabulary, motion and animation timing, empty states, loading states, and accessibility requirements. The Cut is the experience benchmark. Reference this before designing or building any screen.
 
 #### [`/MD/design/MICROCOPY.md`](/MD/design/MICROCOPY.md)
-Every word the app says. Voice and tone guide, onboarding copy for customers and detailers, booking flow copy, empty states, error messages, notification text, button and CTA tone guide, and Rain Coverage membership copy. Reference this before writing any in-app text.
+Every word the app says. Voice and tone guide, onboarding copy for customers, mobile operators, shop operators, and hybrid operators, booking flow copy for both service models, empty states, error messages, notification text, button and CTA tone guide, and Rain Coverage membership copy. Reference this before writing any in-app text.
 
 ---
 
 ### 🏢 Brand
 
 #### [`/MD/brand/BRAND_DNA.md`](/MD/brand/BRAND_DNA.md)
-The brand foundation — essence (Control), five character traits, four voice principles with Do/Don't tables, brand promise, and the enemy FOAM exists to defeat ("Good Enough"). Everything FOAM says publicly traces back to this document. Reference this before writing any copy, designing any screen, or making any marketing decision.
+The brand foundation — essence (Control), five character traits, four voice principles with Do/Don't tables, brand promise, and the enemy FOAM exists to defeat ("Good Enough"). Covers both mobile operators and shop operators throughout. Everything FOAM says publicly traces back to this document. Reference this before writing any copy, designing any screen, or making any marketing decision.
 
 #### [`/MD/brand/VISUAL_IDENTITY.md`](/MD/brand/VISUAL_IDENTITY.md)
-Complete creative brief for the design team — typography direction (Outfit + Inter, with rationale), full color palette psychology and specific hex values, photography style guide (what to shoot, how to light it), logo concept direction (water bead mark + wordmark), and the three words every new customer should feel. Reference this in UXPilot and before any visual production.
+Complete creative brief for the design team — typography direction (Outfit + Inter, with rationale), full color palette psychology and specific hex values, photography style guide (what to shoot, how to light it — van work and bay work), logo concept direction (water bead mark + wordmark), and the three words every new customer should feel. Reference this in UXPilot and before any visual production.
 
 #### [`/MD/brand/BRAND_MESSAGE_HIERARCHY.md`](/MD/brand/BRAND_MESSAGE_HIERARCHY.md)
-The messaging source of truth — tagline ("Your business. Your car. Clean."), elevator pitch (standard and investor variants), long-form brand story (problem, solution, vision), and audience-specific key messages for solo detailers, crew operators, and customers. Includes a competitor proof test table. Reference this for every campaign, pitch deck, and public communication.
+The messaging source of truth — tagline ("Your business. Your car. Clean."), elevator pitch (standard and investor variants), long-form brand story (problem, solution, vision), and audience-specific key messages for solo mobile detailers, crew operators, shop operators, and customers. Includes a competitor proof test table. Reference this for every campaign, pitch deck, and public communication.
 
 #### [`/MD/brand/SOCIAL_MEDIA_BRAND_GUIDE.md`](/MD/brand/SOCIAL_MEDIA_BRAND_GUIDE.md)
-The execution playbook for Instagram, TikTok, Facebook, and Meta Ads — six visual templates with exact specs, caption style guide (tone, length, signature phrases, emoji rules), six content categories with look/feel definitions, the five brand elements required in every post, and the five things FOAM never does. Includes a weekly content calendar cadence for the Atlanta launch phase.
+The execution playbook for Instagram, TikTok, Facebook, and Meta Ads — six visual templates with exact specs, caption style guide (tone, length, signature phrases, emoji rules), six content categories with look/feel definitions for both mobile and shop operator content, the five brand elements required in every post, and the five things FOAM never does. Includes a weekly content calendar cadence for the Atlanta launch phase.
 
 #### [`/MD/brand/BRAND_STORY.md`](/MD/brand/BRAND_STORY.md)
-The founder origin story in four formats — 50-word social bio, 200-word core (Hero's Journey), 350-word about page, and 600-word full founder narrative for press and pitch contexts. Built around the Foam Auto Spa origin. Reference this for the about page, App Store description, press kit, and any founder-facing communication.
+The founder origin story in four formats — 50-word social bio, 200-word core (Hero's Journey), 350-word about page, and 600-word full founder narrative for press and pitch contexts. Built around the Foam Auto Spa origin — a mobile van and three physical shops in Atlanta. Reference this for the about page, App Store description, press kit, and any founder-facing communication.
 
 ---
 
 ### 📈 Strategy
 
 #### [`/MD/strategy/COMPETITIVE_ANALYSIS.md`](/MD/strategy/COMPETITIVE_ANALYSIS.md)
-Full breakdown of direct competitors (Washos, Spiffy, Detail King, Mobile Tech RX), indirect competitors (Booksy, Vagaro, Square, Google/Yelp), competitive gaps the platform exploits, the real strategic moat (data lock-in), and a monitoring cadence. Reference this before any positioning or marketing decision.
+Full breakdown of direct competitors (Washos, Spiffy, Detail King, Mobile Tech RX), indirect competitors (Booksy, Vagaro, Square, Google/Yelp), competitive gaps the platform exploits across both operator types, the real strategic moat (data lock-in for mobile and shop operators), and a monitoring cadence. Reference this before any positioning or marketing decision.
 
 #### [`/MD/strategy/GO_TO_MARKET.md`](/MD/strategy/GO_TO_MARKET.md)
-Three-phase launch plan — supply activation (pre-launch), soft launch (July), public launch (Aug–Sep). Covers detailer recruitment strategy, customer acquisition channels, launch market (Atlanta only), KPIs by phase, and what not to do. Reference this for every GTM and growth decision.
+Three-phase launch plan — supply activation (pre-launch), soft launch (July), public launch (Aug–Sep). Covers recruitment strategy for both mobile operators and shop operators, separate acquisition channels and messaging for each type, customer acquisition channels, launch market (Atlanta only), KPIs by phase, and what not to do. Reference this for every GTM and growth decision.
 
 #### [`/MD/strategy/PRICING_STRATEGY.md`](/MD/strategy/PRICING_STRATEGY.md)
-Detailed tier breakdowns, customer pricing rationale, flat fee vs. percentage analysis, unit economics modeling, competitive pricing context, and pricing review cadence. Reference this before any pricing conversation with detailers or investors.
+Detailed tier breakdowns, customer pricing rationale, flat fee vs. percentage analysis, unit economics modeling for both mobile and shop operator types, competitive pricing context, and pricing review cadence. Reference this before any pricing conversation with operators or investors.
 
 #### [`/MD/strategy/ROADMAP.md`](/MD/strategy/ROADMAP.md)
-Full build and GTM timeline from now through Q2 2026. Organized by phase: Foundation, Soft Launch, Public Launch, Deepen the OS, Growth Infrastructure, Market 2. Includes a parking lot for validated ideas without a timeline. Reference this during sprint planning and investor conversations.
+Full build and GTM timeline from now through Q2 2026. Organized by phase: Foundation, Soft Launch, Public Launch, Deepen the OS, Growth Infrastructure, Market 2. Covers both service model build priorities. Includes a parking lot for validated ideas without a timeline. Reference this during sprint planning and investor conversations.
 
 #### [`/MD/strategy/AEO_SEO_GEO.md`](/MD/strategy/AEO_SEO_GEO.md)
-Complete discoverability strategy across three disciplines: SEO (ranking on Google), AEO (being cited by AI assistants like ChatGPT and Perplexity), and GEO (owning local market answers city by city). Includes keyword strategy, content pillars, schema markup requirements, Atlanta launch tactics, and an integrated calendar. Reference this when building the marketing site, publishing content, or planning press outreach.
+Complete discoverability strategy across three disciplines: SEO (ranking on Google), AEO (being cited by AI assistants like ChatGPT and Perplexity), and GEO (owning local market answers city by city). Includes keyword strategy for mobile operators, shop operators, and customers, content pillars, schema markup requirements, Atlanta launch tactics, and an integrated calendar. Reference this when building the marketing site, publishing content, or planning press outreach.
 
 ---
 
@@ -178,10 +183,10 @@ Check `CORE_CONCEPTS.md` and `FEATURES.md` first. If the answer isn't there, doc
 Start with `ARCHITECTURE.md` for the full system map, then `DATA_MODEL.md` for schema, `CAPABILITY_LAYER.md` for system logic, and `DESIGN_SYSTEM.md` for component specs.
 
 **Designing a screen?**
-Start with `INTERACTION_PRINCIPLES.md` for behavior, `DESIGN_SYSTEM.md` for visual specs, and `MICROCOPY.md` for every word on the screen.
+Start with `INTERACTION_PRINCIPLES.md` for behavior, `DESIGN_SYSTEM.md` for visual specs, and `MICROCOPY.md` for every word on the screen. Note: MICROCOPY.md has separate onboarding flows for mobile operators, shop operators, and hybrid operators — use the right one.
 
-**Talking to a detailer, investor, or partner?**
-`VISION.md` for the pitch, `COMPETITIVE_ANALYSIS.md` for positioning, `PRICING_STRATEGY.md` for the business model, `GO_TO_MARKET.md` for the plan.
+**Talking to a detailer, shop owner, investor, or partner?**
+`VISION.md` for the pitch, `COMPETITIVE_ANALYSIS.md` for positioning, `PRICING_STRATEGY.md` for the business model, `GO_TO_MARKET.md` for the plan, `BRAND_STORY.md` for the founder narrative. The founder ran both a mobile van and three physical shops — lead with that.
 
 ---
 
@@ -192,6 +197,7 @@ These are open questions that need resolution before or during development:
 - [x] **App name** — FOAM ✅
 - [x] **Brand identity** — Brand DNA, Visual Identity, Message Hierarchy, Social Guide, and Brand Story complete ✅
 - [x] **Design System accent colors** — Cobalt Blue (#2563EB) and Outfit/Inter locked in DESIGN_SYSTEM.md ✅
+- [x] **Operator scope** — Platform serves mobile detailers, fixed location shops, and hybrid operators ✅
 - [ ] **Legal review** — Rain Coverage membership structure needs attorney review before launch
 - [ ] **React Native vs PWA** — Confirm approach for cross-platform development in Replit
 - [ ] **Android timeline** — iOS confirmed as primary; Android launch date to be set
@@ -244,8 +250,8 @@ These are open questions that need resolution before or during development:
 
 ## Founder Context
 
-Built by a first-generation American who operated a mobile detailing business called Foam Auto Spa in Atlanta, GA. The product exists because the founder lived the problem — managing crew through text messages, chasing payments on Venmo, and losing customer vehicle history when a phone died. That operator experience is the product's unfair advantage over every competitor who studied the industry from the outside.
+Built by a first-generation American who operated Foam Auto Spa in Atlanta — a detailing business that ran both a mobile van and three physical shops simultaneously. The product exists because the founder lived the problem across both service models at the same time: managing crew across a route and crew across bays, chasing Venmo on the mobile side and tracking walk-ins on a whiteboard on the shop side, losing customer vehicle history in a cracked phone and in an outdated paper system. That dual operator experience — running mobile and fixed location operations in parallel — is the product's unfair advantage over every competitor who only understood one side of this industry, or neither. The founder still handles logistics for those shops today, which means the operator credibility that built this product is current, not historical.
 
 ---
 
-*Last updated: April 2026. Update this README whenever a major decision is made or a new file is added.*
+*Last updated: May 2026. Update this README whenever a major decision is made or a new file is added.*

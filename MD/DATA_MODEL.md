@@ -1,5 +1,7 @@
 # Data Model
-**Version 1.1 — Updated May 2, 2026**
+**Version 1.3 — Updated May 3, 2026**
+Changes from v1.2 marked with `[v1.3]`
+Changes from v1.1 marked with `[v1.2]`
 Changes from v1.0 marked with `[v1.1]`
 
 Built on Supabase (PostgreSQL). All tables use UUID primary keys. Row-level security enforced via Supabase RLS policies. Role-based access control enforced at the application and database layer.
@@ -28,17 +30,20 @@ user_id             uuid REFERENCES users(id)
 business_name       text
 bio                 text
 operation_type      text NOT NULL DEFAULT 'mobile'  -- 'mobile' | 'fixed' | 'hybrid'
--- Mobile fields
+is_multi_unit       boolean NOT NULL DEFAULT false  -- [v1.3] true when business has multiple locations or vans
+-- Single-unit mobile fields (used when is_multi_unit = false)
 service_radius      integer  -- miles; used when operation_type = 'mobile' | 'hybrid'
 home_base_lat       decimal
 home_base_lng       decimal
--- Fixed location fields
+-- Single-unit fixed location fields (used when is_multi_unit = false)
 location_address    text     -- used when operation_type = 'fixed' | 'hybrid'
 location_lat        decimal
 location_lng        decimal
 location_hours      jsonb    -- { mon: {open:'08:00',close:'18:00'}, tue: ... }
 bay_count           integer DEFAULT 1  -- simultaneous jobs at fixed location
 accepts_walkins     boolean DEFAULT false
+-- When is_multi_unit = true, location/asset config moves to business_locations
+-- and business_assets tables. Single-unit fields above are ignored.
 -- Shared
 stripe_account_id   text
 is_active           boolean DEFAULT true
@@ -163,6 +168,10 @@ cancelled_by            uuid REFERENCES users(id) NULLABLE  -- [v1.1]
 cancelled_at            timestamptz NULLABLE  -- [v1.1]
 cancellation_reason     text NULLABLE  -- [v1.1] free text + structured reason code
 no_show_reported_at     timestamptz NULLABLE  -- [v1.1] when operator tapped 'Report No-Show'
+submitted_by            uuid REFERENCES users(id) NULLABLE  -- [v1.2] who submitted job completion
+submitted_by_role       text NULLABLE  -- [v1.2] 'operator' | 'team_member' — for dispute evidence
+location_id             uuid REFERENCES business_locations(id) NULLABLE  -- [v1.3] which physical location this job is at
+asset_id                uuid REFERENCES business_assets(id) NULLABLE  -- [v1.3] which van/mobile unit is serving this job
 notes                   text
 created_at              timestamptz DEFAULT now()
 updated_at              timestamptz DEFAULT now()
@@ -215,6 +224,38 @@ photo_type      text  -- 'before' | 'after' | 'damage'
 uploaded_by     uuid REFERENCES users(id)
 created_at      timestamptz DEFAULT now()
 ```
+
+### booking_modifications [v1.2 — NEW]
+Tracks field-level service changes made by crew members during a job. Supports manager approval workflow before changes are committed to the booking total. Created when a crew member adds or removes a service in the field.
+
+```sql
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id          uuid REFERENCES bookings(id)
+booking_vehicle_id  uuid REFERENCES booking_vehicles(id) NULLABLE  -- which vehicle the change applies to
+modified_by         uuid REFERENCES users(id)  -- crew member who requested the change
+modification_type   text NOT NULL  -- 'service_added' | 'service_removed'
+service_id          uuid REFERENCES service_packages(id)  -- service being added or removed
+original_price      decimal(10,2) NULLABLE  -- price before modification (for removals)
+new_price           decimal(10,2) NULLABLE  -- price after modification (for additions)
+reason              text NULLABLE  -- required for removals: 'customer_requested' | 'vehicle_condition' | 'time_constraint' | 'access_issue'
+status              text NOT NULL DEFAULT 'pending'
+-- Status values: 'pending' | 'approved' | 'auto_approved' | 'rejected'
+-- auto_approved fires after 5 minutes with no manager response
+approved_by         uuid REFERENCES users(id) NULLABLE  -- manager who approved/rejected
+approved_at         timestamptz NULLABLE
+auto_approve_at     timestamptz  -- set to created_at + 5 minutes on creation
+rejection_reason    text NULLABLE  -- manager can add context when rejecting
+created_at          timestamptz DEFAULT now()
+updated_at          timestamptz DEFAULT now()
+```
+
+**Approval logic:**
+- On creation: `auto_approve_at` = `created_at + 5 minutes`
+- Manager push notification fires immediately via `booking-modification-request` Edge Function
+- If manager approves before `auto_approve_at`: status → `approved`, booking totals update
+- If no manager response by `auto_approve_at`: status → `auto_approved`, booking totals update
+- If manager rejects: status → `rejected`, crew notified, original service state restored
+- Rejected modifications are retained in the table for audit trail — never deleted
 
 ---
 
@@ -373,19 +414,87 @@ created_at      timestamptz DEFAULT now()
 
 ---
 
-## Key Relationships Summary [v1.1]
+## Multi-Unit Business [v1.3 — NEW]
+
+These tables support operators running multiple physical locations and/or multiple mobile vans under one business account. When `detailer_profiles.is_multi_unit = true`, location and asset config lives here instead of on `detailer_profiles`.
+
+### business_locations [v1.3 — NEW]
+Physical shop locations. One business can have many locations. Each appears as a separate card in customer discovery with its own address, hours, and bay configuration.
+
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id     uuid NOT NULL REFERENCES detailer_profiles(id) ON DELETE CASCADE
+name            text NOT NULL  -- e.g., "Buckhead Shop", "Midtown Location"
+address         text NOT NULL
+lat             decimal NOT NULL
+lng             decimal NOT NULL
+bay_count       integer NOT NULL DEFAULT 1
+hours           jsonb NOT NULL  -- { mon: {open:'08:00',close:'18:00'}, ... }
+accepts_walkins boolean NOT NULL DEFAULT false
+phone           text NULLABLE  -- location-specific phone number
+is_active       boolean NOT NULL DEFAULT true
+display_order   integer NOT NULL DEFAULT 0  -- controls order in manager Today tab filter
+avg_rating      decimal(3,2)  -- location-specific rating (calculated from jobs at this location)
+total_reviews   integer NOT NULL DEFAULT 0
+created_at      timestamptz NOT NULL DEFAULT now()
+updated_at      timestamptz NOT NULL DEFAULT now()
+```
+
+### business_assets [v1.3 — NEW]
+Mobile vans or service units. One business can have many vans. Each van has its own service zone, crew assignment, and equipment loadout. Vans share the operator's discovery profile but have distinct routing and scheduling.
+
+```sql
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id         uuid NOT NULL REFERENCES detailer_profiles(id) ON DELETE CASCADE
+name                text NOT NULL  -- e.g., "Van 1", "Marcus's Rig", "Team Blue"
+license_plate       text NULLABLE
+home_base_lat       decimal NOT NULL  -- where the van starts and ends each day
+home_base_lng       decimal NOT NULL
+service_radius_miles integer NOT NULL DEFAULT 15
+-- Service zone override: if set, this polygon overrides the circle radius
+service_zone_geojson jsonb NULLABLE  -- GeoJSON polygon for irregular coverage areas
+primary_crew_id     uuid REFERENCES team_members(id) NULLABLE  -- default driver/operator
+equipment_notes     text NULLABLE  -- "Has steam cleaner, no clay bar" etc.
+is_active           boolean NOT NULL DEFAULT true
+display_order       integer NOT NULL DEFAULT 0
+created_at          timestamptz NOT NULL DEFAULT now()
+updated_at          timestamptz NOT NULL DEFAULT now()
+```
+
+### asset_crew_assignments [v1.3 — NEW]
+Tracks which crew members are assigned to which van on which days. Many-to-many. Allows crew to rotate between vans week to week.
+
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+asset_id    uuid NOT NULL REFERENCES business_assets(id) ON DELETE CASCADE
+crew_id     uuid NOT NULL REFERENCES team_members(id) ON DELETE CASCADE
+assigned_date date NOT NULL  -- specific date of assignment
+is_primary  boolean NOT NULL DEFAULT false  -- primary operator of this van on this day
+created_at  timestamptz NOT NULL DEFAULT now()
+UNIQUE (asset_id, crew_id, assigned_date)
+```
+
+---
+
+## Key Relationships Summary [v1.3]
 ```
 users (1) ──── (1) detailer_profiles
 users (1) ──── (1) customer_profiles
 users (1) ──── (1) crew_members
 detailer_profiles (1) ──── (many) crew_members
 detailer_profiles (1) ──── (many) service_packages
+detailer_profiles (1) ──── (many) business_locations    [v1.3 — new, multi-location]
+detailer_profiles (1) ──── (many) business_assets       [v1.3 — new, multi-van]
+business_assets (1) ──── (many) asset_crew_assignments  [v1.3 — new]
 customer_profiles (1) ──── (many) vehicles
 bookings (many) ──── (1) customer_profiles
 bookings (many) ──── (1) detailer_profiles
+bookings (many) ──── (0..1) business_locations  [v1.3 — which location for fixed jobs]
+bookings (many) ──── (0..1) business_assets     [v1.3 — which van for mobile jobs]
 bookings (1) ──── (many) booking_vehicles          [v1.1 — replaces single vehicle_id]
 booking_vehicles (1) ──── (many) booking_vehicle_services  [v1.1 — new]
 booking_vehicles (1) ──── (many) booking_photos    [v1.1 — photos now vehicle-linked]
+bookings (1) ──── (many) booking_modifications     [v1.2 — new, crew field edits]
 bookings (1) ──── (1) reviews
 bookings (1) ──── (1) payments
 ```

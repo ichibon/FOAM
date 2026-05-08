@@ -31,11 +31,14 @@ function RootLayoutNav() {
         case "customer":
           router.replace("/customer/discover");
           break;
-        case "detailer":
-          router.replace("/detailer/today");
+        case "operator":
+          router.replace("/operator/today");
           break;
-        case "crew":
-          router.replace("/crew/jobs");
+        case "manager":
+          router.replace("/operator/today");
+          break;
+        case "team_member":
+          router.replace("/team_member/jobs");
           break;
         default:
           router.replace("/auth/role-select");
@@ -47,8 +50,8 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="auth" />
       <Stack.Screen name="customer" />
-      <Stack.Screen name="detailer" />
-      <Stack.Screen name="crew" />
+      <Stack.Screen name="operator" />
+      <Stack.Screen name="team_member" />
     </Stack>
   );
 }

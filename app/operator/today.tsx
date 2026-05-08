@@ -2,15 +2,15 @@ import { View, Text, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing } from "@/constants/design";
 
-export default function CrewJobsScreen() {
+export default function OperatorTodayScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, Platform.OS === "web" && { paddingTop: 67 }]}>
         <Text style={styles.logoText}>foam</Text>
-        <Text style={styles.screenTitle}>My Jobs</Text>
+        <Text style={styles.screenTitle}>Today</Text>
       </View>
       <View style={styles.body}>
-        <Text style={styles.placeholder}>Your assigned jobs — coming soon.</Text>
+        <Text style={styles.placeholder}>Your daily job schedule — coming soon.</Text>
       </View>
     </SafeAreaView>
   );

@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import "react-native-url-polyfill/auto";
 
-export type UserRole = "customer" | "detailer" | "crew";
+export type UserRole = "customer" | "operator" | "manager" | "team_member";
 
 export interface FoamUser {
   id: string;

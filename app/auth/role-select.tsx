@@ -14,13 +14,13 @@ const roles: { role: UserRole; title: string; description: string; icon: keyof t
     icon: "car-outline",
   },
   {
-    role: "detailer",
+    role: "operator",
     title: "I run a detailing business",
     description: "Manage your bookings, customers, crew, and payments.",
     icon: "sparkles-outline",
   },
   {
-    role: "crew",
+    role: "team_member",
     title: "I'm part of a crew",
     description: "See your assigned jobs and track your earnings.",
     icon: "people-outline",
@@ -42,11 +42,13 @@ export default function RoleSelectScreen() {
         .from("customer_profiles")
         .insert({ user_id: user.id });
       router.replace("/customer/discover");
-    } else if (role === "detailer") {
+    } else if (role === "operator") {
       await supabase
         .from("detailer_profiles")
         .insert({ user_id: user.id });
-      router.replace("/detailer/today");
+      router.replace("/operator/today");
+    } else if (role === "team_member") {
+      router.replace("/team_member/jobs");
     }
   }
 

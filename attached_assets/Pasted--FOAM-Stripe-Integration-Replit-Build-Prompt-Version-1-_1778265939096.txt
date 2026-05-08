@@ -1,0 +1,1404 @@
+# FOAM — Stripe Integration
+## Replit Build Prompt
+## Version 1.0 — May 8, 2026
+
+---
+
+## OVERVIEW
+
+Build the complete Stripe payment infrastructure for FOAM. This covers
+everything from Stripe Connect operator onboarding to customer card capture,
+authorization holds, job completion capture, tip handling, cancellation fee
+logic, and webhook event processing.
+
+**Stack:** React Native (Expo), Supabase (PostgreSQL), Stripe + Stripe Connect
+**Supabase Project ID:** yteffvegixoqvjoykwzx
+**Environment:** Start in Stripe TEST MODE. All keys are test keys until
+explicitly switched to live.
+
+---
+
+## ENVIRONMENT VARIABLES REQUIRED
+
+Add these to Replit Secrets before starting:
+
+```
+STRIPE_PUBLISHABLE_KEY         # pk_test_... — safe for client
+STRIPE_SECRET_KEY              # sk_test_... — server/Edge Functions only
+STRIPE_WEBHOOK_SECRET          # whsec_... — from Stripe Dashboard → Webhooks
+STRIPE_CONNECT_CLIENT_ID       # ca_... — from Stripe Connect settings
+SUPABASE_URL                   # https://yteffvegixoqvjoykwzx.supabase.co
+SUPABASE_ANON_KEY              # public anon key — safe for client
+SUPABASE_SERVICE_ROLE_KEY      # service role key — Edge Functions only
+```
+
+---
+
+## STEP 0 — INSTALL DEPENDENCIES
+
+```bash
+# Stripe React Native SDK
+npx expo install @stripe/stripe-react-native
+
+# Supabase JS client (if not already installed)
+npm install @supabase/supabase-js
+```
+
+Add to `app.json` plugins:
+```json
+{
+  "plugins": [
+    [
+      "@stripe/stripe-react-native",
+      {
+        "merchantIdentifier": "merchant.com.foamauto",
+        "enableGooglePay": true
+      }
+    ]
+  ]
+}
+```
+
+---
+
+## STEP 1 — STRIPE PROVIDER SETUP
+
+Wrap the root layout with the Stripe provider.
+
+**File: `app/_layout.tsx`**
+
+```tsx
+import { StripeProvider } from '@stripe/stripe-react-native'
+
+export default function RootLayout() {
+  return (
+    <StripeProvider
+      publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
+      merchantIdentifier="merchant.com.foamauto"
+      urlScheme="foamauto"
+    >
+      {/* existing app content */}
+    </StripeProvider>
+  )
+}
+```
+
+---
+
+## STEP 2 — STRIPE CONNECT EXPRESS (OPERATOR ONBOARDING)
+
+### 2A — Create Connect Account (Supabase Edge Function)
+
+**File: `supabase/functions/stripe-create-connect-account/index.ts`**
+
+Triggered when operator reaches Step 4 of onboarding ("Get Paid").
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const { operator_id, email, business_name } = await req.json()
+
+  // Create Stripe Connect Express account
+  const account = await stripe.accounts.create({
+    type: 'express',
+    email,
+    business_type: 'individual',
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+      instant_payouts: { requested: true },   // enable instant payout capability
+    },
+    metadata: { operator_id }
+  })
+
+  // Generate onboarding link
+  const accountLink = await stripe.accountLinks.create({
+    account: account.id,
+    refresh_url: 'foamauto://stripe-onboarding/refresh',
+    return_url: 'foamauto://stripe-onboarding/complete',
+    type: 'account_onboarding',
+  })
+
+  // Store stripe_account_id on detailer_profiles
+  await supabase
+    .from('detailer_profiles')
+    .update({ stripe_account_id: account.id })
+    .eq('id', operator_id)
+
+  return new Response(
+    JSON.stringify({ url: accountLink.url }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+```
+
+### 2B — Open Onboarding in App (React Native)
+
+**File: `app/operator/onboarding/stripe-connect.tsx`**
+
+```tsx
+import { useEffect, useState } from 'react'
+import { View, Linking } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
+import { supabase } from '@/lib/supabase'
+
+export default function StripeConnectScreen() {
+  const [loading, setLoading] = useState(false)
+
+  const handleConnectStripe = async () => {
+    setLoading(true)
+    try {
+      const { data } = await supabase.functions.invoke(
+        'stripe-create-connect-account',
+        { body: { operator_id, email, business_name } }
+      )
+      // Open Stripe Express onboarding in in-app browser
+      await WebBrowser.openBrowserAsync(data.url)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle deep link return from Stripe
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      if (url.includes('stripe-onboarding/complete')) {
+        // Stripe onboarding complete — check account status via webhook
+        // Navigate to pending approval screen
+        router.replace('/operator/onboarding/pending')
+      }
+    })
+    return () => subscription.remove()
+  }, [])
+
+  return (
+    <View>
+      {/* "Connect with Stripe" button from approved UI design */}
+    </View>
+  )
+}
+```
+
+---
+
+## STEP 3 — STRIPE CUSTOMER (CUSTOMER ONBOARDING)
+
+Create a Stripe Customer record when a customer completes account setup.
+Store `stripe_customer_id` on `customer_profiles`.
+
+**File: `supabase/functions/stripe-create-customer/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const { customer_profile_id, email, full_name } = await req.json()
+
+  const customer = await stripe.customers.create({
+    email,
+    name: full_name,
+    metadata: { customer_profile_id }
+  })
+
+  await supabase
+    .from('customer_profiles')
+    .update({ stripe_customer_id: customer.id })
+    .eq('id', customer_profile_id)
+
+  return new Response(
+    JSON.stringify({ stripe_customer_id: customer.id }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+```
+
+---
+
+## STEP 4 — STRIPE ELEMENTS (PAYMENT CAPTURE IN BOOKING FLOW)
+
+### 4A — Payment Sheet Setup (Edge Function)
+
+**File: `supabase/functions/stripe-create-payment-intent/index.ts`**
+
+Called at Step 4 of the booking flow (Review & Pay screen).
+Creates the authorization hold for the full service subtotal.
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const { booking_id, customer_profile_id } = await req.json()
+
+  // Get booking details
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select(`
+      subtotal,
+      detailer_id,
+      detailer_profiles!inner(stripe_account_id, approval_status),
+      customer_profiles!inner(stripe_customer_id)
+    `)
+    .eq('id', booking_id)
+    .single()
+
+  if (!booking) throw new Error('Booking not found')
+  if (!booking.detailer_profiles.stripe_account_id) {
+    throw new Error('Operator not connected to Stripe')
+  }
+
+  // Determine platform fee based on operator subscription tier
+  // Fetch operator subscription from Stripe
+  const platformFeeRate = await getPlatformFeeRate(
+    booking.detailer_profiles.stripe_account_id
+  )
+
+  const amountInCents = Math.round(booking.subtotal * 100)
+  const platformFeeInCents = Math.round(amountInCents * platformFeeRate)
+
+  // Create PaymentIntent with manual capture
+  // hold_amount = full service subtotal (NOT including tip)
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amountInCents,
+    currency: 'usd',
+    capture_method: 'manual',           // CRITICAL — authorization hold only
+    customer: booking.customer_profiles.stripe_customer_id,
+    payment_method_types: ['card', 'cashapp'],
+    // Apple Pay and Google Pay are automatically available via 'card'
+    application_fee_amount: platformFeeInCents,
+    transfer_data: {
+      destination: booking.detailer_profiles.stripe_account_id,
+    },
+    metadata: {
+      booking_id,
+      fee_rate: platformFeeRate.toString(),
+    }
+  })
+
+  // Create payment setup intent for saving card
+  const setupIntent = await stripe.setupIntents.create({
+    customer: booking.customer_profiles.stripe_customer_id,
+    payment_method_types: ['card', 'cashapp'],
+    usage: 'off_session',
+    metadata: { booking_id }
+  })
+
+  // Store hold details in payments table
+  const holdExpiresAt = new Date()
+  holdExpiresAt.setDate(holdExpiresAt.getDate() + 7) // Stripe 7-day max
+
+  await supabase.from('payments').upsert({
+    booking_id,
+    stripe_payment_intent_id: paymentIntent.id,
+    amount: booking.subtotal,
+    hold_amount: booking.subtotal,
+    hold_placed_at: new Date().toISOString(),
+    hold_expires_at: holdExpiresAt.toISOString(),
+    platform_fee: booking.subtotal * platformFeeRate,
+    status: 'pending',
+    stripe_capture_method: 'manual',
+  })
+
+  return new Response(
+    JSON.stringify({
+      payment_intent_client_secret: paymentIntent.client_secret,
+      setup_intent_client_secret: setupIntent.client_secret,
+    }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+
+// Helper: get platform fee rate based on operator subscription tier
+async function getPlatformFeeRate(stripeAccountId: string): Promise<number> {
+  // Check Stripe subscriptions for this connected account
+  // Starter = 0.15, Pro = 0.12, Crew = 0.10
+  // Default to Starter rate if no subscription found
+  const subscriptions = await stripe.subscriptions.list({
+    limit: 1,
+  })
+  // Match subscription product to tier
+  // Implementation depends on your Stripe product IDs
+  // Return appropriate rate
+  return 0.12 // Pro rate default — update with real product matching
+}
+```
+
+### 4B — Payment Sheet in React Native
+
+**File: `app/customer/booking/payment.tsx`**
+
+```tsx
+import {
+  useStripe,
+  usePlatformPay,
+  PlatformPayButton,
+  PlatformPay,
+} from '@stripe/stripe-react-native'
+import { supabase } from '@/lib/supabase'
+
+export default function PaymentScreen({ bookingId }: { bookingId: string }) {
+  const { initPaymentSheet, presentPaymentSheet } = useStripe()
+  const { isPlatformPaySupported } = usePlatformPay()
+
+  const initializePayment = async () => {
+    const { data } = await supabase.functions.invoke(
+      'stripe-create-payment-intent',
+      { body: { booking_id: bookingId } }
+    )
+
+    const { error } = await initPaymentSheet({
+      merchantDisplayName: 'FOAM Auto Detailing',
+      paymentIntentClientSecret: data.payment_intent_client_secret,
+      setupIntentClientSecret: data.setup_intent_client_secret,
+      defaultBillingDetails: { name: user.full_name },
+      applePay: {
+        merchantCountryCode: 'US',
+      },
+      googlePay: {
+        merchantCountryCode: 'US',
+        testEnv: true, // set false in production
+      },
+      // Cash App Pay is handled automatically via payment_method_types
+      allowsDelayedPaymentMethods: false,
+      returnURL: 'foamauto://payment/return',
+    })
+
+    if (!error) await presentPaymentSheet()
+  }
+
+  return (
+    <View>
+      {/* Review & Pay screen from approved UXPilot designs */}
+      {/* Payment sheet opens on "Confirm & Pay" tap */}
+    </View>
+  )
+}
+```
+
+---
+
+## STEP 5 — STRIPE CAPTURE EDGE FUNCTION
+
+The most critical Edge Function. Fires when customer confirms payment
+after job completion.
+
+**File: `supabase/functions/stripe-capture/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const { booking_id, tip_amount_cents = 0 } = await req.json()
+
+  // Get payment record with all modification intents
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('booking_id', booking_id)
+    .single()
+
+  if (!payment) throw new Error('Payment not found')
+
+  // Get booking for detailer and tier info
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select(`
+      detailer_id,
+      detailer_profiles!inner(
+        stripe_account_id,
+        platform_fee_override,
+        tip_distribution_model,
+        tip_crew_percentage,
+        tip_operator_percentage
+      )
+    `)
+    .eq('id', booking_id)
+    .single()
+
+  const stripeAccountId = booking.detailer_profiles.stripe_account_id
+
+  // ── STEP A: Capture main service hold ─────────────────────────────────
+  const capturedIntent = await stripe.paymentIntents.capture(
+    payment.stripe_payment_intent_id
+  )
+
+  // ── STEP B: Capture approved modification holds ─────────────────────
+  const modificationIntents = payment.modification_intents || []
+  const capturedModifications = []
+
+  for (const mod of modificationIntents) {
+    if (!mod.captured) {
+      await stripe.paymentIntents.capture(mod.payment_intent_id)
+      capturedModifications.push({ ...mod, captured: true })
+    }
+  }
+
+  // ── STEP C: Create separate tip PaymentIntent (Option A) ────────────
+  let tipPaymentIntentId = null
+  let tipPaymentStatus = 'none'
+
+  if (tip_amount_cents > 0) {
+    const tipIntent = await stripe.paymentIntents.create({
+      amount: tip_amount_cents,
+      currency: 'usd',
+      customer: capturedIntent.customer as string,
+      payment_method: capturedIntent.payment_method as string,
+      confirm: true,                          // capture immediately — no hold for tips
+      off_session: true,
+      transfer_data: { destination: stripeAccountId },
+      metadata: { booking_id, type: 'tip' }
+    })
+    tipPaymentIntentId = tipIntent.id
+    tipPaymentStatus = tipIntent.status === 'succeeded' ? 'captured' : 'failed'
+  }
+
+  // ── STEP D: Calculate crew tip shares ──────────────────────────────
+  if (tip_amount_cents > 0 && tipPaymentStatus === 'captured') {
+    await distributeTips({
+      booking_id,
+      tip_amount: tip_amount_cents / 100,
+      distribution_model: booking.detailer_profiles.tip_distribution_model,
+      crew_percentage: booking.detailer_profiles.tip_crew_percentage,
+      operator_percentage: booking.detailer_profiles.tip_operator_percentage,
+    })
+  }
+
+  // ── STEP E: Handle Instant Payout ──────────────────────────────────
+  let instantPayoutFee = null
+  if (payment.instant_payout_requested) {
+    const payoutAmount = capturedIntent.amount - capturedIntent.application_fee_amount
+    const instantFee = Math.round(payoutAmount * 0.015)   // 1.5%
+    const netPayout = payoutAmount - instantFee
+
+    await stripe.payouts.create(
+      {
+        amount: netPayout,
+        currency: 'usd',
+        method: 'instant',
+        metadata: { booking_id }
+      },
+      { stripeAccount: stripeAccountId }
+    )
+    instantPayoutFee = instantFee / 100
+  }
+
+  // ── STEP F: Update payment record ──────────────────────────────────
+  await supabase
+    .from('payments')
+    .update({
+      status: 'captured',
+      capture_amount: capturedIntent.amount_received / 100,
+      tip_payment_intent_id: tipPaymentIntentId,
+      tip_payment_status: tipPaymentStatus,
+      modification_intents: capturedModifications.length > 0
+        ? capturedModifications
+        : payment.modification_intents,
+      instant_payout_fee: instantPayoutFee,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('booking_id', booking_id)
+
+  // ── STEP G: Update booking status ──────────────────────────────────
+  await supabase
+    .from('bookings')
+    .update({ status: 'completed', updated_at: new Date().toISOString() })
+    .eq('id', booking_id)
+
+  return new Response(
+    JSON.stringify({ success: true }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+
+// Helper: distribute tips based on operator's configured model
+async function distributeTips({
+  booking_id,
+  tip_amount,
+  distribution_model,
+  crew_percentage,
+  operator_percentage,
+}: {
+  booking_id: string
+  tip_amount: number
+  distribution_model: string
+  crew_percentage: number
+  operator_percentage: number
+}) {
+  const { data: bookingCrew } = await supabase
+    .from('booking_crew')
+    .select('*')
+    .eq('booking_id', booking_id)
+
+  if (!bookingCrew?.length) return
+
+  switch (distribution_model) {
+    case 'assigned_crew': {
+      // Model 1A: single crew gets 100%
+      // Model 1B: multiple crew split equally (tip_share per row)
+      const crewCount = bookingCrew.length
+      const tipShare = 1 / crewCount
+      for (const crew of bookingCrew) {
+        await supabase
+          .from('booking_crew')
+          .update({ tip_share: tipShare })
+          .eq('id', crew.id)
+      }
+      break
+    }
+    case 'split_percentage': {
+      // Model 4: crew_percentage% to crew, operator_percentage% to operator
+      const crewTipTotal = tip_amount * (crew_percentage / 100)
+      const crewShare = crewTipTotal / bookingCrew.length / tip_amount
+      for (const crew of bookingCrew) {
+        await supabase
+          .from('booking_crew')
+          .update({ tip_share: crewShare })
+          .eq('id', crew.id)
+      }
+      break
+    }
+    case 'operator': {
+      // Model 2: operator keeps 100% — tip_share = 0 for all crew
+      for (const crew of bookingCrew) {
+        await supabase
+          .from('booking_crew')
+          .update({ tip_share: 0 })
+          .eq('id', crew.id)
+      }
+      break
+    }
+    case 'split_equal_day': {
+      // Model 3: pool tips across all crew who worked today
+      // Gets handled by the payroll calculation, not here
+      // Set tip_share to null to signal "pool" distribution
+      break
+    }
+  }
+}
+```
+
+---
+
+## STEP 6 — BOOKING CANCELLED EDGE FUNCTION
+
+Handles all cancellation scenarios. Applies the correct fee tier.
+Fires on any booking status → cancelled transition.
+
+**File: `supabase/functions/booking-cancelled/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const {
+    booking_id,
+    cancelled_by,        // 'customer' | 'operator' | 'foam' | 'system'
+    cancellation_reason,
+  } = await req.json()
+
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select(`
+      scheduled_at,
+      subtotal,
+      created_at,
+      reschedule_count,
+      detailer_id,
+      detailer_profiles!inner(stripe_account_id, operator_cancel_strike_count)
+    `)
+    .eq('id', booking_id)
+    .single()
+
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('booking_id', booking_id)
+    .single()
+
+  if (!payment?.stripe_payment_intent_id) {
+    // No hold placed yet — just cancel booking
+    await supabase
+      .from('bookings')
+      .update({ status: 'cancelled', cancelled_by, cancelled_at: new Date().toISOString() })
+      .eq('id', booking_id)
+    return new Response(JSON.stringify({ success: true }))
+  }
+
+  // ── DETERMINE FEE TIER ─────────────────────────────────────────────
+  const now = new Date()
+  const scheduledAt = new Date(booking.scheduled_at)
+  const bookedAt = new Date(booking.created_at)
+  const hoursUntilAppointment = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60)
+  const hoursSinceBooking = (now.getTime() - bookedAt.getTime()) / (1000 * 60 * 60)
+
+  let feeTier = 'free'
+  let feeRate = 0
+
+  if (cancelled_by === 'operator') {
+    // Operator cancellations always free for customer
+    feeTier = 'free'
+    feeRate = 0
+  } else if (cancelled_by === 'customer') {
+    if (hoursSinceBooking <= 72) {
+      feeTier = 'free'        // Within 72hrs of booking — free window
+      feeRate = 0
+    } else if (hoursUntilAppointment > 24) {
+      feeTier = 'twenty_five' // 72-24hrs before appointment
+      feeRate = 0.25
+    } else {
+      feeTier = 'fifty'       // Under 24hrs before appointment
+      feeRate = 0.50
+    }
+  }
+
+  const cancellationFeeAmount = booking.subtotal * feeRate
+  const cancellationFeeAmountCents = Math.round(cancellationFeeAmount * 100)
+
+  // ── EXECUTE STRIPE ACTION ──────────────────────────────────────────
+  if (feeRate === 0) {
+    // Full release — cancel the PaymentIntent
+    await stripe.paymentIntents.cancel(payment.stripe_payment_intent_id)
+
+    // Cancel any modification holds too
+    const modIntents = payment.modification_intents || []
+    for (const mod of modIntents) {
+      if (!mod.captured) {
+        await stripe.paymentIntents.cancel(mod.payment_intent_id)
+      }
+    }
+  } else {
+    // Partial capture — capture the fee amount
+    await stripe.paymentIntents.capture(
+      payment.stripe_payment_intent_id,
+      { amount_to_capture: cancellationFeeAmountCents }
+    )
+  }
+
+  // ── UPDATE DATABASE ────────────────────────────────────────────────
+  await supabase
+    .from('payments')
+    .update({
+      status: feeRate === 0 ? 'cancelled' : 'partially_captured',
+      cancellation_fee_amount: cancellationFeeAmount,
+      cancellation_fee_tier: feeTier,
+      cancellation_initiated_by: cancelled_by,
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason,
+    })
+    .eq('booking_id', booking_id)
+
+  await supabase
+    .from('bookings')
+    .update({
+      status: 'cancelled',
+      cancelled_by,
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason,
+    })
+    .eq('id', booking_id)
+
+  // ── OPERATOR CANCELLATION — APPLY CREDIT + STRIKE ─────────────────
+  if (cancelled_by === 'operator') {
+    // Apply FOAM credit to customer
+    await supabase
+      .from('customer_profiles')
+      .update({
+        foam_credit: supabase.rpc('increment', {
+          row_id: booking.customer_id,
+          amount: booking.subtotal
+        })
+      })
+
+    // Log cancellation strike
+    const newStrikeCount =
+      booking.detailer_profiles.operator_cancel_strike_count + 1
+
+    await supabase
+      .from('detailer_profiles')
+      .update({
+        operator_cancel_strike_count: newStrikeCount,
+        operator_flagged_at: newStrikeCount >= 2
+          ? new Date().toISOString()
+          : null,
+      })
+      .eq('id', booking.detailer_id)
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, fee_tier: feeTier, fee_amount: cancellationFeeAmount }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+```
+
+---
+
+## STEP 7 — STRIPE HOLD EXPIRE EDGE FUNCTION (CRON)
+
+Runs daily. Manages the 7-day authorization hold window.
+
+**File: `supabase/functions/stripe-hold-expire/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async () => {
+  // Find all holds expiring within 48 hours
+  const cutoff = new Date()
+  cutoff.setHours(cutoff.getHours() + 48)
+
+  const { data: expiringPayments } = await supabase
+    .from('payments')
+    .select('*, bookings!inner(id, customer_id, scheduled_at)')
+    .eq('status', 'authorized')
+    .lt('hold_expires_at', cutoff.toISOString())
+
+  for (const payment of expiringPayments || []) {
+    try {
+      // Attempt re-authorization — cancel old intent, create new one
+      await stripe.paymentIntents.cancel(payment.stripe_payment_intent_id)
+
+      const newIntent = await stripe.paymentIntents.create({
+        amount: Math.round(payment.hold_amount * 100),
+        currency: 'usd',
+        capture_method: 'manual',
+        customer: payment.stripe_customer_id,
+        payment_method: payment.stripe_payment_method_id,
+        confirm: true,
+        off_session: true,
+        metadata: { booking_id: payment.booking_id, type: 're_auth' }
+      })
+
+      // Success — update hold with new expiry
+      const newExpiry = new Date()
+      newExpiry.setDate(newExpiry.getDate() + 7)
+
+      await supabase
+        .from('payments')
+        .update({
+          stripe_payment_intent_id: newIntent.id,
+          hold_placed_at: new Date().toISOString(),
+          hold_expires_at: newExpiry.toISOString(),
+        })
+        .eq('id', payment.id)
+
+    } catch (err) {
+      // Re-auth failed — notify customer, give 24hr window
+      await supabase.functions.invoke('send-notification', {
+        body: {
+          user_id: payment.bookings.customer_id,
+          type: 'hold_re_auth_failed',
+          booking_id: payment.booking_id,
+          message: 'Your payment method needs attention to keep your detail booked.',
+        }
+      })
+
+      // Mark payment as needing attention
+      await supabase
+        .from('payments')
+        .update({ status: 'hold_re_auth_failed' })
+        .eq('id', payment.id)
+
+      // Schedule auto-cancel if no update in 24hrs
+      // This is handled by another cron pass tomorrow
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ processed: expiringPayments?.length || 0 }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+```
+
+**Register the cron in `supabase/config.toml`:**
+```toml
+[functions.stripe-hold-expire]
+schedule = "0 6 * * *"   # runs daily at 6am UTC
+```
+
+---
+
+## STEP 8 — STRIPE WEBHOOK HANDLER
+
+The webhook handler keeps FOAM's database in sync with Stripe events.
+This is the single entry point for all inbound Stripe events.
+
+**File: `supabase/functions/stripe-webhook/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const signature = req.headers.get('stripe-signature')!
+  const body = await req.text()
+
+  let event: Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      Deno.env.get('STRIPE_WEBHOOK_SECRET')!
+    )
+  } catch (err) {
+    return new Response('Webhook signature verification failed', { status: 400 })
+  }
+
+  switch (event.type) {
+
+    // ── PAYMENT INTENTS ─────────────────────────────────────────────
+    case 'payment_intent.succeeded': {
+      const intent = event.data.object as Stripe.PaymentIntent
+      const bookingId = intent.metadata.booking_id
+      if (!bookingId) break
+
+      await supabase
+        .from('payments')
+        .update({
+          status: 'captured',
+          payment_method_type: getPaymentMethodType(intent),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('stripe_payment_intent_id', intent.id)
+      break
+    }
+
+    case 'payment_intent.payment_failed': {
+      const intent = event.data.object as Stripe.PaymentIntent
+      const bookingId = intent.metadata.booking_id
+      if (!bookingId) break
+
+      await supabase
+        .from('payments')
+        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .eq('stripe_payment_intent_id', intent.id)
+
+      // Notify customer
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('bookings!inner(customer_id)')
+        .eq('stripe_payment_intent_id', intent.id)
+        .single()
+
+      if (payment) {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            user_id: payment.bookings.customer_id,
+            type: 'payment_failed',
+            booking_id: bookingId,
+          }
+        })
+      }
+      break
+    }
+
+    case 'payment_intent.canceled': {
+      const intent = event.data.object as Stripe.PaymentIntent
+      await supabase
+        .from('payments')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('stripe_payment_intent_id', intent.id)
+      break
+    }
+
+    // ── CONNECT ACCOUNT ─────────────────────────────────────────────
+    case 'account.updated': {
+      const account = event.data.object as Stripe.Account
+      const operatorId = account.metadata?.operator_id
+      if (!operatorId) break
+
+      const isFullyOnboarded =
+        account.details_submitted &&
+        account.charges_enabled &&
+        account.payouts_enabled
+
+      if (isFullyOnboarded) {
+        await supabase
+          .from('detailer_profiles')
+          .update({
+            badge_verified: true,
+            identity_verified_at: new Date().toISOString(),
+          })
+          .eq('id', operatorId)
+      }
+      break
+    }
+
+    // ── PAYOUTS ─────────────────────────────────────────────────────
+    case 'payout.paid': {
+      const payout = event.data.object as Stripe.Payout
+      await supabase
+        .from('payouts')
+        .update({ status: 'paid' })
+        .eq('stripe_payout_id', payout.id)
+      break
+    }
+
+    case 'payout.failed': {
+      const payout = event.data.object as Stripe.Payout
+      await supabase
+        .from('payouts')
+        .update({ status: 'failed' })
+        .eq('stripe_payout_id', payout.id)
+
+      // Trigger ErrorDrawer notification to operator
+      await supabase.functions.invoke('send-notification', {
+        body: {
+          type: 'payout_failed',
+          payout_id: payout.id,
+          amount: payout.amount / 100,
+        }
+      })
+      break
+    }
+
+    // ── DISPUTES ────────────────────────────────────────────────────
+    case 'charge.dispute.created': {
+      const dispute = event.data.object as Stripe.Dispute
+      const charge = await stripe.charges.retrieve(dispute.charge as string)
+      const bookingId = charge.metadata?.booking_id
+      if (!bookingId) break
+
+      // Flag booking and pause operator payout
+      await supabase
+        .from('payments')
+        .update({
+          status: 'disputed',
+          dispute_opened_at: new Date().toISOString(),
+        })
+        .eq('booking_id', bookingId)
+
+      // Alert FOAM ops
+      await supabase.functions.invoke('send-notification', {
+        body: {
+          type: 'dispute_opened',
+          booking_id: bookingId,
+          dispute_id: dispute.id,
+          amount: dispute.amount / 100,
+        }
+      })
+      break
+    }
+
+    case 'charge.dispute.closed': {
+      const dispute = event.data.object as Stripe.Dispute
+      const charge = await stripe.charges.retrieve(dispute.charge as string)
+      const bookingId = charge.metadata?.booking_id
+      if (!bookingId) break
+
+      await supabase
+        .from('payments')
+        .update({
+          status: dispute.status === 'won' ? 'captured' : 'disputed',
+          dispute_resolved_at: new Date().toISOString(),
+          dispute_outcome: dispute.status === 'won' ? 'won' : 'lost',
+        })
+        .eq('booking_id', bookingId)
+      break
+    }
+
+    // ── SUBSCRIPTIONS ────────────────────────────────────────────────
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as Stripe.Subscription
+      // Downgrade operator to Starter tier
+      // Identify operator by Stripe customer ID
+      const { data: profile } = await supabase
+        .from('detailer_profiles')
+        .select('id')
+        .eq('stripe_customer_id', subscription.customer)
+        .single()
+
+      if (profile) {
+        // Update subscription tier in FOAM
+        // Implementation depends on how you track tier in detailer_profiles
+        await supabase
+          .from('detailer_profiles')
+          .update({ subscription_tier: 'starter' })
+          .eq('id', profile.id)
+      }
+      break
+    }
+  }
+
+  return new Response(JSON.stringify({ received: true }), {
+    headers: { 'Content-Type': 'application/json' },
+  })
+})
+
+// Helper: map Stripe payment method type to FOAM's enum
+function getPaymentMethodType(intent: Stripe.PaymentIntent): string {
+  const type = intent.payment_method_types?.[0]
+  if (type === 'cashapp') return 'cashapp'
+  const details = (intent as any).payment_method_details?.type
+  if (details === 'apple_pay') return 'apple_pay'
+  if (details === 'google_pay') return 'google_pay'
+  return 'card'
+}
+```
+
+---
+
+## STEP 9 — REGISTER WEBHOOK IN STRIPE DASHBOARD
+
+1. Go to Stripe Dashboard → Developers → Webhooks
+2. Add endpoint: `https://yteffvegixoqvjoykwzx.supabase.co/functions/v1/stripe-webhook`
+3. Select events to listen for:
+   - `payment_intent.succeeded`
+   - `payment_intent.payment_failed`
+   - `payment_intent.canceled`
+   - `account.updated`
+   - `payout.paid`
+   - `payout.failed`
+   - `charge.dispute.created`
+   - `charge.dispute.closed`
+   - `customer.subscription.deleted`
+4. Copy the webhook signing secret → add to Replit Secrets as `STRIPE_WEBHOOK_SECRET`
+
+---
+
+## STEP 10 — BOOKING MODIFICATION HOLD (EDGE FUNCTION)
+
+When a manager approves a crew-added service, create an additional
+authorization for the modification amount.
+
+**File: `supabase/functions/booking-modification-request/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const { modification_id, action } = await req.json()
+  // action: 'approve' | 'reject'
+
+  const { data: modification } = await supabase
+    .from('booking_modifications')
+    .select('*, bookings!inner(customer_id, payments!inner(*))')
+    .eq('id', modification_id)
+    .single()
+
+  if (action === 'approve' && modification.modification_type === 'service_added') {
+    const payment = modification.bookings.payments[0]
+    const additionalAmountCents = Math.round(modification.new_price * 100)
+
+    // Create additional authorization hold for the modification amount
+    const additionalIntent = await stripe.paymentIntents.create({
+      amount: additionalAmountCents,
+      currency: 'usd',
+      capture_method: 'manual',
+      customer: payment.stripe_customer_id,
+      payment_method: payment.stripe_payment_method_id,
+      confirm: true,
+      off_session: true,
+      metadata: {
+        booking_id: modification.booking_id,
+        modification_id,
+        type: 'modification_hold'
+      }
+    })
+
+    // Store on modification record
+    await supabase
+      .from('booking_modifications')
+      .update({
+        status: 'approved',
+        stripe_payment_intent_id: additionalIntent.id,
+        hold_amount: modification.new_price,
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', modification_id)
+
+    // Add to payment's modification_intents array
+    const existingIntents = payment.modification_intents || []
+    await supabase
+      .from('payments')
+      .update({
+        modification_intents: [
+          ...existingIntents,
+          {
+            modification_id,
+            payment_intent_id: additionalIntent.id,
+            amount: modification.new_price,
+            captured: false
+          }
+        ]
+      })
+      .eq('id', payment.id)
+
+    // Notify customer of additional hold
+    await supabase.functions.invoke('send-notification', {
+      body: {
+        user_id: modification.bookings.customer_id,
+        type: 'service_added',
+        modification_id,
+        amount: modification.new_price,
+      }
+    })
+  }
+
+  if (action === 'reject') {
+    await supabase
+      .from('booking_modifications')
+      .update({
+        status: 'rejected',
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', modification_id)
+  }
+
+  return new Response(
+    JSON.stringify({ success: true }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+```
+
+---
+
+## STEP 11 — NO-SHOW HANDLER EDGE FUNCTION
+
+**File: `supabase/functions/no-show-handler/index.ts`**
+
+```typescript
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  const { booking_id } = await req.json()
+
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('*, customer_profiles!inner(id), payments!inner(*)')
+    .eq('id', booking_id)
+    .single()
+
+  const payment = booking.payments[0]
+
+  // Send 10-minute grace period notification
+  await supabase.functions.invoke('send-notification', {
+    body: {
+      user_id: booking.customer_profiles.id,
+      type: 'no_show_grace_period',
+      booking_id,
+      message: 'Your detailer is at the location. Are you on your way?',
+    }
+  })
+
+  // Wait 10 minutes then capture 50% if operator confirms no-show
+  // In production this would use a queue — for now, the operator
+  // makes a second API call to confirm after the grace period
+
+  const noShowFeeAmount = booking.subtotal * 0.5
+  const noShowFeeAmountCents = Math.round(noShowFeeAmount * 100)
+
+  await stripe.paymentIntents.capture(
+    payment.stripe_payment_intent_id,
+    { amount_to_capture: noShowFeeAmountCents }
+  )
+
+  await supabase
+    .from('payments')
+    .update({
+      status: 'partially_captured',
+      cancellation_fee_amount: noShowFeeAmount,
+      cancellation_fee_tier: 'no_show',
+      cancellation_initiated_by: 'system',
+    })
+    .eq('id', payment.id)
+
+  await supabase
+    .from('bookings')
+    .update({
+      status: 'no_show',
+      no_show_reported_at: new Date().toISOString(),
+    })
+    .eq('id', booking_id)
+
+  return new Response(
+    JSON.stringify({ success: true, fee: noShowFeeAmount }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
+})
+```
+
+---
+
+## STEP 12 — DEPLOY ALL EDGE FUNCTIONS
+
+```bash
+# Deploy all functions at once
+supabase functions deploy stripe-create-connect-account
+supabase functions deploy stripe-create-customer
+supabase functions deploy stripe-create-payment-intent
+supabase functions deploy stripe-capture
+supabase functions deploy booking-cancelled
+supabase functions deploy stripe-hold-expire
+supabase functions deploy stripe-webhook
+supabase functions deploy booking-modification-request
+supabase functions deploy no-show-handler
+```
+
+---
+
+## TESTING CHECKLIST
+
+Test every flow in Stripe TEST MODE before switching to live.
+
+### Stripe Test Cards
+```
+Success:                    4242 4242 4242 4242
+Declined:                   4000 0000 0000 0002
+Auth required:              4000 0025 0000 3155
+Insufficient funds:         4000 0000 0000 9995
+Dispute (after capture):    4000 0000 0000 0259
+```
+
+### Test Flows
+
+**Operator onboarding:**
+- [ ] Connect Express link opens in browser
+- [ ] Completing onboarding triggers `account.updated` webhook
+- [ ] `badge_verified` set to true on `detailer_profiles`
+- [ ] Deep link returns operator to app on completion
+
+**Customer booking payment:**
+- [ ] Payment sheet opens with card, Apple Pay, Google Pay options
+- [ ] Cash App Pay visible (after Dashboard toggle enabled)
+- [ ] Successful payment creates PaymentIntent with `capture_method: manual`
+- [ ] `payments` table updated with hold details
+- [ ] Payment method type stored correctly
+
+**Job completion capture:**
+- [ ] `stripe-capture` captures service hold
+- [ ] Modification holds captured if any exist
+- [ ] Tip PaymentIntent created separately if tip > 0
+- [ ] `booking_crew.tip_share` calculated correctly per distribution model
+- [ ] Instant Payout fires if opted in, 1.5% fee deducted
+
+**Cancellation — free window:**
+- [ ] Within 72hrs of booking → `paymentIntents.cancel()` → full hold released
+- [ ] `payments.cancellation_fee_tier = 'free'`
+
+**Cancellation — 25% fee:**
+- [ ] 72-24hrs before appointment → partial capture at 25%
+- [ ] `payments.cancellation_fee_tier = 'twenty_five'`
+- [ ] `payments.status = 'partially_captured'`
+
+**Cancellation — 50% fee:**
+- [ ] Under 24hrs before appointment → partial capture at 50%
+- [ ] `payments.cancellation_fee_tier = 'fifty'`
+
+**No-show:**
+- [ ] Grace period notification fires
+- [ ] 50% captured on operator confirmation
+- [ ] `bookings.status = 'no_show'`
+
+**Operator cancellation:**
+- [ ] Full hold released
+- [ ] FOAM credit applied to customer
+- [ ] `operator_cancel_strike_count` incremented
+- [ ] `operator_flagged_at` set if count >= 2
+
+**Webhook events:**
+- [ ] `payment_intent.succeeded` → payments status updated
+- [ ] `payment_intent.payment_failed` → customer notified
+- [ ] `account.updated` → badge_verified set on completion
+- [ ] `payout.failed` → ErrorDrawer notification triggered
+- [ ] `charge.dispute.created` → dispute flagged, FOAM ops alerted
+
+**Hold expiry (stripe-hold-expire):**
+- [ ] Re-auth attempted at T-48hrs
+- [ ] Success: new expiry set silently
+- [ ] Failure: customer notified, 24hr window
+
+---
+
+## IMPORTANT NOTES
+
+1. **Never log or store raw card data.** Stripe Elements handles PCI
+   compliance — card data never touches FOAM servers.
+
+2. **platform_fee_override:** Before calculating fees, always check
+   `detailer_profiles.platform_fee_override` first. If not NULL, use it.
+   Otherwise use the tier default (15%/12%/10%).
+
+3. **Instant Payout timing:** The 1.5% fee is deducted from the operator's
+   net payout, not from the customer charge. The customer always pays the
+   same amount regardless of payout method.
+
+4. **Tip PaymentIntent timing:** Create the tip PaymentIntent only AFTER
+   the service hold is successfully captured. Never create a tip charge
+   if the service capture fails.
+
+5. **Modification holds:** Each approved modification gets its own
+   PaymentIntent. They are captured individually in `stripe-capture` but
+   must all succeed before marking the booking as completed.
+
+6. **Cash App Pay:** Enable in Stripe Dashboard before testing. Add
+   `'cashapp'` to `payment_method_types` in PaymentIntent creation. The
+   customer must have the Cash App app installed to use it.
+
+7. **Test mode vs live mode:** All webhook URLs must be updated when
+   switching from test to live. Stripe test webhooks only send to test
+   endpoints. Use `stripe listen --forward-to` for local testing.

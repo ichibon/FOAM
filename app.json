@@ -49,6 +49,13 @@
       "expo-router",
       "expo-secure-store",
       [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.app.foam.mobile",
+          "enableGooglePay": true
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",

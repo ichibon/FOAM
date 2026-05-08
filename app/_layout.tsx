@@ -14,6 +14,7 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
+import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
 SplashScreen.preventAutoHideAsync();
@@ -76,10 +77,16 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <StatusBar style="light" />
-          <RootLayoutNav />
-        </AuthProvider>
+        <StripeProvider
+          publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
+          merchantIdentifier="merchant.app.foam.mobile"
+          urlScheme="foam"
+        >
+          <AuthProvider>
+            <StatusBar style="light" />
+            <RootLayoutNav />
+          </AuthProvider>
+        </StripeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

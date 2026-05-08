@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-export default function DetailerLayout() {
+export default function OperatorLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="today" />

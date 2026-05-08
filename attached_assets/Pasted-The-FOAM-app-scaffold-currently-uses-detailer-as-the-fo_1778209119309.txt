@@ -1,0 +1,45 @@
+The FOAM app scaffold currently uses detailer as the folder and role name throughout the codebase. This needs to be updated to operator to match the navigation spec and data model. The role covers solo mobile operators, fixed location operators, hybrid operators, and multi-unit operators — detailer is too narrow.
+Make the following changes:
+1. Rename folders:
+
+app/detailer/ → app/operator/
+Any nested folders inside app/detailer/ keep their names, just the parent folder changes
+
+2. Update all imports and references:
+Search the entire codebase for any string that contains detailer and replace with operator — EXCEPT for the following which should stay as detailer:
+
+Any Supabase table references: detailer_profiles stays as-is — that's the actual database table name and must not change
+Any Supabase column references: detailer_id stays as-is
+Any TypeScript type that maps directly to a database table (e.g., DetailerProfile type can stay or be aliased — don't break the DB mapping)
+
+3. Specific files to update:
+
+app/_layout.tsx — update any route references from /detailer to /operator
+hooks/useAuth.tsx — update role string checks. If the current code checks for role === 'detailer', update to role === 'operator'. The role value stored in the Supabase JWT custom claim should also be operator not detailer
+constants/design.ts — search for any detailer string references
+types/database.ts — update TypeScript interface/type names that use Detailer to use Operator (e.g., DetailerNavigator → OperatorNavigator) but leave any types that directly map to Supabase table names as-is
+
+4. Update the Supabase JWT custom claim:
+In hooks/useAuth.tsx or wherever the user role is set/read from the JWT, ensure the role values match these exact strings:
+
+'customer'
+'operator' ← was 'detailer'
+'manager'
+'team_member'
+
+5. After renaming — verify:
+
+The app still builds without TypeScript errors
+The role-based routing in useAuth.tsx correctly routes operator role to app/operator/ tabs
+The 5-tab operator navigator still renders (Today · Bookings · Customers · Business · Profile)
+The 3-tab customer navigator still renders (Discover · Bookings · Profile)
+The 3-tab crew navigator still renders (My Jobs · Earnings · Profile)
+
+Do not change:
+
+Any Supabase table names (detailer_profiles, detailer_id)
+The 5-tab, 3-tab, 3-tab navigator structure
+Any existing screen component names or logic
+The Supabase project ID or client configuration
+
+This is a pure rename — no new features, no logic changes. Just folder names, import paths, and role string values.

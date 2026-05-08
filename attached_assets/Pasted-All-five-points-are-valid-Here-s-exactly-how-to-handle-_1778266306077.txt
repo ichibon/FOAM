@@ -1,0 +1,93 @@
+All five points are valid. Here's exactly how to handle each one:
+
+---
+
+**1. `getPlatformFeeRate` — query Supabase, not Stripe**
+
+The Supabase approach is correct. Simpler, faster, no Stripe product ID constants needed. Add a `subscription_tier` column to `detailer_profiles` that gets set at onboarding and updated by the `customer.subscription.deleted` webhook. The fee lookup becomes:
+
+```typescript
+async function getPlatformFeeRate(detailerProfileId: string): Promise<number> {
+  const { data } = await supabase
+    .from('detailer_profiles')
+    .select('subscription_tier, platform_fee_override')
+    .eq('id', detailerProfileId)
+    .single()
+
+  // Check manual override first
+  if (data.platform_fee_override !== null) {
+    return data.platform_fee_override
+  }
+
+  // Map tier to rate
+  const rates: Record<string, number> = {
+    starter: 0.15,
+    pro: 0.12,
+    crew: 0.10,
+  }
+  return rates[data.subscription_tier] ?? 0.15 // default to Starter if unknown
+}
+```
+
+Tell Replit to add `subscription_tier text NOT NULL DEFAULT 'starter'` to `detailer_profiles` via a migration before wiring this up.
+
+---
+
+**2. `platform_fee_override` check**
+
+Already handled in the function above — it checks override first before falling back to tier rate. Tell Replit to use that exact pattern everywhere fees are calculated, including the modification hold and tip calculations.
+
+---
+
+**3. No-show 10-minute wait**
+
+The two-call approach is correct for launch. Operator calls the endpoint once to report the no-show (which sends the grace period notification), and a second time to confirm after waiting. Don't build a queue for this now. Tell Replit to split it into two explicit endpoints:
+
+- `POST /no-show-report` — sends grace period notification, marks booking `no_show_grace_period`
+- `POST /no-show-confirm` — operator confirms after 10 minutes, captures 50%
+
+Clean separation, no queue dependency.
+
+---
+
+**4. `customer_id` missing from query**
+
+Simple fix. Tell Replit to add `customer_id` to the booking select:
+
+```typescript
+const { data: booking } = await supabase
+  .from('bookings')
+  .select(`
+    customer_id,        // ← add this
+    scheduled_at,
+    subtotal,
+    created_at,
+    reschedule_count,
+    detailer_id,
+    detailer_profiles!inner(stripe_account_id, operator_cancel_strike_count)
+  `)
+  .eq('id', booking_id)
+  .single()
+```
+
+---
+
+**5. Environment variables**
+
+You need five things from your Stripe Dashboard before Replit can deploy and test:
+
+| Variable | Where to find it |
+|----------|-----------------|
+| `STRIPE_PUBLISHABLE_KEY` | Dashboard → Developers → API Keys → Publishable key |
+| `STRIPE_SECRET_KEY` | Dashboard → Developers → API Keys → Secret key |
+| `STRIPE_WEBHOOK_SECRET` | Dashboard → Developers → Webhooks → (after creating endpoint) → Signing secret |
+| `STRIPE_CONNECT_CLIENT_ID` | Dashboard → Connect → Settings → Integration → Client ID |
+| `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Same as publishable key — needs the `EXPO_PUBLIC_` prefix for client-side access |
+
+Get those five into Replit Secrets first, then tell Replit to proceed. The Supabase vars should already be there from the initial scaffold.
+
+---
+
+**Tell Replit:**
+
+> Proceed with building. Implement all five fixes as discussed: (1) query `detailer_profiles.subscription_tier` from Supabase for fee rate instead of Stripe product matching — add `subscription_tier text NOT NULL DEFAULT 'starter'` to detailer_profiles via migration, (2) check `platform_fee_override` first in all fee calculations, (3) split no-show into two endpoints: `/no-show-report` and `/no-show-confirm`, (4) add `customer_id` to the bookings select in `booking-cancelled`, (5) environment variables will be added to Replit Secrets before deployment. Build all Edge Functions now and we'll add the secrets when ready to deploy and test.

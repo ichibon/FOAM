@@ -46,6 +46,7 @@ verify_jwt = true
 
 [functions.stripe-hold-expire]
 verify_jwt = false
+schedule = "0 6 * * *"
 
 [functions.stripe-webhook]
 verify_jwt = false

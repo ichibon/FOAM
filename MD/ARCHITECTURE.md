@@ -1,5 +1,7 @@
 # FOAM — Architecture
-**Version 1.1 — Updated May 2, 2026**
+**Version 1.3 — Updated May 9, 2026**
+Changes from v1.2 marked with `[v1.3]`
+Changes from v1.1 marked with `[v1.2]`
 Changes from v1.0 marked with `[v1.1]`
 
 > This document is the architectural overview of the entire FOAM platform. It connects the stack, the systems, the data flow, and the decision rationale in one place. Use this as the map before going deep into any individual component.
@@ -187,10 +189,10 @@ CREATE POLICY "detailers_own_bookings" ON bookings
     SELECT id FROM detailer_profiles WHERE user_id = auth.uid()
   ));
 
--- Crew see only jobs assigned to them
-CREATE POLICY "crew_assigned_jobs" ON bookings
-  FOR SELECT USING (crew_member_id = (
-    SELECT id FROM crew_members WHERE user_id = auth.uid()
+-- Team members see only jobs assigned to them
+CREATE POLICY "team_member_assigned_jobs" ON bookings
+  FOR SELECT USING (team_member_id = (
+    SELECT id FROM team_members WHERE user_id = auth.uid()
   ));
 ```
 
@@ -224,14 +226,14 @@ Operations that require server-side execution run as Supabase Edge Functions (De
 - Denormalized fields for read performance (`avg_rating`, `total_reviews` on `detailer_profiles`) — updated via triggers
 - Foreign keys enforced at the database level, not just application level
 
-### Core Entity Relationships [v1.1 — updated]
+### Core Entity Relationships [v1.3 — updated]
 
 ```
 users (1) ────────── (1) detailer_profiles
 users (1) ────────── (1) customer_profiles
-users (1) ────────── (1) crew_members
+users (1) ────────── (1) team_members
 
-detailer_profiles (1) ── (many) crew_members
+detailer_profiles (1) ── (many) team_members
 detailer_profiles (1) ── (many) service_packages
 detailer_profiles (1) ── (many) bookings
 
@@ -240,7 +242,7 @@ customer_profiles (1) ── (many) bookings
 
 bookings (many) ─────── (1) customer_profiles
 bookings (many) ─────── (1) detailer_profiles
-bookings (many) ─────── (0..1) crew_members
+bookings (many) ─────── (0..1) team_members
 bookings (1) ──────────── (0..1) reviews
 bookings (1) ──────────── (0..1) payments
 bookings (1) ──────────── (many) booking_vehicles          [v1.1 — replaces single vehicle_id]
@@ -267,24 +269,104 @@ Data access is partitioned at the RLS level — not the application level:
 
 ---
 
-## Payment Architecture [v1.1 — updated]
+## Payment Architecture [v1.2 — fully updated]
 
-### The Money Flow
+### Platform Fee Structure
 
-FOAM uses Stripe's **manual capture model** (authorization hold). This is the same mechanism used by Uber, Airbnb, and DoorDash. Funds are authorized at booking and captured only after the job is complete.
+FOAM charges operators a per-booking platform fee tiered by subscription. FOAM absorbs Stripe's processing cost (2.9% + $0.30) — operators see one clean percentage with no separate processing charge.
+
+| Tier | Monthly | Platform Fee | FOAM nets after Stripe |
+|------|---------|-------------|----------------------|
+| Starter | $29/mo | 15% | ~12% |
+| Pro | $69/mo | 12% | ~9% |
+| Crew | $149/mo | 10% | ~7% |
+
+Cancellation fees follow the same split: FOAM takes its standard platform fee percentage, operator keeps the remainder.
+
+### Accepted Payment Methods
+
+**Customer-side (inbound):**
+
+| Method | Stripe API | Status |
+|--------|-----------|--------|
+| Credit / Debit card | `card` | ✅ Launch |
+| Apple Pay | `card` (wallet) | ✅ Launch — automatic with Stripe Elements |
+| Google Pay | `card` (wallet) | ✅ Launch — automatic with Stripe Elements |
+| Cash App Pay | `cashapp` | ✅ Launch — enable in Stripe Dashboard → Settings → Payment Methods → Wallets |
+| ACH / Bank transfer | `us_bank_account` | ❌ V2 |
+
+**Operator-side (outbound payouts):**
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| Bank account (ACH) | ✅ Launch | Standard 2-business-day rolling payout |
+| Instant Payout | ✅ Launch (opt-in) | 1.5% fee, same-day to debit card. Operator chooses per payout. |
+| Cash App bank account | ✅ Launch (self-service) | Operator enters Cash App routing/account numbers in Stripe Connect. FOAM surfaces as a tip in onboarding. |
+
+### Authorization Hold Model
+
+Full service subtotal held at booking confirmation. Immediately — not 24-48 hours before the appointment. Tip is always a separate PaymentIntent at job completion.
+
+**Hold amount calculation:**
+```
+hold_amount = sum of all services across all vehicles in the booking
+```
+
+**Field-added services (booking modifications):**
+When a manager approves a crew-added service that increases the booking total, FOAM immediately creates an additional authorization for the difference. All holds captured together at job completion.
+
+```
+modification_intents = [{modification_id, payment_intent_id, amount, captured}]
+stored as JSONB on payments table
+```
+
+### Cancellation Policy [v1.2 — new]
+
+| When customer cancels | Fee | Stripe Action |
+|-----------------------|-----|--------------|
+| Within 72 hours of booking | Free | `paymentIntents.cancel()` — full hold released |
+| 72–24 hours before appointment | 25% of service total | Partial capture at 25%, remainder released |
+| Under 24 hours before appointment | 50% of service total | Partial capture at 50%, remainder released |
+| No-show | 50% of service total | Partial capture at 50%, remainder released |
+
+**Cancellation fee split:** FOAM takes its standard platform fee. Operator keeps the remainder.
+
+**Operator cancellations:** Always free for the customer. Hold fully released. FOAM credit applied to customer account. Operator cancellation strike logged. Maximum 2 operator cancellations before auto-cancel + serious flag on account.
+
+### Reschedule Policy [v1.2 — new]
+
+| Who | When | Outcome |
+|-----|------|---------|
+| Customer | More than 24hrs before original appointment | Free. Hold transfers to new date. Cancellation policy clock resets from new booking time. Max 2 reschedules per booking. |
+| Customer | Less than 24hrs before original appointment | Treated as late cancellation — 50% fee. Customer rebooks fresh. |
+| Operator | Any time | Always free for customer. Hold released, FOAM credit applied. Cancel strike logged. Max 2 before auto-cancel + serious flag. |
+
+**Reschedule limit:** 2 per booking maximum. 3rd change treated as cancellation under standard policy.
+
+### The Money Flow [v1.2 — updated]
 
 ```
 Customer books appointment
       │
       ▼
 Stripe PaymentIntent created (capture_method: 'manual')
+paymentMethodTypes: ['card', 'cashapp']
+Apple Pay + Google Pay automatic via 'card'
       │
       ▼
-Authorization hold placed on customer's card
-(Full appointment subtotal recommended — not a token $100 amount)
+Authorization hold = full service subtotal
+Placed immediately at booking confirmation
+stored: hold_amount, hold_placed_at, hold_expires_at
       │
       ▼
 Hold valid for 7 days — managed by stripe-hold-expire Edge Function
+      │
+      ├── Booking modification approved (crew adds service in field)
+      │         │
+      │         ▼
+      │   Additional PaymentIntent created for modification amount
+      │   Stored in payments.modification_intents JSONB array
+      │   Customer notified of additional hold
       │
       ├── Job happens as scheduled
       │         │
@@ -294,89 +376,152 @@ Hold valid for 7 days — managed by stripe-hold-expire Edge Function
       │         ▼
       │   stripe-capture Edge Function fires
       │         │
-      │         ▼
-      │   PaymentIntent captured at final amount (subtotal + tip)
-      │         │
-      │         ├── Platform fee deducted
-      │         │
-      │         └── Net amount → operator's Stripe Connect account
-      │                   │
-      │                   ▼
-      │             Operator's bank account (standard Stripe payout schedule)
+      │         ├── Captures original hold (service subtotal)
+      │         ├── Captures modification holds (approved add-ons)
+      │         ├── Creates separate PaymentIntent for tip (Option A)
+      │         ├── Deducts FOAM platform fee (15% / 12% / 10% by tier)
+      │         ├── Transfers net to operator's Stripe Connect account
+      │         ├── Triggers Instant Payout if operator opted in (1.5% fee)
+      │         └── Calculates crew tip shares per tip_distribution_model
       │
-      ├── Operator cancels before job
+      ├── Customer cancels — within 72hrs of booking
       │         │
       │         ▼
-      │   booking-cancelled Edge Function fires
-      │   PaymentIntent cancelled → hold released (5-7 business days)
-      │   Customer notified + FOAM credit applied (Standard Policy)
+      │   booking-cancelled fires → paymentIntents.cancel()
+      │   Full hold released (5-7 business days to customer card)
+      │
+      ├── Customer cancels — 72-24hrs before appointment
+      │         │
+      │         ▼
+      │   booking-cancelled fires → partial capture at 25%
+      │   Remainder released. Both parties notified.
+      │
+      ├── Customer cancels — under 24hrs before appointment
+      │         │
+      │         ▼
+      │   booking-cancelled fires → partial capture at 50%
+      │   Remainder released. Both parties notified.
+      │
+      ├── Operator cancels — any time
+      │         │
+      │         ▼
+      │   booking-cancelled fires → paymentIntents.cancel()
+      │   Full hold released. FOAM credit applied to customer.
+      │   Operator cancel strike logged.
       │
       ├── Customer no-show
       │         │
       │         ▼
-      │   no-show-handler Edge Function fires
-      │   Partial capture: 50% of affected services
-      │   50% to operator, 50% retained by FOAM
-      │   Customer notified of no-show fee
+      │   no-show-handler fires
+      │   10-min grace period push + SMS to customer
+      │   On operator confirmation → partial capture at 50%
+      │   FOAM takes platform fee, operator keeps remainder
+      │   booking.status → no_show
+      │
+      ├── Customer reschedules — more than 24hrs out
+      │         │
+      │         ▼
+      │   Original hold cancelled, new hold created for new date
+      │   bookings.reschedule_count incremented
+      │   If reschedule_count > 2 → treated as cancellation
+      │
+      ├── Customer reschedules — under 24hrs out
+      │         │
+      │         ▼
+      │   Treated as late cancellation — 50% fee
+      │   Customer rebooks fresh
       │
       └── Hold approaches expiry (T-48hrs)
                 │
                 ▼
-          stripe-hold-expire attempts re-authorization
+          stripe-hold-expire cron attempts re-authorization
                 │
-                ├── Success → silent, new expiry set
+                ├── Success → silent, new hold_expires_at set
                 │
-                └── Failure → customer notified, 24hr window to update payment
-                              No response → booking cancelled, slot reopened
-```
-
-### Payment Status State Machine [v1.1]
+                └── Failure → push + SMS to customer, 24hr window
+                              No response → booking-cancelled fires
+                              Full hold released, slot reopened
 
 ```
-authorized → captured → paid_out
-     │
-     ├── cancelled (hold released)
-     ├── hold_expired (re-auth failed, booking cancelled)
-     ├── failed (capture failed)
-     ├── refunded (post-capture refund)
-     └── disputed → won (funds restored) | lost (chargeback absorbed)
+
+### Edge Functions [v1.2 — updated]
+
+| Function | Type | Trigger | Purpose |
+|----------|------|---------|---------|
+| `stripe-webhook` | Handler | Stripe webhook events | Syncs payment status, operator Connect onboarding completion, payout status, disputes to FOAM database |
+| `stripe-capture` | Action | Customer confirms payment | Captures service hold + modification holds, creates tip PaymentIntent, deducts platform fee by tier, routes to operator Connect, triggers Instant Payout if opted in, calculates crew tip shares |
+| `stripe-hold-expire` | Cron (daily) | Scheduled | Checks holds expiring within 48hrs, re-authorizes, notifies customer on failure, fires booking-cancelled if no response |
+| `booking-cancelled` | Action | Cancellation event | Cancels or partially captures per policy tier, releases remainder, applies FOAM credit on operator cancellation, logs cancel strike, notifies both parties |
+| `no-show-handler` | Action | Operator confirms no-show | Grace period push + SMS, partial capture at 50%, updates booking status, notifies customer of fee |
+| `booking-modification-request` | Action | booking_modifications row created | Pushes modification to manager for approval, creates additional PaymentIntent hold on approval, sets auto_approve_at |
+| `booking-confirmed` | Action | Booking status → confirmed | Push + SMS to customer and operator |
+| `appointment-reminder` | Cron | Scheduled | 24hr and 1hr reminders |
+| `review-request` | Action | Booking status → completed | Review request push + SMS 1hr after completion |
+| `rain-check` | Cron (daily) | Scheduled | Weather API check for Rain Coverage claims |
+| `payout-summary` | Cron (weekly) | Scheduled | Operator payout reports |
+| `lapsed-customer` | Cron (weekly) | Scheduled | Re-engagement for customers 60+ days without booking (V2) |
+
+### Stripe Webhook Events Handled [v1.2 — updated]
+
+| Event | FOAM Action |
+|-------|------------|
+| `payment_intent.succeeded` | Update `payments.status → captured`, trigger payout summary |
+| `payment_intent.payment_failed` | Notify customer, block booking confirmation |
+| `payment_intent.canceled` | Release hold, update status → cancelled |
+| `account.updated` | Operator Connect onboarding complete — set `badge_verified = true`, update approval status |
+| `payout.paid` | Update payout status → paid |
+| `payout.failed` | Update payout status → failed, push ErrorDrawer notification to operator |
+| `charge.dispute.created` | Flag booking, pause operator payout, alert FOAM ops, assemble evidence package |
+| `charge.dispute.closed` | Update dispute outcome, release or claw back payout |
+| `customer.subscription.deleted` | Operator subscription cancelled — downgrade tier |
+
+### Payment Status State Machine [v1.2 — updated]
+
+```
+authorized
+    │
+    ├── → cancelled         (hold released — free cancellation or operator cancel)
+    ├── → partially_captured (25% or 50% per cancellation policy tier)
+    ├── → hold_expired      (re-auth failed, booking cancelled)
+    │
+    ▼
+captured
+    │
+    ├── → refunded          (post-capture refund)
+    ├── → disputed          → won (funds restored)
+    │                       → lost (chargeback absorbed)
+    ▼
+paid_out
 ```
 
-### Dispute Handling [v1.1 — new]
+### Dispute Handling [v1.1 — unchanged]
 
-When a customer disputes a charge with their bank, FOAM's dispute evidence package is auto-assembled from:
+Evidence package auto-assembled from:
 
 | Evidence | Source |
 |----------|--------|
-| Before photos | `job-photos` storage bucket, linked to booking + vehicle |
-| After photos | `job-photos` storage bucket, linked to booking + vehicle |
+| Before photos | `job-photos` bucket, linked to booking + vehicle |
+| After photos | `job-photos` bucket, linked to booking + vehicle |
 | Booking timestamp | `bookings.scheduled_at` |
 | Completion timestamp | `bookings.updated_at` when status = `completed` |
 | Operator rating | `detailer_profiles.avg_rating` + `total_reviews` |
 | Customer payment confirmation | `payments.captured_at` |
 
-Before/after photo upload is mandatory before job completion specifically because these photos serve as dispute evidence. This is a functional requirement, not a UX preference.
+Before/after photo upload is mandatory before job completion. These photos are dispute evidence — a functional requirement, not a UX preference.
 
-FOAM ops is notified immediately on `charge.dispute.created`. Evidence is submitted within 5 days. Operator payout is paused during dispute resolution.
+### Stripe Connect — Express Accounts [v1.2 — updated]
 
-### Stripe Connect — Express Accounts
-
-Detailers onboard via Stripe Connect Express — the fastest path to getting detailers paid without FOAM handling KYC directly. Stripe handles:
-- Identity verification
+Operators onboard via Stripe Connect Express. Stripe handles:
+- Identity verification (sets `badge_verified = true` on `detailer_profiles`)
 - Bank account linking
 - Tax reporting (1099-K)
-- Payout scheduling
+- Payout scheduling (standard ACH 2-day or Instant Payout 1.5% same-day)
 
 FOAM handles:
-- Platform fee deduction before transfer
-- Tip routing (tip goes to detailer's Connect account in full, added at capture time)
-- Subscription billing (separate from transaction fees)
-
-### Subscription Billing
-
-Detailer tier subscriptions (Starter/Pro/Crew) are managed as Stripe Subscriptions — separate from per-transaction fees. Both are tied to the same Stripe customer record for the detailer.
-
-Rain Coverage ($7.99/month) is a Stripe Subscription on the customer's Stripe customer record.
+- Platform fee deduction before transfer (15% Starter / 12% Pro / 10% Crew)
+- Tip routing (separate PaymentIntent, full amount to operator Connect, distributed to crew per tip_distribution_model)
+- Subscription billing (separate Stripe Subscription, same Stripe customer record)
+- Instant Payout fee deduction (1.5% deducted from payout_amount, stored in payments.instant_payout_fee)
 
 ---
 
@@ -395,44 +540,60 @@ Supabase Edge Function
       └── SMS → Twilio API → Carrier → Customer/Detailer phone
 ```
 
-### Notification Priority by Type [v1.1 — updated]
+### Notification Priority by Type [v1.2 — updated]
 
-| Notification | Push | SMS | Customer | Operator | Notes |
-|-------------|------|-----|----------|----------|-------|
-| Booking confirmed | ✅ | ✅ | ✅ | ✅ | |
-| 24-hour reminder | ✅ | ✅ | ✅ | ❌ | |
-| 1-hour reminder | ✅ | ❌ | ✅ | ❌ | |
-| En route (V2) | ✅ | ❌ | ✅ | ❌ | |
-| Job complete | ✅ | ❌ | ✅ | ❌ | |
-| Review request | ✅ | ✅ | ✅ | ❌ | |
-| Payment received | ✅ | ❌ | ❌ | ✅ | |
-| Rain Coverage triggered | ✅ | ✅ | ✅ | ❌ | |
-| New booking (detailer) | ✅ | ✅ | ❌ | ✅ | |
-| Operator cancelled | ✅ | ✅ | ✅ | ✅ | [v1.1] Customer gets credit + rebooking link |
-| No-show grace period | ✅ | ✅ | ✅ | ❌ | [v1.1] "Are you on your way?" |
-| No-show confirmed | ✅ | ✅ | ✅ | ✅ | [v1.1] Customer: fee charged. Operator: earnings confirmed. |
-| Partial completion | ✅ | ❌ | ✅ | ❌ | [v1.1] Adjusted invoice notification |
-| Hold re-auth failed | ✅ | ✅ | ✅ | ❌ | [v1.1] Update payment CTA |
-| Booking cancelled — payment failure | ✅ | ✅ | ✅ | ✅ | [v1.1] |
-| Dispute opened | ❌ | ❌ | ❌ | ✅ | [v1.1] Payout on hold — handled by ops |
-| Dispute resolved — won | ✅ | ❌ | ❌ | ✅ | [v1.1] Payout released |
-| Dispute resolved — lost | ✅ | ❌ | ❌ | ✅ | [v1.1] Payout adjusted |
+| Notification | Push | SMS | Customer | Operator | Crew | Notes |
+|-------------|------|-----|----------|----------|------|-------|
+| Booking confirmed | ✅ | ✅ | ✅ | ✅ | ❌ | |
+| 24-hour reminder | ✅ | ✅ | ✅ | ❌ | ❌ | |
+| 1-hour reminder | ✅ | ❌ | ✅ | ❌ | ❌ | |
+| En route (V2) | ✅ | ❌ | ✅ | ❌ | ❌ | |
+| Job complete | ✅ | ❌ | ✅ | ❌ | ❌ | |
+| Review request | ✅ | ✅ | ✅ | ❌ | ❌ | |
+| Payment received | ✅ | ❌ | ❌ | ✅ | ❌ | |
+| Rain Coverage triggered | ✅ | ✅ | ✅ | ❌ | ❌ | |
+| New booking | ✅ | ✅ | ❌ | ✅ | ❌ | |
+| Operator cancelled | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.1] Customer gets credit + rebooking link |
+| Customer cancelled — free | ✅ | ❌ | ✅ | ✅ | ❌ | [v1.2] Within 72hrs of booking |
+| Customer cancelled — 25% fee | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.2] 72-24hrs before appt |
+| Customer cancelled — 50% fee | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.2] Under 24hrs before appt |
+| Customer rescheduled | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.2] New date + hold transfer confirmed |
+| Operator rescheduled | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.2] Customer gets FOAM credit |
+| No-show grace period | ✅ | ✅ | ✅ | ❌ | ❌ | [v1.1] "Are you on your way?" |
+| No-show confirmed | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.1] Customer: fee charged. Operator: earnings confirmed. |
+| Partial completion | ✅ | ❌ | ✅ | ❌ | ❌ | [v1.1] Adjusted invoice notification |
+| Hold re-auth failed | ✅ | ✅ | ✅ | ❌ | ❌ | [v1.1] Update payment CTA |
+| Booking cancelled — payment failure | ✅ | ✅ | ✅ | ✅ | ❌ | [v1.1] |
+| Dispute opened | ❌ | ❌ | ❌ | ✅ | ❌ | [v1.1] Payout on hold — handled by ops |
+| Dispute resolved — won | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.1] Payout released |
+| Dispute resolved — lost | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.1] Payout adjusted |
+| Operator approved | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.2] "You're live." celebration screen |
+| Operator rejected | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.2] "One more thing." — soft tone |
+| Payout failed | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.2] ErrorDrawer with bank details CTA |
+| Crew join request | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.2] Manager approves in Team tab |
+| Crew approved | ✅ | ❌ | ❌ | ❌ | ✅ | [v1.2] Welcome to [Business Name] |
+| Job assigned | ✅ | ❌ | ❌ | ❌ | ✅ | [v1.2] Crew member notified |
+| Service change request | ✅ | ❌ | ❌ | ✅ | ❌ | [v1.2] Manager approve/decline |
+| Service change auto-approved | ✅ | ❌ | ❌ | ✅ | ✅ | [v1.2] 5-min auto-approve |
 
 SMS is reserved for high-priority customer-facing notifications where a missed push could break the experience. Everything else is push + in-app only.
 
 ---
 
-## Booking State Machine [v1.1 — updated]
+## Booking State Machine [v1.2 — updated]
 
 ```
 requested
     │
     ▼
 confirmed ──────────────────────────────────────────► cancelled
-    │                                                  (operator or customer)
+    │         (operator or customer per policy)        (free / 25% / 50% fee
+    │                                                   based on timing)
+    │ ◄──────────────────────────────────────────────── rescheduled
+    │         (max 2 per booking, resets policy clock)
     ▼
 in_progress ─────────────────────────────────────────► no_show
-    │                                                  (customer absent)
+    │                                                  (50% capture)
     ▼
 completed ──────────────────────────────────────────► partially_completed
     │                                                  (some services skipped)
@@ -445,12 +606,13 @@ reviewed
 | Status | Meaning | Payment State |
 |--------|---------|--------------|
 | `requested` | Customer submitted booking, awaiting operator confirmation | Hold not yet placed |
-| `confirmed` | Operator accepted, hold placed on customer card | `authorized` |
+| `confirmed` | Operator accepted, hold placed immediately on customer card | `authorized` |
 | `in_progress` | Operator has started work | `authorized` |
-| `completed` | All services finished, invoice sent | `captured` after customer confirms |
-| `partially_completed` | Some services completed, adjusted invoice sent | `captured` at adjusted amount |
-| `cancelled` | Cancelled by operator or customer | `cancelled` — hold released |
-| `no_show` | Customer absent at scheduled time | `captured` at 50% of affected services |
+| `completed` | All services finished, payment confirmed | `captured` |
+| `partially_completed` | Some services completed, adjusted invoice | `captured` at adjusted amount |
+| `cancelled` | Cancelled by operator or customer | `cancelled` or `partially_captured` per policy |
+| `no_show` | Customer absent at scheduled time | `partially_captured` at 50% |
+| `rescheduled` | Appointment moved to new date | Original hold cancelled, new hold created |
 
 ---
 
@@ -483,7 +645,7 @@ reviewed
 | Unauthorized data access | RLS on all tables — enforced at database level |
 | JWT tampering | Supabase validates JWT signature server-side on every request |
 | Payment fraud | Stripe handles PCI compliance — no card data touches FOAM servers |
-| Crew accessing owner data | Permission flags on crew_members table, enforced by RLS |
+| Team member accessing owner data | Permission flags on team_members table, enforced by RLS |
 | Customer accessing other customer data | RLS policies scoped to auth.uid() |
 | Prompt injection in AI workflows | AI_RULES.md defines boundaries; no user-generated content passed to AI without sanitization |
 | Media access control | Storage bucket policies mirror RLS — unauthenticated access only to public buckets |
@@ -574,9 +736,11 @@ None of these are needed at launch. All are achievable without changing the core
 
 | Document | What It Covers |
 |----------|---------------|
-| DATA_MODEL.md | Complete PostgreSQL schema with all tables, columns, and relationships |
+| DATA_MODEL_v1.6.md | Complete PostgreSQL schema — all 27 tables, all columns, relationships |
+| PAYMENT_POLICY.md | Authorization hold, cancellation tiers, reschedule rules, platform fees |
+| MICROCOPY.md | All copy across all roles and screens including payment and policy copy |
 | CAPABILITY_LAYER.md | Functional systems and their business logic |
 | FEATURES.md | What gets built in MVP vs V2 |
-| FOAM_Edge_Cases_Resolution.md | Resolution paths for all 6 identified failure scenarios |
+| FOAM_DECISIONS_OVERVIEW.md | All confirmed product and business decisions |
 | AI_RULES.md | How Claude is used in development |
 | AI_CONFIDENCE_MODEL.md | How to weight AI architectural recommendations |

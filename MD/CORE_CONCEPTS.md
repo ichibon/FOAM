@@ -108,20 +108,24 @@ Applies to mobile and fixed location services equally. Legal framing: service gu
 
 ## The Recurring Appointment Model
 
-Customers can set up recurring appointments — weekly, bi-weekly, monthly. Works for both mobile (detailer comes to same location on schedule) and fixed (customer drops off on a recurring schedule). Recurring bookings get a reduced platform fee for operators.
+Customers can set up recurring appointments — weekly, bi-weekly, monthly. Works for both mobile (detailer comes to same location on schedule) and fixed (customer drops off on a recurring schedule).
 
 ---
 
 ## Platform Fee Structure (Summary)
+**v1.1 — Updated to percentage model. Cross-reference PRICING_STRATEGY.md for full detail.**
 
-| Tier | Monthly Fee | Standard Booking Fee | Recurring Booking Fee |
-|------|-------------|---------------------|----------------------|
-| Starter | $34/mo | $10 | $8 |
-| Pro | $79/mo | $8 | $6 |
-| Crew | $174/mo | $6 | $5 |
+| Tier | Monthly Fee | Annual Fee | Platform Fee Per Booking |
+|------|-------------|------------|--------------------------|
+| Starter | $29/mo | $290/yr | 15% of booking value |
+| Pro | $69/mo | $690/yr | 12% of booking value |
+| Crew | $149/mo | $1,490/yr | 10% of booking value |
 
-Additional team members beyond 3: $20-25/month per member.
+FOAM absorbs Stripe's processing cost (2.9% + $0.30). Operators see one clean percentage — no separate processing charge on top.
+
+Additional team members beyond 3 (Crew tier): $20–25/month per member.
 Annual plans available at all tiers (2 months free).
+Founding operators: pricing locked at launch rate for 12 months from onboarding date.
 
 ---
 

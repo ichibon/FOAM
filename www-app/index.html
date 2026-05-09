@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FOAM — The Operating System for Auto Detailing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:      #339DC7;
+      --accent-dark: #2B85A9;
+      --dark:        #0F2F3C;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: #FAFAFA; -webkit-font-smoothing: antialiased; }
+    a { transition: color 150ms ease; }
+    button { outline: none; }
+
+    @keyframes heroFadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardFadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero-grid   { grid-template-columns: 1fr !important; }
+      .hero-cards  { display: none !important; }
+      .audience-grid { grid-template-columns: 1fr !important; }
+      .steps-grid  { grid-template-columns: 1fr !important; }
+      .feature-grid { grid-template-columns: 1fr !important; }
+      .pricing-grid { grid-template-columns: 1fr !important; }
+      .founder-grid { grid-template-columns: 1fr !important; }
+      .founding-grid { grid-template-columns: 1fr !important; }
+      .footer-grid { grid-template-columns: 1fr 1fr !important; }
+      .stats-grid  { grid-template-columns: repeat(2,1fr) !important; gap: 24px !important; }
+      .stats-grid > div { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 24px !important; }
+      .nav-desktop { display: none !important; }
+      .nav-mobile-btn { display: flex !important; }
+    }
+    @media (max-width: 600px) {
+      .footer-grid { grid-template-columns: 1fr !important; }
+      .stats-grid  { grid-template-columns: 1fr 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="components/foam-shared.jsx"></script>
+  <script type="text/babel" src="components/foam-top.jsx"></script>
+  <script type="text/babel" src="components/foam-mid.jsx"></script>
+  <script type="text/babel" src="components/foam-bottom.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "accentColor": "#339DC7",
+      "launchCity": "Atlanta",
+      "showFoundingSection": true,
+      "pricingDefault": "annual"
+    }/*EDITMODE-END*/;
+
+    const App = () => {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      // Sync accent color to CSS vars
+      React.useEffect(() => {
+        if (!t.accentColor) return;
+        document.documentElement.style.setProperty('--accent', t.accentColor);
+        const hex = t.accentColor.replace('#','');
+        const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+        const dR = Math.max(0,r-20), dG = Math.max(0,g-20), dB = Math.max(0,b-20);
+        document.documentElement.style.setProperty('--accent-dark', `rgb(${dR},${dG},${dB})`);
+      }, [t.accentColor]);
+
+      return (
+        <>
+          <TweaksPanel>
+            <TweakSection label="Brand" />
+            <TweakColor
+              label="Accent color"
+              value={t.accentColor}
+              options={['#339DC7','#1a6b52','#7C3AED','#C7433B']}
+              onChange={v => setTweak('accentColor', v)}
+            />
+            <TweakSection label="Content" />
+            <TweakText
+              label="Launch city"
+              value={t.launchCity}
+              onChange={v => setTweak('launchCity', v)}
+            />
+            <TweakToggle
+              label="Founding Operators section"
+              value={t.showFoundingSection}
+              onChange={v => setTweak('showFoundingSection', v)}
+            />
+          </TweaksPanel>
+
+          <FoamNav />
+          <FoamHero city={t.launchCity} />
+          <FoamStatsBar />
+          <FoamAudienceRouter />
+          <FoamHowItWorks />
+          <FoamProductFeature />
+          <FoamPricing />
+          <FoamFounderStory />
+          <FoamFoundingOperator show={t.showFoundingSection} />
+          <FoamFinalCTA />
+          <FoamFooter />
+        </>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -53,7 +53,7 @@ The capability layer defines the functional systems that power the platform. The
 ---
 
 ## Weather API Integration (Rain Protection)
-- Provider: Tomorrow.io or Open-Meteo (real-time and historical precipitation data)
+- Provider: Tomorrow.io (real-time and historical precipitation data by zip code)
 - Logic: Query precipitation data by customer zip code for 72-hour window following appointment completion timestamp
 - Trigger threshold: Measurable rainfall (>0.1 inches) within the window
 - Automated claim processing — no customer action required
@@ -121,7 +121,7 @@ The capability layer defines the functional systems that power the platform. The
 | File Storage | Supabase Storage |
 | SMS Notifications | Twilio |
 | Push Notifications | Expo Notifications |
-| Weather Data | Tomorrow.io or Open-Meteo |
+| Weather Data | Tomorrow.io |
 | Maps & Routing | Google Maps API |
 | Development Environment | Replit |
 | UI Design | UXPilot |

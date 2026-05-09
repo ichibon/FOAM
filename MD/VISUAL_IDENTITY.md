@@ -137,12 +137,12 @@ Text Secondary:   #525252
 Text Tertiary:    #A3A3A3
 Border Subtle:    #E4E4E7
 Border Default:   #D4D4D8
-Accent:           #2563EB   (same — maintains brand consistency across modes)
+Accent:           #339DC7   (FOAM Blue — same accent across light and dark modes)
 ```
 
 ### Color Usage Rules
 
-- Accent (#2563EB) is used ONLY for: primary CTAs, active states, links, key data points
+- Accent (#339DC7) is used ONLY for: primary CTAs, active states, links, key data points
 - Never use accent as a background on anything larger than a chip or tag
 - Maximum 10% of any screen's visual area should be accent color
 - Success green is used ONLY for: completed jobs, received payments, positive states
@@ -245,10 +245,6 @@ The standalone "f" — isolated from the wordmark — is the primary app icon ma
 The system only works if the elements stay in their lanes.
 
 **Playfair Display Bold** commands. It headlines, it sets the tone in the first second of any screen.
-
-**Inter Regular/Medium** executes. It delivers information clearly and gets out of the way.
-
-**Cobalt Blue (#2563EB)** acts. It is the only color on screen that is asking you to do something.
 
 **Inter Regular/Medium** executes. It delivers information clearly and gets out of the way.
 

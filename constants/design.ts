@@ -111,49 +111,63 @@ export const Radius = {
 
 export const Shadows = {
   dark: {
-    sm: {
+    level1: {
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.4,
       shadowRadius: 3,
       elevation: 2,
     },
-    md: {
+    level2: {
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.5,
       shadowRadius: 12,
       elevation: 4,
     },
-    lg: {
+    level3: {
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.6,
       shadowRadius: 24,
       elevation: 8,
     },
+    level4: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.7,
+      shadowRadius: 48,
+      elevation: 16,
+    },
   },
   light: {
-    sm: {
+    level1: {
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.08,
       shadowRadius: 3,
       elevation: 2,
     },
-    md: {
+    level2: {
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.10,
       shadowRadius: 12,
       elevation: 4,
     },
-    lg: {
+    level3: {
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.12,
       shadowRadius: 24,
       elevation: 8,
+    },
+    level4: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.15,
+      shadowRadius: 48,
+      elevation: 16,
     },
   },
 } as const;
@@ -229,8 +243,8 @@ export const ErrorStateTokens = {
     iconColor: "#DC2626",
     iconBg: "rgba(220,38,38,0.10)",
   },
-  blocking: {
-    iconColor: "#DC2626",
-    iconBg: "rgba(220,38,38,0.10)",
+  info: {
+    iconColor: "#3B82F6",
+    iconBg: "rgba(59,130,246,0.10)",
   },
 } as const;

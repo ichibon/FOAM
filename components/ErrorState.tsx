@@ -1,44 +1,43 @@
-import React, { useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Linking,
 } from "react-native";
-import { router } from "expo-router";
 import { Colors, ErrorStateTokens, Layout } from "@/constants/design";
 import { LucideIcon } from "./LucideIcon";
 
 /**
- * severity values:
+ * Severity:
  *   "warning"  — non-blocking issue, outlined CTA
  *   "error"    — actionable failure, filled red CTA
- *   "blocking" — full-screen hard stop (no nav, no dismiss), filled red CTA
+ *   "info"     — informational state, filled blue CTA
  *
- * Note: the UX spec uses "blocking" (not "info") for unrecoverable states
- * such as offline or auth-expired screens. This is intentional.
+ * Use fullScreen={true} for blocking errors (no internet, suspended, etc.)
+ * that cover the entire viewport with no nav chrome.
+ *
+ * Recovery types provide semantic context but CTA execution is fully
+ * controlled by the caller via ctaAction — no routing logic lives here.
  */
 export interface ErrorStateProps {
-  severity: "warning" | "error" | "blocking";
+  severity: "error" | "warning" | "info";
   recovery: "retry" | "navigate" | "support";
   icon: string;
   headline: string;
   body: string;
   ctaLabel: string;
-  retryAction?: () => void;
-  navigateTo?: string;
+  ctaAction: () => void;
   ghostLabel?: string;
   ghostAction?: () => void;
   fullScreen?: boolean;
   errorCode?: string;
-  onCtaPress?: () => void;
 }
 
 const SEVERITY_TOKENS = {
   warning: ErrorStateTokens.warning,
   error: ErrorStateTokens.error,
-  blocking: ErrorStateTokens.blocking,
+  info: ErrorStateTokens.info,
 } as const;
 
 export function ErrorState({
@@ -48,41 +47,19 @@ export function ErrorState({
   headline,
   body,
   ctaLabel,
-  retryAction,
-  navigateTo,
+  ctaAction,
   ghostLabel,
   ghostAction,
   fullScreen = false,
   errorCode,
-  onCtaPress,
 }: ErrorStateProps) {
-  const lastRetry = useRef(0);
   const colors = SEVERITY_TOKENS[severity];
-
-  const handleCta = () => {
-    if (onCtaPress) {
-      onCtaPress();
-      return;
-    }
-    if (recovery === "retry") {
-      const now = Date.now();
-      if (now - lastRetry.current < 1000) return;
-      lastRetry.current = now;
-      retryAction?.();
-    } else if (recovery === "navigate" && navigateTo) {
-      router.push(navigateTo as Parameters<typeof router.push>[0]);
-    } else if (recovery === "support") {
-      Linking.openURL("mailto:support@foamauto.app");
-    }
-  };
-
-  const isErrorSeverity = severity === "error" || severity === "blocking";
+  const isWarning = severity === "warning";
+  const ctaBgColor = isWarning ? "transparent" : severity === "info" ? Colors.foamBlue : Colors.errorLight;
 
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      <View
-        style={[styles.iconCircle, { backgroundColor: colors.iconBg }]}
-      >
+      <View style={[styles.iconCircle, { backgroundColor: colors.iconBg }]}>
         <LucideIcon
           name={icon}
           size={ErrorStateTokens.iconSize}
@@ -102,17 +79,19 @@ export function ErrorState({
         <TouchableOpacity
           style={[
             styles.ctaBase,
-            severity === "warning"
-              ? styles.ctaOutlined
-              : { backgroundColor: isErrorSeverity ? Colors.errorLight : Colors.foamBlue },
+            {
+              backgroundColor: ctaBgColor,
+              borderWidth: isWarning ? 1.5 : 0,
+              borderColor: Colors.foamBlue,
+            },
           ]}
-          onPress={handleCta}
+          onPress={ctaAction}
           activeOpacity={0.8}
         >
           <Text
             style={[
               styles.ctaText,
-              { color: severity === "warning" ? Colors.foamBlue : Colors.white },
+              { color: isWarning ? Colors.foamBlue : Colors.white },
             ]}
           >
             {ctaLabel}
@@ -191,11 +170,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
-  },
-  ctaOutlined: {
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: Colors.foamBlue,
   },
   ctaText: {
     fontFamily: "Inter_600SemiBold",

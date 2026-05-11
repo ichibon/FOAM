@@ -7,18 +7,31 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
   ScrollView,
-  Linking,
 } from "react-native";
-import { router } from "expo-router";
 import { Drawer, Layout } from "@/constants/design";
 import { ErrorState, type ErrorStateProps } from "./ErrorState";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DRAWER_MAX_HEIGHT = SCREEN_HEIGHT * 0.85;
 
-export interface ErrorDrawerProps extends ErrorStateProps {
+export interface ErrorDrawerProps {
   visible: boolean;
   onDismiss?: () => void;
+  /**
+   * severity, recovery, icon, headline, body, ctaLabel are all passed through
+   * to ErrorState. ctaAction and ghostAction are intercepted so the drawer
+   * dismisses itself before executing the caller's action.
+   */
+  severity: ErrorStateProps["severity"];
+  recovery: ErrorStateProps["recovery"];
+  icon: string;
+  headline: string;
+  body: string;
+  ctaLabel: string;
+  ctaAction: () => void;
+  ghostLabel?: string;
+  ghostAction?: () => void;
+  errorCode?: string;
   children?: React.ReactNode;
 }
 
@@ -31,8 +44,7 @@ export function ErrorDrawer({
   headline,
   body,
   ctaLabel,
-  retryAction,
-  navigateTo,
+  ctaAction,
   ghostLabel,
   ghostAction,
   errorCode,
@@ -40,7 +52,6 @@ export function ErrorDrawer({
 }: ErrorDrawerProps) {
   const translateY = useRef(new Animated.Value(DRAWER_MAX_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const lastRetry = useRef(0);
 
   useEffect(() => {
     if (visible) {
@@ -73,22 +84,17 @@ export function ErrorDrawer({
     }
   }, [visible]);
 
-  const handleCtaPress = () => {
-    if (recovery === "retry") {
-      const now = Date.now();
-      if (now - lastRetry.current < 1000) return;
-      lastRetry.current = now;
-      retryAction?.();
-    } else if (recovery === "navigate" && navigateTo) {
-      onDismiss?.();
-      setTimeout(
-        () => router.push(navigateTo as Parameters<typeof router.push>[0]),
-        250,
-      );
-    } else if (recovery === "support") {
-      Linking.openURL("mailto:support@foamauto.app");
-    }
+  const handleCta = () => {
+    onDismiss?.();
+    setTimeout(ctaAction, 250);
   };
+
+  const handleGhost = ghostAction
+    ? () => {
+        onDismiss?.();
+        setTimeout(ghostAction, 250);
+      }
+    : undefined;
 
   return (
     <Modal
@@ -128,13 +134,11 @@ export function ErrorDrawer({
               headline={headline}
               body={body}
               ctaLabel={ctaLabel}
-              retryAction={retryAction}
-              navigateTo={navigateTo}
+              ctaAction={handleCta}
               ghostLabel={ghostLabel}
-              ghostAction={ghostAction}
+              ghostAction={handleGhost}
               errorCode={errorCode}
               fullScreen={false}
-              onCtaPress={handleCtaPress}
             />
 
             {children && (

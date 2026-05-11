@@ -34,10 +34,10 @@ async function checkPendingApproval(
   if (role === "operator" || role === "manager") {
     const { data } = await client
       .from("detailer_profiles")
-      .select("is_approved")
+      .select("approval_status")
       .eq("user_id", userId)
       .single();
-    return data != null && data.is_approved !== true;
+    return data != null && data.approval_status !== "approved";
   }
   if (role === "team_member") {
     const { data } = await client

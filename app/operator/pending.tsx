@@ -45,7 +45,7 @@ export default function OperatorPendingScreen() {
 
       const { data: profile, error: profileError } = await supabase
         .from("detailer_profiles")
-        .select("id, stripe_account_id, is_approved")
+        .select("id, stripe_account_id, approval_status")
         .eq("user_id", user.id)
         .single();
 
@@ -68,10 +68,10 @@ export default function OperatorPendingScreen() {
         { label: "Profile created", done: true },
         { label: "Service menu added", done: (serviceCount ?? 0) > 0 },
         { label: "Stripe account connected", done: !!profile.stripe_account_id },
-        { label: "FOAM review", done: profile.is_approved === true },
+        { label: "FOAM review", done: profile.approval_status === "approved" },
       ]);
 
-      if (profile.is_approved === true) {
+      if (profile.approval_status === "approved") {
         await refreshAuth();
         router.replace("/operator/today");
       }

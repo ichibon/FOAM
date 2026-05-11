@@ -136,7 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         await fetchUserProfile(user.id, c, setRole, setOnboardingComplete, setPendingApproval, () => {});
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[useAuth] refreshAuth failed", err);
+    }
   }
 
   async function signOut() {
@@ -144,7 +146,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const c = getSupabase();
       await c.auth.signOut();
-    } catch {}
+    } catch (err) {
+      console.warn("[useAuth] signOut failed", err);
+    }
     setRole(null);
     setOnboardingComplete(false);
     setPendingApproval(false);

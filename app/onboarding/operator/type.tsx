@@ -14,7 +14,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
-type OperationType = "mobile" | "fixed" | "hybrid";
+type OperationType = "mobile" | "fixed" | "both";
 
 const types: {
   id: OperationType;
@@ -39,7 +39,7 @@ const types: {
     chips: ["Bay management", "Operating hours", "Walk-in toggle"],
   },
   {
-    id: "hybrid",
+    id: "both",
     title: "Both",
     description: "Run mobile jobs and a fixed location from one unified view.",
     icon: "Zap",

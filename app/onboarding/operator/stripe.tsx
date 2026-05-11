@@ -127,16 +127,8 @@ export default function StripeScreen() {
         const html = buildAccountOnboardingHtml(data.client_secret as string);
         setOnboardingHtml(html);
         setShowOnboarding(true);
-      } else if (data.url) {
-        const html = `<!DOCTYPE html><html><head>
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          </head><body style="margin:0">
-          <iframe src="${data.url as string}" style="width:100vw;height:100vh;border:0"></iframe>
-          </body></html>`;
-        setOnboardingHtml(html);
-        setShowOnboarding(true);
       } else {
-        router.replace("/onboarding/operator/pending");
+        setError("Stripe setup could not be initialized. Please try again.");
       }
     } catch {
       setError("Something went wrong. Please try again.");

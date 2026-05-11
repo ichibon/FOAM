@@ -1,9 +1,10 @@
-import { useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { useEffect, useCallback } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 const checklist = [
@@ -20,21 +21,34 @@ const nextSteps = [
 ];
 
 export default function OperatorPendingScreen() {
-  useEffect(() => {
-    markOnboardingComplete();
-  }, []);
+  const { refreshAuth } = useAuth();
 
-  async function markOnboardingComplete() {
+  const checkApprovalAndAdvance = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from("users")
-          .update({ onboarding_complete: true })
-          .eq("id", user.id);
+      if (!user) return;
+
+      await supabase
+        .from("users")
+        .update({ onboarding_complete: true })
+        .eq("id", user.id);
+
+      const { data: profile } = await supabase
+        .from("detailer_profiles")
+        .select("is_approved")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile?.is_approved === true) {
+        await refreshAuth();
+        router.replace("/operator/today");
       }
     } catch {}
-  }
+  }, [refreshAuth]);
+
+  useEffect(() => {
+    checkApprovalAndAdvance();
+  }, [checkApprovalAndAdvance]);
 
   function handleExplore() {
     router.replace("/operator/today");
@@ -70,6 +84,13 @@ export default function OperatorPendingScreen() {
                 <Text style={[styles.checklistText, !item.done && styles.checklistTextPending]}>
                   {item.label}
                 </Text>
+                {!item.done && (
+                  <ActivityIndicator
+                    size="small"
+                    color={Colors.light.textTertiary}
+                    style={styles.spinner}
+                  />
+                )}
               </View>
             ))}
           </View>
@@ -94,8 +115,12 @@ export default function OperatorPendingScreen() {
             <Text style={styles.primaryButtonText}>Explore the App</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.contactButton} activeOpacity={0.7}>
-            <Text style={styles.contactButtonText}>Have questions? Contact us</Text>
+          <TouchableOpacity
+            style={styles.checkButton}
+            onPress={checkApprovalAndAdvance}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.checkButtonText}>Check approval status</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -178,6 +203,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.bgPrimary,
   },
   checklistText: {
+    flex: 1,
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textPrimary,
@@ -185,6 +211,7 @@ const styles = StyleSheet.create({
   checklistTextPending: {
     color: Colors.light.textTertiary,
   },
+  spinner: { flexShrink: 0 },
   divider: {
     height: 1,
     backgroundColor: Colors.light.borderSubtle,
@@ -234,12 +261,12 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
-  contactButton: {
+  checkButton: {
     height: 40,
     alignItems: "center",
     justifyContent: "center",
   },
-  contactButtonText: {
+  checkButtonText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.foamBlue,

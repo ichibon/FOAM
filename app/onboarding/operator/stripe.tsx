@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 const WebView = Platform.OS !== "web"
@@ -96,6 +97,7 @@ const requirements = [
 ];
 
 export default function StripeScreen() {
+  const { refreshAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [onboardingHtml, setOnboardingHtml] = useState<string | null>(null);
@@ -145,7 +147,8 @@ export default function StripeScreen() {
     } catch (err) {
       console.warn("[StripeOnboarding] onboarding_complete write failed", err);
     }
-    router.replace("/operator/today");
+    await refreshAuth();
+    router.replace("/operator/pending");
   }
 
   function handleWebViewMessage(event: { nativeEvent: { data: string } }) {

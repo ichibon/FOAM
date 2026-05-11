@@ -40,11 +40,22 @@ export default function InviteCodeScreen() {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from("team_members")
-        .update({ user_id: user.id })
-        .eq("id", match.id);
+    if (!user) {
+      setError("Session expired. Please sign in again.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: bindError } = await supabase
+      .from("team_members")
+      .update({ user_id: user.id })
+      .eq("id", match.id);
+
+    if (bindError) {
+      console.warn("[CrewInvite] team_members bind failed", bindError);
+      setError("Could not join the team. Please try again.");
+      setLoading(false);
+      return;
     }
 
     setLoading(false);

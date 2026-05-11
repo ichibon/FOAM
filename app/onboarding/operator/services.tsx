@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { EmptyState } from "@/components/EmptyState";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type VehiclePricing = {
@@ -140,6 +141,18 @@ export default function ServicesScreen() {
           <Text style={styles.subheadline}>Add your services and pricing. You can edit these anytime.</Text>
         </View>
 
+        {services.length === 0 && (
+          <EmptyState
+            variant="functional"
+            icon="Tag"
+            headline="No services yet"
+            body="Add the services you offer. You can edit or add more anytime."
+            ctaLabel="Add a Service"
+            ctaRoute="/onboarding/operator/services"
+            fullScreen={false}
+          />
+        )}
+
         {services.length > 0 && (
           <View style={styles.servicesList}>
             {services.map((service) => (
@@ -151,13 +164,6 @@ export default function ServicesScreen() {
                       ${service.price} · ~{durationLabel(service.hours, service.minutes)}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => {}}
-                    activeOpacity={0.7}
-                    style={styles.editBtn}
-                  >
-                    <LucideIcon name="Pencil" size={16} color={Colors.light.textTertiary} />
-                  </TouchableOpacity>
                 </View>
 
                 {service.description ? (
@@ -420,7 +426,6 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     marginTop: 2,
   },
-  editBtn: { padding: 4 },
   serviceDescription: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,

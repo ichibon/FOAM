@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
+import { Platform } from "react-native";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -14,8 +15,13 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
-import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+
+// StripeProvider is native-only — import lazily to avoid web crashes
+const StripeProvider =
+  Platform.OS !== "web"
+    ? require("@stripe/stripe-react-native").StripeProvider
+    : ({ children }: { children: ReactNode }) => <>{children}</>;
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,7 +32,7 @@ function RootLayoutNav() {
     if (loading) return;
 
     if (!session) {
-      router.replace("/auth/welcome");
+      router.replace("/onboarding/splash");
     } else {
       switch (role) {
         case "customer":
@@ -49,6 +55,7 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="auth" />
       <Stack.Screen name="customer" />
       <Stack.Screen name="operator" />
@@ -78,12 +85,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StripeProvider
-          publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
+          publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""}
           merchantIdentifier="merchant.app.foam.mobile"
           urlScheme="foam"
         >
           <AuthProvider>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
             <RootLayoutNav />
           </AuthProvider>
         </StripeProvider>

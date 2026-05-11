@@ -16,6 +16,7 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import type { UserRole } from "@/lib/supabase";
 
 const StripeProvider =
   Platform.OS !== "web"
@@ -24,19 +25,25 @@ const StripeProvider =
 
 SplashScreen.preventAutoHideAsync();
 
-const ONBOARDING_ENTRY: Record<string, string> = {
-  customer: "/onboarding/customer/vehicle",
-  operator: "/onboarding/operator/type",
-  manager: "/onboarding/operator/type",
-  team_member: "/onboarding/crew/profile",
-};
+function onboardingEntryFor(role: UserRole): string {
+  switch (role) {
+    case "customer": return "/onboarding/customer/vehicle";
+    case "operator": return "/onboarding/operator/type";
+    case "manager": return "/onboarding/operator/type";
+    case "team_member": return "/onboarding/crew/invite";
+    default: return "/auth/role-select";
+  }
+}
 
-const MAIN_TAB: Record<string, string> = {
-  customer: "/customer/discover",
-  operator: "/operator/today",
-  manager: "/operator/today",
-  team_member: "/team_member/jobs",
-};
+function mainTabFor(role: UserRole): string {
+  switch (role) {
+    case "customer": return "/customer/discover";
+    case "operator": return "/operator/today";
+    case "manager": return "/operator/today";
+    case "team_member": return "/team_member/jobs";
+    default: return "/onboarding/splash";
+  }
+}
 
 function RootLayoutNav() {
   const { session, role, onboardingComplete, loading } = useAuth();
@@ -55,13 +62,13 @@ function RootLayoutNav() {
     }
 
     if (!onboardingComplete) {
-      const entry = ONBOARDING_ENTRY[role] ?? "/onboarding/splash";
-      router.replace(entry as any);
+      const entry = onboardingEntryFor(role);
+      router.replace(entry as Parameters<typeof router.replace>[0]);
       return;
     }
 
-    const tab = MAIN_TAB[role] ?? "/onboarding/splash";
-    router.replace(tab as any);
+    const tab = mainTabFor(role);
+    router.replace(tab as Parameters<typeof router.replace>[0]);
   }, [session, role, onboardingComplete, loading]);
 
   return (

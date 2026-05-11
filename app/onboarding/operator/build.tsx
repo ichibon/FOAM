@@ -6,101 +6,106 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Modal,
   Platform,
   ActivityIndicator,
-  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
-import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { LucideIcon } from "@/components/LucideIcon";
 
-const SPECIALTIES = ["Interior", "Exterior", "Paint Correction", "Ceramic Coating", "Window Tint", "Fleet"];
+type AssetType = "van" | "trailer" | "truck" | "other";
 
-export default function BuildProfileScreen() {
-  const [businessName, setBusinessName] = useState("");
-  const [bio, setBio] = useState("");
-  const [years, setYears] = useState(5);
-  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(["Interior", "Exterior"]);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+interface AddedVan {
+  id: string;
+  name: string;
+  asset_type: AssetType;
+}
+
+interface AddedLocation {
+  id: string;
+  name: string;
+  address: string;
+}
+
+async function getDetailerProfileId(client: SupabaseClient, userId: string): Promise<string | null> {
+  const { data } = await client
+    .from("detailer_profiles")
+    .select("id")
+    .eq("user_id", userId)
+    .single();
+  return data?.id ?? null;
+}
+
+export default function BuildOperationScreen() {
+  const [vans, setVans] = useState<AddedVan[]>([]);
+  const [locations, setLocations] = useState<AddedLocation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [photoLoading, setPhotoLoading] = useState(false);
 
-  function toggleSpecialty(s: string) {
-    setSelectedSpecialties((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-    );
-  }
+  const [showVanDrawer, setShowVanDrawer] = useState(false);
+  const [vanName, setVanName] = useState("");
+  const [vanType, setVanType] = useState<AssetType>("van");
+  const [vanSaving, setVanSaving] = useState(false);
 
-  async function handlePickPhoto() {
-    if (Platform.OS !== "web") {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") return;
-    }
+  const [showLocDrawer, setShowLocDrawer] = useState(false);
+  const [locName, setLocName] = useState("");
+  const [locAddress, setLocAddress] = useState("");
+  const [locSaving, setLocSaving] = useState(false);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+  const assetTypes: { id: AssetType; label: string }[] = [
+    { id: "van", label: "Van" },
+    { id: "trailer", label: "Trailer" },
+    { id: "truck", label: "Truck" },
+    { id: "other", label: "Other" },
+  ];
 
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-    }
-  }
-
-  async function uploadPhoto(userId: string): Promise<string | null> {
-    if (!photoUri) return null;
-    try {
-      const ext = photoUri.split(".").pop() ?? "jpg";
-      const path = `detailers/${userId}/logo.${ext}`;
-      const response = await fetch(photoUri);
-      const blob = await response.blob();
-      const { error } = await supabase.storage
-        .from("business-assets")
-        .upload(path, blob, { upsert: true, contentType: `image/${ext}` });
-      if (error) {
-        console.warn("Photo upload error:", error.message);
-        return null;
+  async function handleAddVan() {
+    if (!vanName.trim()) return;
+    setVanSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const detailerId = await getDetailerProfileId(supabase as unknown as SupabaseClient, user.id);
+      if (detailerId) {
+        const { data } = await supabase
+          .from("business_assets")
+          .insert({ detailer_id: detailerId, name: vanName.trim(), asset_type: vanType })
+          .select("id, name, asset_type")
+          .single();
+        if (data) setVans((prev) => [...prev, data as AddedVan]);
       }
-      const { data } = supabase.storage.from("business-assets").getPublicUrl(path);
-      return data.publicUrl;
-    } catch (e) {
-      console.warn("Photo upload failed:", e);
-      return null;
     }
+    setVanName("");
+    setVanType("van");
+    setVanSaving(false);
+    setShowVanDrawer(false);
+  }
+
+  async function handleAddLocation() {
+    if (!locName.trim() || !locAddress.trim()) return;
+    setLocSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const detailerId = await getDetailerProfileId(supabase as unknown as SupabaseClient, user.id);
+      if (detailerId) {
+        const { data } = await supabase
+          .from("business_locations")
+          .insert({ detailer_id: detailerId, name: locName.trim(), address: locAddress.trim() })
+          .select("id, name, address")
+          .single();
+        if (data) setLocations((prev) => [...prev, data as AddedLocation]);
+      }
+    }
+    setLocName("");
+    setLocAddress("");
+    setLocSaving(false);
+    setShowLocDrawer(false);
   }
 
   async function handleContinue() {
-    if (!businessName.trim()) return;
     setLoading(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const avatarUrl = await uploadPhoto(user.id);
-
-      const updatePayload: Record<string, any> = {
-        business_name: businessName.trim(),
-        bio: bio.trim() || null,
-      };
-      if (avatarUrl) updatePayload.avatar_url = avatarUrl;
-
-      await supabase
-        .from("detailer_profiles")
-        .update(updatePayload)
-        .eq("user_id", user.id);
-
-      if (avatarUrl) {
-        await supabase
-          .from("users")
-          .update({ avatar_url: avatarUrl })
-          .eq("id", user.id);
-      }
-    }
-
     router.push("/onboarding/operator/services");
     setLoading(false);
   }
@@ -121,112 +126,92 @@ export default function BuildProfileScreen() {
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.introBlock}>
-          <Text style={styles.headline}>Your shop, your brand.</Text>
-          <Text style={styles.subheadline}>This is what customers see when they find you.</Text>
+          <Text style={styles.headline}>Build your operation.</Text>
+          <Text style={styles.subheadline}>Add your vehicles and locations so the app knows how you work.</Text>
         </View>
 
-        <View style={styles.photoSection}>
-          <TouchableOpacity style={styles.photoButton} onPress={handlePickPhoto} activeOpacity={0.8}>
-            {photoUri ? (
-              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-            ) : (
-              <LucideIcon name="Camera" size={28} color={Colors.foamBlue} />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.7}>
-            <Text style={styles.addPhotoText}>{photoUri ? "Change photo" : "Add photo"}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formSection}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Your name or business name</Text>
-            <TextInput
-              style={styles.input}
-              value={businessName}
-              onChangeText={setBusinessName}
-              placeholder="e.g., Marcus T. Detailing"
-              placeholderTextColor={Colors.light.textTertiary}
-              autoCapitalize="words"
-            />
-            <Text style={styles.inputHint}>This appears on your profile and booking cards.</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>VEHICLES</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowVanDrawer(true)}
+              activeOpacity={0.8}
+            >
+              <LucideIcon name="Plus" size={14} color={Colors.foamBlue} />
+              <Text style={styles.addButtonText}>Add Van</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Bio</Text>
-              <Text style={styles.optional}>Optional</Text>
+          {vans.length === 0 ? (
+            <View style={styles.emptyState}>
+              <LucideIcon name="Truck" size={24} color={Colors.light.textTertiary} />
+              <Text style={styles.emptyStateTitle}>No vehicles yet</Text>
+              <Text style={styles.emptyStateBody}>Add your vans, trailers, or trucks.</Text>
             </View>
-            <View style={styles.textAreaWrapper}>
-              <TextInput
-                style={styles.textArea}
-                value={bio}
-                onChangeText={(t) => setBio(t.slice(0, 200))}
-                placeholder="Tell customers what makes your work different."
-                placeholderTextColor={Colors.light.textTertiary}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-              <Text style={styles.charCount}>{bio.length} / 200</Text>
+          ) : (
+            <View style={styles.itemList}>
+              {vans.map((van) => (
+                <View key={van.id} style={styles.itemRow}>
+                  <View style={styles.itemIcon}>
+                    <LucideIcon name="Truck" size={16} color={Colors.foamBlue} />
+                  </View>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{van.name}</Text>
+                    <Text style={styles.itemMeta}>{van.asset_type}</Text>
+                  </View>
+                  <LucideIcon name="Check" size={16} color={Colors.foamBlue} />
+                </View>
+              ))}
             </View>
-          </View>
+          )}
         </View>
 
-        <View style={styles.experienceSection}>
-          <View style={styles.experienceRow}>
-            <Text style={styles.experienceLabel}>Years of experience</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={styles.stepperButton}
-                onPress={() => setYears((y) => Math.max(0, y - 1))}
-                activeOpacity={0.7}
-              >
-                <LucideIcon name="Minus" size={14} color={Colors.foamBlue} />
-              </TouchableOpacity>
-              <Text style={styles.stepperValue}>{years}</Text>
-              <TouchableOpacity
-                style={styles.stepperButton}
-                onPress={() => setYears((y) => y + 1)}
-                activeOpacity={0.7}
-              >
-                <LucideIcon name="Plus" size={14} color={Colors.foamBlue} />
-              </TouchableOpacity>
-            </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>LOCATIONS</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowLocDrawer(true)}
+              activeOpacity={0.8}
+            >
+              <LucideIcon name="Plus" size={14} color={Colors.foamBlue} />
+              <Text style={styles.addButtonText}>Add Location</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        <View style={styles.specialtiesSection}>
-          <Text style={styles.sectionLabel}>SPECIALTIES</Text>
-          <View style={styles.pills}>
-            {SPECIALTIES.map((s) => {
-              const active = selectedSpecialties.includes(s);
-              return (
-                <TouchableOpacity
-                  key={s}
-                  style={[styles.pill, active && styles.pillActive]}
-                  onPress={() => toggleSpecialty(s)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{s}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {locations.length === 0 ? (
+            <View style={styles.emptyState}>
+              <LucideIcon name="MapPin" size={24} color={Colors.light.textTertiary} />
+              <Text style={styles.emptyStateTitle}>No locations yet</Text>
+              <Text style={styles.emptyStateBody}>Add a shop, bay, or fixed service location.</Text>
+            </View>
+          ) : (
+            <View style={styles.itemList}>
+              {locations.map((loc) => (
+                <View key={loc.id} style={styles.itemRow}>
+                  <View style={styles.itemIcon}>
+                    <LucideIcon name="MapPin" size={16} color={Colors.foamBlue} />
+                  </View>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{loc.name}</Text>
+                    <Text style={styles.itemMeta}>{loc.address}</Text>
+                  </View>
+                  <LucideIcon name="Check" size={16} color={Colors.foamBlue} />
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryButton, (!businessName.trim() || loading) && styles.buttonDisabled]}
+          style={[styles.primaryButton, loading && styles.buttonDisabled]}
           onPress={handleContinue}
-          disabled={!businessName.trim() || loading}
+          disabled={loading}
           activeOpacity={0.85}
         >
           {loading ? (
@@ -235,7 +220,112 @@ export default function BuildProfileScreen() {
             <Text style={styles.primaryButtonText}>Continue</Text>
           )}
         </TouchableOpacity>
+        <Text style={styles.skipHint}>You can add more vehicles and locations later.</Text>
       </View>
+
+      <Modal visible={showVanDrawer} animationType="slide" transparent onRequestClose={() => setShowVanDrawer(false)}>
+        <View style={styles.backdrop}>
+          <TouchableOpacity style={styles.backdropTouchable} onPress={() => setShowVanDrawer(false)} />
+          <View style={styles.drawer}>
+            <View style={styles.drawerHandle} />
+            <Text style={styles.drawerTitle}>Add Vehicle</Text>
+
+            <View style={styles.drawerForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Vehicle name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={vanName}
+                  onChangeText={setVanName}
+                  placeholder="e.g., Primary Van, Unit 1"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Type</Text>
+                <View style={styles.typeRow}>
+                  {assetTypes.map((t) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[styles.typePill, vanType === t.id && styles.typePillActive]}
+                      onPress={() => setVanType(t.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.typePillText, vanType === t.id && styles.typePillTextActive]}>
+                        {t.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.drawerButton, (!vanName.trim() || vanSaving) && styles.buttonDisabled]}
+              onPress={handleAddVan}
+              disabled={!vanName.trim() || vanSaving}
+              activeOpacity={0.85}
+            >
+              {vanSaving ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.drawerButtonText}>Add Vehicle</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showLocDrawer} animationType="slide" transparent onRequestClose={() => setShowLocDrawer(false)}>
+        <View style={styles.backdrop}>
+          <TouchableOpacity style={styles.backdropTouchable} onPress={() => setShowLocDrawer(false)} />
+          <View style={styles.drawer}>
+            <View style={styles.drawerHandle} />
+            <Text style={styles.drawerTitle}>Add Location</Text>
+
+            <View style={styles.drawerForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Location name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={locName}
+                  onChangeText={setLocName}
+                  placeholder="e.g., Main Shop, Downtown Bay"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Address</Text>
+                <TextInput
+                  style={styles.input}
+                  value={locAddress}
+                  onChangeText={setLocAddress}
+                  placeholder="123 Main St, Atlanta, GA 30305"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.drawerButton, (!locName.trim() || !locAddress.trim() || locSaving) && styles.buttonDisabled]}
+              onPress={handleAddLocation}
+              disabled={!locName.trim() || !locAddress.trim() || locSaving}
+              activeOpacity={0.85}
+            >
+              {locSaving ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.drawerButtonText}>Add Location</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -258,10 +348,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   spacer: { width: 44 },
-  progressTrackWrap: {
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
+  progressTrackWrap: { paddingHorizontal: Spacing.md, marginBottom: Spacing.sm },
   progressTrack: {
     height: 4,
     backgroundColor: Colors.light.borderSubtle,
@@ -292,167 +379,93 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     lineHeight: 22,
   },
-  photoSection: {
+  section: { marginBottom: 32 },
+  sectionHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
-  },
-  photoButton: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.light.bgSecondary,
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    overflow: "hidden",
   },
-  photoPreview: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-  },
-  addPhotoText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyS,
-    color: Colors.foamBlue,
-  },
-  formSection: { gap: Spacing.md, marginBottom: 24 },
-  inputGroup: { gap: 6 },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  label: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-  },
-  optional: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyS,
-    color: Colors.light.textTertiary,
-  },
-  input: {
-    height: 48,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
-    ...Shadows.light.level1,
-  },
-  inputHint: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.label,
-    color: Colors.light.textTertiary,
-  },
-  textAreaWrapper: { position: "relative" },
-  textArea: {
-    height: 100,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
-    ...Shadows.light.level1,
-  },
-  charCount: {
-    position: "absolute",
-    bottom: 12,
-    right: 16,
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
-    backgroundColor: Colors.light.surface,
-    paddingHorizontal: 4,
-  },
-  experienceSection: {
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.md,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    marginBottom: 24,
-    ...Shadows.light.level1,
-  },
-  experienceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  experienceLabel: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-    paddingLeft: 4,
-  },
-  stepper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  stepperButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepperValue: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 18,
-    color: Colors.light.textPrimary,
-    minWidth: 20,
-    textAlign: "center",
-  },
-  specialtiesSection: { marginBottom: 8 },
   sectionLabel: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.label,
     color: Colors.light.textTertiary,
     letterSpacing: 0.8,
-    marginBottom: Spacing.sm,
   },
-  pills: {
+  addButton: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  pill: {
-    paddingHorizontal: 16,
-    paddingVertical: Spacing.sm,
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.foamBlueSubtle,
     borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+  },
+  addButtonText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.caption,
+    color: Colors.foamBlue,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 32,
     backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderStyle: "dashed",
+    gap: 6,
   },
-  pillActive: {
-    backgroundColor: Colors.foamBlue,
-    borderColor: Colors.foamBlue,
-  },
-  pillText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyS,
+  emptyStateTitle: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
     color: Colors.light.textSecondary,
   },
-  pillTextActive: {
-    color: Colors.white,
+  emptyStateBody: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    textAlign: "center",
+    maxWidth: 200,
+  },
+  itemList: { gap: Spacing.sm },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    ...Shadows.light.level1,
+  },
+  itemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemInfo: { flex: 1 },
+  itemName: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  itemMeta: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+    textTransform: "capitalize",
   },
   footer: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Platform.OS === "web" ? 24 : 0,
     paddingTop: Spacing.md,
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   primaryButton: {
     width: "100%",
@@ -467,6 +480,93 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,
+    color: Colors.white,
+  },
+  skipHint: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+    textAlign: "center",
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: Drawer.backdropStandard,
+    justifyContent: "flex-end",
+  },
+  backdropTouchable: {
+    flex: 1,
+  },
+  drawer: {
+    backgroundColor: Drawer.background,
+    borderTopLeftRadius: Drawer.borderRadius,
+    borderTopRightRadius: Drawer.borderRadius,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === "web" ? 24 : 40,
+    paddingTop: Drawer.dragHandleTopOffset,
+    ...Shadows.light.level3,
+  },
+  drawerHandle: {
+    width: Drawer.dragHandleWidth,
+    height: Drawer.dragHandleHeight,
+    borderRadius: 2,
+    backgroundColor: Drawer.dragHandleColor,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  drawerTitle: {
+    fontFamily: Typography.display,
+    fontSize: 20,
+    color: Colors.light.textPrimary,
+    marginBottom: 20,
+  },
+  drawerForm: { gap: Spacing.md, marginBottom: 24 },
+  inputGroup: { gap: 6 },
+  inputLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textSecondary,
+  },
+  input: {
+    height: 48,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+  },
+  typeRow: { flexDirection: "row", gap: Spacing.sm },
+  typePill: {
+    paddingHorizontal: 14,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.surface,
+  },
+  typePillActive: {
+    backgroundColor: Colors.foamBlue,
+    borderColor: Colors.foamBlue,
+  },
+  typePillText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+  },
+  typePillTextActive: { color: Colors.white },
+  drawerButton: {
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Shadows.light.level2,
+  },
+  drawerButtonText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
 });

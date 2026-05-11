@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
 const checklist = [
@@ -18,6 +20,22 @@ const nextSteps = [
 ];
 
 export default function OperatorPendingScreen() {
+  useEffect(() => {
+    markOnboardingComplete();
+  }, []);
+
+  async function markOnboardingComplete() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("users")
+          .update({ onboarding_complete: true })
+          .eq("id", user.id);
+      }
+    } catch {}
+  }
+
   function handleExplore() {
     router.replace("/operator/today");
   }

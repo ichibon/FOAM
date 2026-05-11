@@ -1,250 +1,363 @@
-import { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from "react-native";
-import { router } from "expo-router";
+import { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { supabase } from "@/lib/supabase";
+import { LucideIcon } from "@/components/LucideIcon";
+
+type AuthMode = "login" | "signup";
 
 export default function WelcomeScreen() {
-  const cardAnim1 = useRef(new Animated.Value(0)).current;
-  const cardAnim2 = useRef(new Animated.Value(0)).current;
-  const cardAnim3 = useRef(new Animated.Value(0)).current;
-  const contentAnim = useRef(new Animated.Value(0)).current;
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const nd = Platform.OS !== "web";
-    const float = (anim: Animated.Value, delay: number, duration: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, { toValue: 1, duration, delay, useNativeDriver: nd }),
-          Animated.timing(anim, { toValue: 0, duration, useNativeDriver: nd }),
-        ])
-      );
+  function switchMode(next: AuthMode) {
+    setMode(next);
+    setError(null);
+  }
 
-    float(cardAnim1, 0, 3000).start();
-    float(cardAnim2, 500, 4000).start();
-    float(cardAnim3, 1000, 3500).start();
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setError("Enter your email above, then tap Forgot Password.");
+      return;
+    }
+    setLoading(true);
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim());
+    setLoading(false);
+    if (resetErr) {
+      setError(resetErr.message);
+    } else {
+      Alert.alert("Check your email", "We sent a password reset link to " + email.trim());
+    }
+  }
 
-    Animated.timing(contentAnim, {
-      toValue: 1,
-      duration: 400,
-      delay: 200,
-      useNativeDriver: nd,
-    }).start();
-  }, []);
+  async function handleSubmit() {
+    setError(null);
 
-  const card1Y = cardAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
-  const card2Y = cardAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
-  const card3Y = cardAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
+    if (mode === "login") {
+      if (!email.trim() || !password) {
+        setError("Please enter your email and password.");
+        return;
+      }
+      setLoading(true);
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      setLoading(false);
+      if (signInErr) setError(signInErr.message);
+    } else {
+      if (!fullName.trim() || !email.trim() || !password) {
+        setError("Please fill in all fields.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      setLoading(true);
+      const { error: signUpErr } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: fullName.trim() } },
+      });
+      setLoading(false);
+      if (signUpErr) {
+        setError(signUpErr.message);
+        return;
+      }
+      router.replace("/auth/role-select");
+    }
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.illustrationArea}>
-        <View style={styles.blurCircle} />
-        <Animated.View style={[styles.card3, { transform: [{ translateY: card3Y }, { rotate: "-12deg" }] }]} />
-        <Animated.View style={[styles.card2, { transform: [{ translateY: card2Y }, { rotate: "6deg" }] }]} />
-        <Animated.View style={[styles.card1, { transform: [{ translateY: card1Y }, { rotate: "-3deg" }] }]}>
-          <View style={styles.card1Circle} />
-          <View style={styles.card1Lines}>
-            <View style={styles.card1Line1} />
-            <View style={styles.card1Line2} />
-          </View>
-        </Animated.View>
-      </View>
-
-      <Animated.View
-        style={[
-          styles.contentArea,
-          {
-            opacity: contentAnim,
-            transform: [
-              {
-                translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }),
-              },
-            ],
-          },
-        ]}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.dragHandle} />
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.brandBlock}>
+            <Text style={styles.wordmark}>FOAM</Text>
+            <Text style={styles.tagline}>The operating system for clean cars.</Text>
+          </View>
 
-        <View style={styles.copyBlock}>
-          <Text style={styles.headline}>Your car deserves better.</Text>
-          <Text style={styles.subheadline}>
-            Find the best mobile detailers near you and book in seconds.
-          </Text>
-        </View>
+          <View style={styles.card}>
+            <View style={styles.toggle}>
+              <TouchableOpacity
+                style={[styles.toggleTab, mode === "login" && styles.toggleTabActive]}
+                onPress={() => switchMode("login")}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.toggleTabText, mode === "login" && styles.toggleTabTextActive]}>
+                  Log In
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleTab, mode === "signup" && styles.toggleTabActive]}
+                onPress={() => switchMode("signup")}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.toggleTabText, mode === "signup" && styles.toggleTabTextActive]}>
+                  Sign Up
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push("/auth/signup")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryButtonText}>Get Started</Text>
-          </TouchableOpacity>
+            {error && (
+              <View style={styles.errorBox}>
+                <LucideIcon name="AlertCircle" size={14} color={Colors.errorLight} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
-          <TouchableOpacity
-            style={styles.ghostButton}
-            onPress={() => router.push("/auth/login")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.ghostButtonText}>Log In</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.form}>
+              {mode === "signup" && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Full name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Marcus Thompson"
+                    placeholderTextColor={Colors.light.textTertiary}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
+              )}
 
-        <View style={styles.termsRow}>
-          <Text style={styles.termsText}>By continuing, you agree to our Terms and Privacy Policy.</Text>
-        </View>
-      </Animated.View>
-    </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Password</Text>
+                  {mode === "login" && (
+                    <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
+                      <Text style={styles.forgotText}>Forgot password?</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={styles.passwordRow}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder={mode === "signup" ? "8+ characters" : "••••••••"}
+                    placeholderTextColor={Colors.light.textTertiary}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword((v) => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <LucideIcon
+                      name={showPassword ? "EyeOff" : "Eye"}
+                      size={20}
+                      color={Colors.light.textTertiary}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {mode === "login" ? "Log In" : "Create Account"}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.terms}>
+              By continuing, you agree to our Terms and Privacy Policy.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.bgPrimary,
-  },
-  illustrationArea: {
-    height: "55%",
-    alignItems: "center",
+  safeArea: { flex: 1, backgroundColor: Colors.light.bgPrimary },
+  flex: { flex: 1 },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: 48,
+    paddingBottom: Platform.OS === "web" ? 32 : 0,
     justifyContent: "center",
-    overflow: "hidden",
-    position: "relative",
   },
-  blurCircle: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: Colors.foamBlueSubtle,
+  brandBlock: {
+    alignItems: "center",
+    marginBottom: 40,
   },
-  card3: {
-    position: "absolute",
-    width: 180,
-    height: 240,
-    borderRadius: 24,
-    backgroundColor: Colors.foamLightBlue,
-    left: "50%",
-    marginLeft: -120,
-    top: "50%",
-    marginTop: -140,
+  wordmark: {
+    fontFamily: Typography.display,
+    fontSize: 40,
+    color: Colors.light.textPrimary,
+    letterSpacing: -1,
+    lineHeight: 48,
+    marginBottom: 6,
   },
-  card2: {
-    position: "absolute",
-    width: 190,
-    height: 260,
-    borderRadius: 24,
-    backgroundColor: "#6BB8D4",
-    left: "50%",
-    marginLeft: -75,
-    top: "50%",
-    marginTop: -120,
-    opacity: 0.9,
+  tagline: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+  },
+  card: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.xl,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
     ...Shadows.light.level2,
   },
-  card1: {
-    position: "absolute",
-    width: 200,
-    height: 280,
-    borderRadius: 24,
-    backgroundColor: Colors.foamBlue,
-    left: "50%",
-    marginLeft: -110,
-    top: "50%",
-    marginTop: -110,
-    padding: 24,
-    justifyContent: "space-between",
-    ...Shadows.light.level3,
+  toggle: {
+    flexDirection: "row",
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.md,
+    padding: 3,
+    marginBottom: Spacing.md,
   },
-  card1Circle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  card1Lines: { gap: 8 },
-  card1Line1: {
-    width: "75%",
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
-  card1Line2: {
-    width: "50%",
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  contentArea: {
+  toggleTab: {
     flex: 1,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: Radius.sm,
+  },
+  toggleTabActive: {
     backgroundColor: Colors.light.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Platform.OS === "web" ? 24 : 0,
-    ...Shadows.light.level3,
+    ...Shadows.light.level1,
   },
-  dragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.light.borderSubtle,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 4,
+  toggleTabText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textTertiary,
   },
-  copyBlock: {
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
-  headline: {
-    fontFamily: Typography.display,
-    fontSize: 32,
+  toggleTabTextActive: {
     color: Colors.light.textPrimary,
-    lineHeight: 36,
+    fontFamily: Typography.bodySemiBold,
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: "rgba(220,38,38,0.07)",
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
     marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "rgba(220,38,38,0.18)",
   },
-  subheadline: {
+  errorText: {
+    flex: 1,
     fontFamily: Typography.body,
-    fontSize: Typography.size.bodyL,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+    lineHeight: 18,
+  },
+  form: { gap: Spacing.sm, marginBottom: Spacing.md },
+  inputGroup: { gap: 5 },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  label: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
     color: Colors.light.textSecondary,
-    lineHeight: 24,
   },
-  buttonGroup: {
-    gap: Spacing.sm,
+  forgotText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.foamBlue,
   },
-  primaryButton: {
-    height: 48,
+  input: {
+    height: 50,
+    backgroundColor: Colors.light.bgPrimary,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+  },
+  passwordRow: { position: "relative" },
+  passwordInput: { paddingRight: 48 },
+  eyeButton: {
+    position: "absolute",
+    right: 4,
+    top: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  submitButton: {
+    height: 50,
     backgroundColor: Colors.foamBlue,
     borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: Spacing.md,
     ...Shadows.light.level2,
   },
-  primaryButtonText: {
+  submitButtonDisabled: { opacity: 0.55 },
+  submitButtonText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
-  ghostButton: {
-    height: 48,
-    backgroundColor: Colors.transparent,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.foamBlue,
-  },
-  ghostButtonText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.bodyM,
-    color: Colors.foamBlue,
-  },
-  termsRow: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  termsText: {
+  terms: {
     fontFamily: Typography.body,
     fontSize: Typography.size.label,
     color: Colors.light.textTertiary,

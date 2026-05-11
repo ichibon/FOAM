@@ -1,10 +1,22 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  ActivityIndicator,
+  Modal,
+} from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
+
+const WebView = Platform.OS !== "web"
+  ? require("react-native-webview").WebView
+  : null;
 
 const requirements = [
   "A US bank account for payouts",
@@ -15,6 +27,7 @@ const requirements = [
 export default function StripeScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
 
   async function handleConnect() {
     setLoading(true);
@@ -22,19 +35,29 @@ export default function StripeScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { error: fnError } = await supabase.functions.invoke(
+        const { data, error: fnError } = await supabase.functions.invoke(
           "stripe-create-connect-account",
           { body: { user_id: user.id } }
         );
         if (fnError) {
-          console.warn("stripe-create-connect-account:", fnError.message);
+          setError("Could not start Stripe setup. Please try again.");
+        } else if (data?.url) {
+          setOnboardingUrl(data.url as string);
+        } else {
+          router.replace("/onboarding/operator/pending");
         }
       }
-    } catch (e) {
-      console.warn("Connect account error:", e);
+    } catch {
+      setError("Something went wrong. Please try again.");
     }
     setLoading(false);
-    router.replace("/onboarding/operator/pending");
+  }
+
+  function handleWebViewNavigate(url: string) {
+    if (url.includes("return") || url.includes("refresh")) {
+      setOnboardingUrl(null);
+      router.replace("/onboarding/operator/pending");
+    }
   }
 
   function handleSkip() {
@@ -92,6 +115,7 @@ export default function StripeScreen() {
 
         {error && (
           <View style={styles.errorBox}>
+            <LucideIcon name="AlertCircle" size={14} color={Colors.errorLight} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -130,6 +154,25 @@ export default function StripeScreen() {
           You won't be able to receive payments until your bank is connected.
         </Text>
       </View>
+
+      {WebView && onboardingUrl && (
+        <Modal visible animationType="slide" onRequestClose={() => setOnboardingUrl(null)}>
+          <SafeAreaView style={styles.webViewContainer}>
+            <View style={styles.webViewHeader}>
+              <TouchableOpacity onPress={() => setOnboardingUrl(null)} activeOpacity={0.7} style={styles.webViewClose}>
+                <LucideIcon name="X" size={20} color={Colors.light.textPrimary} />
+              </TouchableOpacity>
+              <Text style={styles.webViewTitle}>Stripe Onboarding</Text>
+              <View style={styles.spacer} />
+            </View>
+            <WebView
+              source={{ uri: onboardingUrl }}
+              onNavigationStateChange={(state: { url: string }) => handleWebViewNavigate(state.url)}
+              style={styles.webView}
+            />
+          </SafeAreaView>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -255,14 +298,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   errorBox: {
-    backgroundColor: "rgba(220,38,38,0.08)",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: "rgba(220,38,38,0.07)",
     borderRadius: Radius.sm,
     padding: Spacing.sm,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: "rgba(220,38,38,0.2)",
+    borderColor: "rgba(220,38,38,0.18)",
   },
   errorText: {
+    flex: 1,
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
@@ -335,4 +382,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 280,
   },
+  webViewContainer: { flex: 1, backgroundColor: Colors.light.bgPrimary },
+  webViewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+  },
+  webViewClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  webViewTitle: {
+    flex: 1,
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    textAlign: "center",
+  },
+  webView: { flex: 1 },
 });

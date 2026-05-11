@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { UserRole } from "@/lib/supabase";
+import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
+import type { UserRole } from "@/lib/supabase";
 
 interface AuthContextType {
   session: Session | null;
@@ -24,6 +24,24 @@ const AuthContext = createContext<AuthContextType>({
   refreshAuth: async () => {},
 });
 
+async function fetchUserProfile(
+  userId: string,
+  client: SupabaseClient,
+  setRole: (r: UserRole | null) => void,
+  setOnboardingComplete: (v: boolean) => void,
+  setLoading: (v: boolean) => void
+) {
+  const { data } = await client
+    .from("users")
+    .select("role, onboarding_complete")
+    .eq("id", userId)
+    .single();
+
+  setRole((data?.role as UserRole) ?? null);
+  setOnboardingComplete(data?.onboarding_complete === true);
+  setLoading(false);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -32,28 +50,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isConfigured, setIsConfigured] = useState(false);
 
   useEffect(() => {
-    let supabase: ReturnType<typeof import("@/lib/supabase").getSupabase> | null = null;
+    let client: SupabaseClient | null = null;
 
     try {
-      const { getSupabase } = require("@/lib/supabase");
-      supabase = getSupabase();
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      client = getSupabase();
       setIsConfigured(true);
     } catch {
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      setSession(session);
-      if (session) fetchUserProfile(session.user.id, supabase!);
-      else setLoading(false);
+    const c = client;
+
+    c.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
+      setSession(s);
+      if (s) {
+        fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setLoading);
+      } else {
+        setLoading(false);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: string, session: Session | null) => {
-        setSession(session);
-        if (session) {
-          await fetchUserProfile(session.user.id, supabase!);
+    const { data: { subscription } } = c.auth.onAuthStateChange(
+      (_event: string, s: Session | null) => {
+        setSession(s);
+        if (s) {
+          fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setLoading);
         } else {
           setRole(null);
           setOnboardingComplete(false);
@@ -65,32 +88,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchUserProfile(userId: string, supabase: any) {
-    const { data } = await supabase
-      .from("users")
-      .select("role, onboarding_complete")
-      .eq("id", userId)
-      .single();
-
-    setRole(data?.role ?? null);
-    setOnboardingComplete(data?.onboarding_complete === true);
-    setLoading(false);
-  }
-
   async function refreshAuth() {
     try {
-      const { getSupabase } = require("@/lib/supabase");
-      const supabase = getSupabase();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) await fetchUserProfile(user.id, supabase);
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const c = getSupabase();
+      const { data: { user } } = await c.auth.getUser();
+      if (user) {
+        await fetchUserProfile(user.id, c, setRole, setOnboardingComplete, () => {});
+      }
     } catch {}
   }
 
   async function signOut() {
     try {
-      const { getSupabase } = require("@/lib/supabase");
-      const supabase = getSupabase();
-      await supabase.auth.signOut();
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const c = getSupabase();
+      await c.auth.signOut();
     } catch {}
     setRole(null);
     setOnboardingComplete(false);

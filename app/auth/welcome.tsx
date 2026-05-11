@@ -73,7 +73,7 @@ export default function WelcomeScreen() {
         return;
       }
       setLoading(true);
-      const { error: signUpErr } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: { data: { full_name: fullName.trim() } },
@@ -81,6 +81,10 @@ export default function WelcomeScreen() {
       setLoading(false);
       if (signUpErr) {
         setError(signUpErr.message);
+        return;
+      }
+      if (!signUpData.session) {
+        setError("Check your email and click the confirmation link to continue.");
         return;
       }
       router.replace("/auth/role-select");

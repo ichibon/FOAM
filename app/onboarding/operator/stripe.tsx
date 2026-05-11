@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
 const requirements = [
@@ -11,7 +13,27 @@ const requirements = [
 ];
 
 export default function StripeScreen() {
-  function handleConnect() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConnect() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error: fnError } = await supabase.functions.invoke(
+          "stripe-create-connect-account",
+          { body: { user_id: user.id } }
+        );
+        if (fnError) {
+          console.warn("stripe-create-connect-account:", fnError.message);
+        }
+      }
+    } catch (e) {
+      console.warn("Connect account error:", e);
+    }
+    setLoading(false);
     router.replace("/onboarding/operator/pending");
   }
 
@@ -68,6 +90,12 @@ export default function StripeScreen() {
           </View>
         </View>
 
+        {error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <View style={styles.payoutAlert}>
           <View style={styles.payoutAlertIcon}>
             <LucideIcon name="DollarSign" size={12} color={Colors.foamBlue} />
@@ -79,12 +107,23 @@ export default function StripeScreen() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleConnect} activeOpacity={0.85}>
-          <LucideIcon name="Link" size={18} color={Colors.white} />
-          <Text style={styles.primaryButtonText}>Connect with Stripe</Text>
+        <TouchableOpacity
+          style={[styles.primaryButton, loading && styles.buttonDisabled]}
+          onPress={handleConnect}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <>
+              <LucideIcon name="Link" size={18} color={Colors.white} />
+              <Text style={styles.primaryButtonText}>Connect with Stripe</Text>
+            </>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={loading} activeOpacity={0.7}>
           <Text style={styles.skipButtonText}>I'll do this later</Text>
         </TouchableOpacity>
         <Text style={styles.skipWarning}>
@@ -215,6 +254,19 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     flex: 1,
   },
+  errorBox: {
+    backgroundColor: "rgba(220,38,38,0.08)",
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "rgba(220,38,38,0.2)",
+  },
+  errorText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+  },
   payoutAlert: {
     flexDirection: "row",
     gap: Spacing.sm,
@@ -258,6 +310,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     ...Shadows.light.level2,
   },
+  buttonDisabled: { opacity: 0.5 },
   primaryButtonText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,

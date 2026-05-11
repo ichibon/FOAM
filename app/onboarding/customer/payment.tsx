@@ -7,10 +7,13 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
 export default function PaymentScreen() {
@@ -18,6 +21,7 @@ export default function PaymentScreen() {
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [zip, setZip] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function formatCardNumber(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 16);
@@ -30,7 +34,22 @@ export default function PaymentScreen() {
     return digits;
   }
 
-  function handleContinue() {
+  async function handleContinue() {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase.functions.invoke("stripe-create-customer", {
+          body: { user_id: user.id },
+        });
+        if (error) {
+          console.warn("stripe-create-customer:", error.message);
+        }
+      }
+    } catch (e) {
+      console.warn("Payment setup error:", e);
+    }
+    setLoading(false);
     router.replace("/onboarding/customer/location");
   }
 
@@ -133,11 +152,20 @@ export default function PaymentScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleContinue} activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>Save & Continue</Text>
+        <TouchableOpacity
+          style={[styles.primaryButton, loading && styles.buttonDisabled]}
+          onPress={handleContinue}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Save & Continue</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={loading} activeOpacity={0.7}>
           <Text style={styles.skipButtonText}>Skip for now</Text>
         </TouchableOpacity>
       </View>
@@ -288,6 +316,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  buttonDisabled: { opacity: 0.5 },
   primaryButtonText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,

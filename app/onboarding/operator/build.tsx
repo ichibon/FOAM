@@ -8,9 +8,11 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
@@ -22,12 +24,54 @@ export default function BuildProfileScreen() {
   const [bio, setBio] = useState("");
   const [years, setYears] = useState(5);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(["Interior", "Exterior"]);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
 
   function toggleSpecialty(s: string) {
     setSelectedSpecialties((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     );
+  }
+
+  async function handlePickPhoto() {
+    if (Platform.OS !== "web") {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
+
+  async function uploadPhoto(userId: string): Promise<string | null> {
+    if (!photoUri) return null;
+    try {
+      const ext = photoUri.split(".").pop() ?? "jpg";
+      const path = `detailers/${userId}/logo.${ext}`;
+      const response = await fetch(photoUri);
+      const blob = await response.blob();
+      const { error } = await supabase.storage
+        .from("business-assets")
+        .upload(path, blob, { upsert: true, contentType: `image/${ext}` });
+      if (error) {
+        console.warn("Photo upload error:", error.message);
+        return null;
+      }
+      const { data } = supabase.storage.from("business-assets").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e) {
+      console.warn("Photo upload failed:", e);
+      return null;
+    }
   }
 
   async function handleContinue() {
@@ -36,13 +80,25 @@ export default function BuildProfileScreen() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const avatarUrl = await uploadPhoto(user.id);
+
+      const updatePayload: Record<string, any> = {
+        business_name: businessName.trim(),
+        bio: bio.trim() || null,
+      };
+      if (avatarUrl) updatePayload.avatar_url = avatarUrl;
+
       await supabase
         .from("detailer_profiles")
-        .update({
-          business_name: businessName.trim(),
-          bio: bio.trim() || null,
-        })
+        .update(updatePayload)
         .eq("user_id", user.id);
+
+      if (avatarUrl) {
+        await supabase
+          .from("users")
+          .update({ avatar_url: avatarUrl })
+          .eq("id", user.id);
+      }
     }
 
     router.push("/onboarding/operator/services");
@@ -76,11 +132,15 @@ export default function BuildProfileScreen() {
         </View>
 
         <View style={styles.photoSection}>
-          <TouchableOpacity style={styles.photoButton} activeOpacity={0.8}>
-            <LucideIcon name="Camera" size={28} color={Colors.foamBlue} />
+          <TouchableOpacity style={styles.photoButton} onPress={handlePickPhoto} activeOpacity={0.8}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            ) : (
+              <LucideIcon name="Camera" size={28} color={Colors.foamBlue} />
+            )}
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.addPhotoText}>Add photo</Text>
+          <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.7}>
+            <Text style={styles.addPhotoText}>{photoUri ? "Change photo" : "Add photo"}</Text>
           </TouchableOpacity>
         </View>
 
@@ -246,6 +306,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,
+    overflow: "hidden",
+  },
+  photoPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
   },
   addPhotoText: {
     fontFamily: Typography.bodyMedium,

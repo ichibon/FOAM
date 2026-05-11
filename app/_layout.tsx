@@ -17,7 +17,6 @@ import {
 } from "@expo-google-fonts/inter";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
-// StripeProvider is native-only — import lazily to avoid web crashes
 const StripeProvider =
   Platform.OS !== "web"
     ? require("@stripe/stripe-react-native").StripeProvider
@@ -25,33 +24,45 @@ const StripeProvider =
 
 SplashScreen.preventAutoHideAsync();
 
+const ONBOARDING_ENTRY: Record<string, string> = {
+  customer: "/onboarding/customer/vehicle",
+  operator: "/onboarding/operator/type",
+  manager: "/onboarding/operator/type",
+  team_member: "/onboarding/crew/profile",
+};
+
+const MAIN_TAB: Record<string, string> = {
+  customer: "/customer/discover",
+  operator: "/operator/today",
+  manager: "/operator/today",
+  team_member: "/team_member/jobs",
+};
+
 function RootLayoutNav() {
-  const { session, role, loading } = useAuth();
+  const { session, role, onboardingComplete, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;
 
     if (!session) {
       router.replace("/onboarding/splash");
-    } else {
-      switch (role) {
-        case "customer":
-          router.replace("/customer/discover");
-          break;
-        case "operator":
-          router.replace("/operator/today");
-          break;
-        case "manager":
-          router.replace("/operator/today");
-          break;
-        case "team_member":
-          router.replace("/team_member/jobs");
-          break;
-        default:
-          router.replace("/auth/role-select");
-      }
+      return;
     }
-  }, [session, role, loading]);
+
+    if (!role) {
+      router.replace("/auth/role-select");
+      return;
+    }
+
+    if (!onboardingComplete) {
+      const entry = ONBOARDING_ENTRY[role] ?? "/onboarding/splash";
+      router.replace(entry as any);
+      return;
+    }
+
+    const tab = MAIN_TAB[role] ?? "/onboarding/splash";
+    router.replace(tab as any);
+  }, [session, role, onboardingComplete, loading]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

@@ -1,6 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Location from "expo-location";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { LucideIcon } from "@/components/LucideIcon";
 
@@ -11,7 +13,16 @@ const benefits = [
 ];
 
 export default function LocationScreen() {
-  function handleEnable() {
+  const [loading, setLoading] = useState(false);
+
+  async function handleEnable() {
+    setLoading(true);
+    try {
+      if (Platform.OS !== "web") {
+        await Location.requestForegroundPermissionsAsync();
+      }
+    } catch {}
+    setLoading(false);
     router.replace("/onboarding/customer/complete");
   }
 
@@ -53,8 +64,17 @@ export default function LocationScreen() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleEnable} activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>Enable Location</Text>
+        <TouchableOpacity
+          style={[styles.primaryButton, loading && styles.buttonDisabled]}
+          onPress={handleEnable}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Enable Location</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
@@ -173,6 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Shadows.light.level1,
   },
+  buttonDisabled: { opacity: 0.5 },
   primaryButtonText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,

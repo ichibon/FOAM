@@ -10,18 +10,28 @@ import { LucideIcon } from "./LucideIcon";
 
 /**
  * Severity:
- *   "warning"  — non-blocking issue, outlined CTA
- *   "error"    — actionable failure, filled red CTA
- *   "info"     — informational state, filled blue CTA
+ *   "warning"  — non-blocking soft failure, outlined FOAM Blue CTA
+ *   "error"    — actionable hard failure, filled Error Red CTA
+ *   "info"     — informational / upgrade state, filled FOAM Blue CTA
  *
- * Use fullScreen={true} for blocking errors (no internet, suspended, etc.)
- * that cover the entire viewport with no nav chrome.
+ * Use fullScreen={true} for blocking errors (no internet, suspended, update
+ * required) that should cover the entire viewport with no nav chrome.
  *
- * Recovery types provide semantic context but CTA execution is fully
- * controlled by the caller via ctaAction — no routing logic lives here.
+ * Recovery semantic contract — ctaAction MUST fulfil:
+ *   "retry"    — re-fires the failed operation; must be debounced by caller
+ *   "navigate" — navigates to the resolution screen; call router.push inside
+ *   "support"  — opens in-app chat or mailto:support@foamauto.app
+ *
+ * CTA execution is fully owned by the caller via ctaAction — no routing
+ * logic lives in this component. ghostAction follows the same contract.
  */
 export interface ErrorStateProps {
   severity: "error" | "warning" | "info";
+  /**
+   * Semantic label for the recovery path. Does not change component
+   * behaviour — the caller's ctaAction callback owns execution.
+   * Callers MUST implement the contract documented above.
+   */
   recovery: "retry" | "navigate" | "support";
   icon: string;
   headline: string;
@@ -30,7 +40,9 @@ export interface ErrorStateProps {
   ctaAction: () => void;
   ghostLabel?: string;
   ghostAction?: () => void;
+  /** Default false. Set true for blocking errors (no internet, suspended). */
   fullScreen?: boolean;
+  /** Optional support reference displayed in small tertiary text. */
   errorCode?: string;
 }
 

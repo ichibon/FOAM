@@ -15,9 +15,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 export default function CrewProfileScreen() {
+  const { refreshAuth } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -94,7 +96,8 @@ export default function CrewProfileScreen() {
       console.warn("[CrewProfile] continue failed", err);
     }
 
-    router.replace("/team_member/jobs");
+    await refreshAuth();
+    router.replace("/team_member/pending");
     setLoading(false);
   }
 

@@ -1,34 +1,26 @@
 import React, { useEffect, useRef } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   Modal,
   Animated,
   Dimensions,
   TouchableWithoutFeedback,
   ScrollView,
+  Linking,
 } from "react-native";
-import { Colors, Drawer, Layout } from "@/constants/design";
-import { ErrorStateProps } from "./ErrorState";
-import { LucideIcon } from "./LucideIcon";
-import { ErrorStateTokens } from "@/constants/design";
+import { router } from "expo-router";
+import { Drawer, Layout } from "@/constants/design";
+import { ErrorState, type ErrorStateProps } from "./ErrorState";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const DRAWER_MAX_HEIGHT = SCREEN_HEIGHT * 0.8;
+const DRAWER_MAX_HEIGHT = SCREEN_HEIGHT * 0.85;
 
 export interface ErrorDrawerProps extends ErrorStateProps {
   visible: boolean;
   onDismiss?: () => void;
   children?: React.ReactNode;
 }
-
-const SEVERITY_MAP = {
-  warning: ErrorStateTokens.warning,
-  error: ErrorStateTokens.error,
-  blocking: ErrorStateTokens.blocking,
-} as const;
 
 export function ErrorDrawer({
   visible,
@@ -50,10 +42,6 @@ export function ErrorDrawer({
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const lastRetry = useRef(0);
 
-  const colors = SEVERITY_MAP[severity];
-  const isErrorSeverity = severity === "error" || severity === "blocking";
-  const ctaBgColor = isErrorSeverity ? Colors.errorLight : Colors.foamBlue;
-
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -61,9 +49,7 @@ export function ErrorDrawer({
           toValue: 0,
           duration: Drawer.animationDuration,
           useNativeDriver: true,
-          easing: (t) => {
-            return 1 - Math.pow(1 - t, 3);
-          },
+          easing: (t) => 1 - Math.pow(1 - t, 3),
         }),
         Animated.timing(backdropOpacity, {
           toValue: 1,
@@ -87,18 +73,19 @@ export function ErrorDrawer({
     }
   }, [visible]);
 
-  const handleCta = () => {
+  const handleCtaPress = () => {
     if (recovery === "retry") {
       const now = Date.now();
       if (now - lastRetry.current < 1000) return;
       lastRetry.current = now;
       retryAction?.();
     } else if (recovery === "navigate" && navigateTo) {
-      const { router } = require("expo-router");
       onDismiss?.();
-      setTimeout(() => router.push(navigateTo), 250);
+      setTimeout(
+        () => router.push(navigateTo as Parameters<typeof router.push>[0]),
+        250,
+      );
     } else if (recovery === "support") {
-      const { Linking } = require("react-native");
       Linking.openURL("mailto:support@foamauto.app");
     }
   };
@@ -114,10 +101,7 @@ export function ErrorDrawer({
       <View style={styles.modalRoot}>
         <TouchableWithoutFeedback onPress={onDismiss}>
           <Animated.View
-            style={[
-              styles.backdrop,
-              { opacity: backdropOpacity },
-            ]}
+            style={[styles.backdrop, { opacity: backdropOpacity }]}
           />
         </TouchableWithoutFeedback>
 
@@ -137,63 +121,25 @@ export function ErrorDrawer({
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <View style={styles.iconCircle}>
-              <LucideIcon
-                name={icon}
-                size={ErrorStateTokens.iconSize}
-                color={colors.iconColor}
-                strokeWidth={1.75}
-              />
-            </View>
-
-            <Text style={styles.headline}>{headline}</Text>
-            <Text style={styles.body}>{body}</Text>
-
-            {errorCode && (
-              <Text style={styles.errorCode}>Ref: {errorCode}</Text>
-            )}
+            <ErrorState
+              severity={severity}
+              recovery={recovery}
+              icon={icon}
+              headline={headline}
+              body={body}
+              ctaLabel={ctaLabel}
+              retryAction={retryAction}
+              navigateTo={navigateTo}
+              ghostLabel={ghostLabel}
+              ghostAction={ghostAction}
+              errorCode={errorCode}
+              fullScreen={false}
+              onCtaPress={handleCtaPress}
+            />
 
             {children && (
               <View style={styles.childrenContainer}>{children}</View>
             )}
-
-            <View style={styles.ctaContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.ctaBase,
-                  {
-                    backgroundColor:
-                      severity === "warning" ? "transparent" : ctaBgColor,
-                    borderWidth: severity === "warning" ? 1.5 : 0,
-                    borderColor: Colors.foamBlue,
-                  },
-                ]}
-                onPress={handleCta}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.ctaText,
-                    {
-                      color:
-                        severity === "warning" ? Colors.foamBlue : Colors.white,
-                    },
-                  ]}
-                >
-                  {ctaLabel}
-                </Text>
-              </TouchableOpacity>
-
-              {ghostLabel && ghostAction && (
-                <TouchableOpacity
-                  style={styles.ghostCta}
-                  onPress={ghostAction}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.ghostCtaText}>{ghostLabel}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
           </ScrollView>
         </Animated.View>
       </View>
@@ -236,71 +182,10 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   scrollContent: {
-    alignItems: "center",
-    paddingHorizontal: Layout.screenPaddingH,
-    paddingTop: 16,
     paddingBottom: 40,
   },
-  iconCircle: {
-    width: ErrorStateTokens.iconCircleSize,
-    height: ErrorStateTokens.iconCircleSize,
-    borderRadius: ErrorStateTokens.iconCircleSize / 2,
-    backgroundColor: ErrorStateTokens.error.iconBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  headline: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 20,
-    lineHeight: 26,
-    color: Colors.light.textPrimary,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  body: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-    maxWidth: 280,
-  },
-  errorCode: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: Colors.light.textTertiary,
-    marginTop: 8,
-    textAlign: "center",
-  },
   childrenContainer: {
-    width: "100%",
-    marginTop: 20,
-  },
-  ctaContainer: {
-    width: "100%",
-    marginTop: 28,
-  },
-  ctaBase: {
-    height: Layout.ctaHeight,
-    borderRadius: Layout.ctaRadius,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  ctaText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: Layout.ctaFontSize,
-  },
-  ghostCta: {
-    marginTop: 12,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ghostCtaText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    color: Colors.foamBlue,
+    paddingHorizontal: Layout.screenPaddingH,
+    marginTop: 8,
   },
 });

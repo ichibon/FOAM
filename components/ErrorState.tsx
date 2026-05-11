@@ -4,11 +4,21 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  Linking,
 } from "react-native";
+import { router } from "expo-router";
 import { Colors, ErrorStateTokens, Layout } from "@/constants/design";
 import { LucideIcon } from "./LucideIcon";
 
+/**
+ * severity values:
+ *   "warning"  — non-blocking issue, outlined CTA
+ *   "error"    — actionable failure, filled red CTA
+ *   "blocking" — full-screen hard stop (no nav, no dismiss), filled red CTA
+ *
+ * Note: the UX spec uses "blocking" (not "info") for unrecoverable states
+ * such as offline or auth-expired screens. This is intentional.
+ */
 export interface ErrorStateProps {
   severity: "warning" | "error" | "blocking";
   recovery: "retry" | "navigate" | "support";
@@ -22,9 +32,10 @@ export interface ErrorStateProps {
   ghostAction?: () => void;
   fullScreen?: boolean;
   errorCode?: string;
+  onCtaPress?: () => void;
 }
 
-const SEVERITY_MAP = {
+const SEVERITY_TOKENS = {
   warning: ErrorStateTokens.warning,
   error: ErrorStateTokens.error,
   blocking: ErrorStateTokens.blocking,
@@ -43,38 +54,34 @@ export function ErrorState({
   ghostAction,
   fullScreen = false,
   errorCode,
+  onCtaPress,
 }: ErrorStateProps) {
   const lastRetry = useRef(0);
-  const colors = SEVERITY_MAP[severity];
+  const colors = SEVERITY_TOKENS[severity];
 
   const handleCta = () => {
+    if (onCtaPress) {
+      onCtaPress();
+      return;
+    }
     if (recovery === "retry") {
       const now = Date.now();
       if (now - lastRetry.current < 1000) return;
       lastRetry.current = now;
       retryAction?.();
     } else if (recovery === "navigate" && navigateTo) {
-      const { router } = require("expo-router");
-      router.push(navigateTo);
+      router.push(navigateTo as Parameters<typeof router.push>[0]);
     } else if (recovery === "support") {
-      const { Linking } = require("react-native");
       Linking.openURL("mailto:support@foamauto.app");
     }
   };
 
   const isErrorSeverity = severity === "error" || severity === "blocking";
-  const ctaBgColor = isErrorSeverity ? Colors.errorLight : Colors.foamBlue;
-  const ctaStyle = severity === "warning"
-    ? styles.ctaOutlined
-    : styles.ctaFilled;
 
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
       <View
-        style={[
-          styles.iconCircle,
-          { backgroundColor: colors.iconBg },
-        ]}
+        style={[styles.iconCircle, { backgroundColor: colors.iconBg }]}
       >
         <LucideIcon
           name={icon}
@@ -85,7 +92,6 @@ export function ErrorState({
       </View>
 
       <Text style={styles.headline}>{headline}</Text>
-
       <Text style={styles.body}>{body}</Text>
 
       {errorCode && (
@@ -96,10 +102,9 @@ export function ErrorState({
         <TouchableOpacity
           style={[
             styles.ctaBase,
-            ctaStyle,
             severity === "warning"
-              ? { borderColor: Colors.foamBlue }
-              : { backgroundColor: ctaBgColor },
+              ? styles.ctaOutlined
+              : { backgroundColor: isErrorSeverity ? Colors.errorLight : Colors.foamBlue },
           ]}
           onPress={handleCta}
           activeOpacity={0.8}
@@ -107,9 +112,7 @@ export function ErrorState({
           <Text
             style={[
               styles.ctaText,
-              severity === "warning"
-                ? { color: Colors.foamBlue }
-                : { color: Colors.white },
+              { color: severity === "warning" ? Colors.foamBlue : Colors.white },
             ]}
           >
             {ctaLabel}
@@ -189,12 +192,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
   },
-  ctaFilled: {
-    // backgroundColor set inline
-  },
   ctaOutlined: {
     backgroundColor: "transparent",
     borderWidth: 1.5,
+    borderColor: Colors.foamBlue,
   },
   ctaText: {
     fontFamily: "Inter_600SemiBold",

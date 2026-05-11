@@ -24,11 +24,15 @@ export default function DevQA() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [drawerType, setDrawerType] = useState<"error" | "warning">("error");
 
+  if (!__DEV__) return null;
+
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Component QA</Text>
-        <Text style={styles.headerSub}>EmptyState · ErrorState · ErrorDrawer</Text>
+        <Text style={styles.headerSub}>
+          EmptyState · ErrorState · ErrorDrawer
+        </Text>
       </View>
 
       <ScrollView
@@ -66,21 +70,6 @@ export default function DevQA() {
           />
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Vehicles (customer)</Text>
-          <EmptyState
-            variant="first_run"
-            icon="car"
-            headline="No rides added yet."
-            body="Add your vehicle once and we'll remember it for every booking."
-            ctaLabel="Add a Vehicle"
-            ctaRoute="/customer/vehicles/add"
-            ghostLabel="I'll add it later"
-            ghostRoute="/customer/profile"
-            fullScreen={false}
-          />
-        </View>
-
         <Divider />
 
         {/* ── EmptyState: functional ── */}
@@ -100,28 +89,15 @@ export default function DevQA() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>No customers yet</Text>
-          <EmptyState
-            variant="functional"
-            icon="users"
-            headline="No customers yet."
-            body="Do the work, the list will grow."
-            ctaLabel="Share Booking Link"
-            ctaRoute="/operator/profile/share"
-            fullScreen={false}
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Success state (all jobs assigned)</Text>
+          <Text style={styles.cardLabel}>Success state</Text>
           <EmptyState
             variant="functional"
             icon="shield-check"
             iconColor="#16A34A"
             headline="All jobs assigned."
             body="Great work. Check back when new bookings come in."
-            ctaLabel="View All Jobs"
-            ctaRoute="/manager/bookings"
+            ctaLabel="View Today"
+            ctaRoute="/operator/today"
             fullScreen={false}
           />
         </View>
@@ -156,8 +132,8 @@ export default function DevQA() {
             headline="Card declined."
             body="Your payment method didn't work. Update it and try again."
             ctaLabel="Update Payment"
-            navigateTo="/customer/payments"
-            ghostLabel="Try a different card"
+            navigateTo="/customer/discover"
+            ghostLabel="Contact Support"
             ghostAction={() => {}}
           />
         </View>
@@ -180,10 +156,9 @@ export default function DevQA() {
         <Divider />
 
         {/* ── ErrorState: blocking ── */}
-        <SectionLabel label="ErrorState — blocking (full screen preview)" />
+        <SectionLabel label="ErrorState — blocking" />
 
-        <View style={[styles.card, { height: 420 }]}>
-          <Text style={styles.cardLabel}>No internet (blocking)</Text>
+        <View style={[styles.card, { height: 380 }]}>
           <ErrorState
             severity="blocking"
             recovery="retry"
@@ -201,8 +176,6 @@ export default function DevQA() {
         <SectionLabel label="ErrorDrawer — bottom sheet" />
 
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Tap to open drawer</Text>
-
           <TouchableOpacity
             style={styles.drawerTrigger}
             onPress={() => {
@@ -211,7 +184,9 @@ export default function DevQA() {
             }}
             activeOpacity={0.8}
           >
-            <Text style={styles.drawerTriggerText}>Open Error Drawer (error)</Text>
+            <Text style={styles.drawerTriggerText}>
+              Open Error Drawer (error)
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -222,7 +197,9 @@ export default function DevQA() {
             }}
             activeOpacity={0.8}
           >
-            <Text style={styles.drawerTriggerText}>Open Error Drawer (warning)</Text>
+            <Text style={styles.drawerTriggerText}>
+              Open Error Drawer (warning)
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -235,14 +212,16 @@ export default function DevQA() {
         severity={drawerType}
         recovery="navigate"
         icon={drawerType === "error" ? "credit-card" : "alert-circle"}
-        headline={drawerType === "error" ? "Card declined." : "Payment needs attention."}
+        headline={
+          drawerType === "error" ? "Card declined." : "Payment needs attention."
+        }
         body={
           drawerType === "error"
             ? "Your payment method didn't work. Update it and try again."
-            : "Your detail is complete but we couldn't process payment. Update your card to finish up."
+            : "Your detail is complete but we couldn't process payment."
         }
-        ctaLabel={drawerType === "error" ? "Update Payment" : "Update Payment"}
-        navigateTo="/customer/payments"
+        ctaLabel="Update Payment"
+        navigateTo="/customer/discover"
         ghostLabel="Contact Support"
         ghostAction={() => setDrawerVisible(false)}
         errorCode={drawerType === "error" ? "PMT-4242" : undefined}

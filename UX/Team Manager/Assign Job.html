@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FOAM Assign Job</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24 relative min-h-screen">
+
+    <!-- Header Section -->
+    <header id="main-header" class="px-5 pt-12 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle flex items-center justify-between">
+        <a href="#" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary transition-colors">
+            <i class="fa-solid fa-chevron-left text-textPrimary text-[16px]"></i>
+        </a>
+        <div class="flex items-center gap-2">
+            <h1 class="font-sans text-[17px] font-semibold text-textPrimary">Unassigned Jobs</h1>
+            <div class="w-5 h-5 rounded-full bg-warning flex items-center justify-center">
+                <span class="font-sans text-[11px] font-bold text-white">2</span>
+            </div>
+        </div>
+        <div class="w-8 h-8"></div>
+    </header>
+
+    <!-- Filter Pills -->
+    <div id="filter-pills" class="w-full px-5 py-4 flex items-center gap-2 overflow-x-auto hide-scrollbar bg-primary">
+        <button class="px-4 py-1.5 rounded-full bg-brandBlue text-white font-sans text-[13px] font-medium whitespace-nowrap shadow-sm">All</button>
+        <button class="px-4 py-1.5 rounded-full bg-surface border border-borderSubtle text-textSecondary font-sans text-[13px] font-medium whitespace-nowrap hover:bg-secondary transition-colors shadow-sm">Today</button>
+        <button class="px-4 py-1.5 rounded-full bg-surface border border-borderSubtle text-textSecondary font-sans text-[13px] font-medium whitespace-nowrap hover:bg-secondary transition-colors shadow-sm">This Week</button>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <main class="px-5 py-2 flex flex-col gap-3 max-w-lg mx-auto">
+        <!-- Unassigned Job Card 1 -->
+        <div class="bg-surface rounded-[16px] border-l-[3px] border-l-warning p-4 shadow-level2 flex flex-col gap-4">
+            <div class="flex justify-between items-start">
+                <div class="flex flex-col gap-0.5">
+                    <span class="font-sans text-[13px] text-textSecondary">Thu, May 2 &middot; 11:30 AM</span>
+                    <span class="font-sans text-[13px] text-textTertiary">~2 hrs</span>
+                </div>
+                <div class="bg-warningSubtle text-warning px-3 py-1 rounded-full font-sans text-[11px] font-medium">Unassigned</div>
+            </div>
+            <div class="flex flex-col gap-1">
+                <h3 class="font-sans text-[17px] font-semibold text-textPrimary">Christina L.</h3>
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-car-side text-textTertiary text-[16px]"></i>
+                    <span class="font-sans text-[13px] text-textSecondary">2022 Mercedes GLE &middot; Silver</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1 bg-primary rounded-[12px] p-3 border border-borderSubtle">
+                <div class="flex justify-between items-center">
+                    <span class="font-sans text-[15px] font-medium text-textPrimary">Full Interior Detail</span>
+                    <span class="font-sans text-[15px] font-semibold text-brandBlue">$220</span>
+                </div>
+                <div class="flex items-center gap-1.5 mt-1">
+                    <i class="fa-solid fa-map-pin text-textTertiary text-[14px]"></i>
+                    <span class="font-sans text-[13px] text-textSecondary">1847 Peachtree Rd NE</span>
+                </div>
+            </div>
+            <button onclick="openBottomSheet()" class="w-full h-[44px] bg-brandBlue text-white rounded-[12px] font-sans text-[15px] font-semibold hover:bg-brandBlueHover transition-colors mt-2 shadow-sm">Assign to Crew</button>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+    <!-- OVERLAY & BOTTOM SHEET (Screen 3) -->
+    
+    <!-- Backdrop Layer -->
+    <div id="backdrop_layer" class="hidden fixed inset-0 bg-black/30 z-[60] transition-opacity duration-300"></div>
+
+    <!-- Bottom Sheet Container -->
+    <div id="bottom_sheet_container" class="fixed bottom-0 left-0 right-0 h-[80vh] bg-surface rounded-t-[20px] z-[70] flex flex-col shadow-level2 transform translate-y-full transition-transform duration-300 ease-out">
+        
+        <!-- Drag Handle -->
+        <div class="w-full flex justify-center pt-3 pb-1">
+            <div class="w-10 h-1 bg-borderDefault rounded-full"></div>
+        </div>
+
+        <!-- Bottom Sheet Header -->
+        <div id="bottom_sheet_header" class="px-5 pb-3 pt-2 border-b border-borderSubtle flex justify-center items-center relative">
+            <h2 class="font-sans text-[17px] font-semibold text-textPrimary">Assign Job</h2>
+        </div>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto hide-scrollbar px-5 py-4 pb-28">
+            
+            <!-- Job Context Bar -->
+            <div id="job_summary_bar" class="bg-brandBlueSubtle rounded-[12px] p-3 mb-6">
+                <p class="font-sans text-[13px] text-textSecondary leading-relaxed">
+                    Christina L. &middot; Full Interior Detail &middot; Thu, May 2 at 11:30 AM &middot; $220
+                </p>
+            </div>
+
+            <!-- Crew Selection List -->
+            <div id="crew_selection_list" class="flex flex-col gap-2">
+                <span class="font-sans text-[11px] font-medium text-textTertiary uppercase tracking-wider mb-1">CHOOSE A CREW MEMBER</span>
+                
+                <!-- Available Crew Card 1 (Jordan - Selected State) -->
+                <div onclick="selectCrew('jordan')" id="crew_jordan" class="bg-surface rounded-[12px] p-3 border-2 border-brandBlue w-full flex items-start gap-3 cursor-pointer shadow-sm relative">
+                    <div class="w-[44px] h-[44px] rounded-full bg-brandBlue flex items-center justify-center shrink-0">
+                        <span class="font-sans text-[16px] font-semibold text-white">JK</span>
+                    </div>
+                    <div class="flex flex-col flex-1">
+                        <span class="font-sans text-[15px] font-semibold text-textPrimary">Jordan K.</span>
+                        <span class="font-sans text-[13px] text-success">Available at 11:30 AM</span>
+                        <span class="font-sans text-[12px] text-textTertiary">2 jobs today &middot; 4.9 <i class="fa-solid fa-star text-[10px] text-warning"></i> avg</span>
+                        
+                        <!-- Load Indicator -->
+                        <div class="flex items-center gap-2 mt-1.5">
+                            <div class="flex gap-1">
+                                <div class="w-3 h-1.5 rounded-full bg-brandBlue"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-brandBlue"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                            </div>
+                            <span class="font-sans text-[11px] text-textTertiary">Light load</span>
+                        </div>
+                    </div>
+                    <!-- Checkmark for selected state -->
+                    <div class="w-6 h-6 rounded-full bg-brandBlue flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-check text-white text-[12px]"></i>
+                    </div>
+                </div>
+
+                <!-- Available Crew Card 2 (Kayla - Unselected State) -->
+                <div onclick="selectCrew('kayla')" id="crew_kayla" class="bg-surface rounded-[12px] p-3 border border-borderSubtle w-full flex items-start gap-3 cursor-pointer hover:bg-primary transition-colors">
+                    <div class="w-[44px] h-[44px] rounded-full bg-brandBlue flex items-center justify-center shrink-0">
+                        <span class="font-sans text-[16px] font-semibold text-white">KM</span>
+                    </div>
+                    <div class="flex flex-col flex-1">
+                        <span class="font-sans text-[15px] font-semibold text-textPrimary">Kayla M.</span>
+                        <span class="font-sans text-[13px] text-success">Available at 11:30 AM</span>
+                        <span class="font-sans text-[12px] text-textTertiary">3 jobs today &middot; 4.8 <i class="fa-solid fa-star text-[10px] text-warning"></i> avg</span>
+                        
+                        <!-- Load Indicator -->
+                        <div class="flex items-center gap-2 mt-1.5">
+                            <div class="flex gap-1">
+                                <div class="w-3 h-1.5 rounded-full bg-brandBlue"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-brandBlue"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-brandBlue"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                            </div>
+                            <span class="font-sans text-[11px] text-textTertiary">Moderate load</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unavailable Crew Card (Devon) -->
+                <div id="crew_devon" class="bg-secondary rounded-[12px] p-3 border border-borderSubtle w-full flex items-start gap-3 opacity-80 cursor-not-allowed mt-2">
+                    <div class="w-[44px] h-[44px] rounded-full bg-borderDefault flex items-center justify-center shrink-0">
+                        <span class="font-sans text-[16px] font-semibold text-white">DR</span>
+                    </div>
+                    <div class="flex flex-col flex-1">
+                        <span class="font-sans text-[15px] font-semibold text-textTertiary">Devon R.</span>
+                        <span class="font-sans text-[13px] text-warning">Conflict: Has a job 11:00 AM – 1:30 PM</span>
+                        
+                        <!-- Load Indicator (Greyed out) -->
+                        <div class="flex items-center gap-2 mt-1.5 opacity-50">
+                            <div class="flex gap-1">
+                                <div class="w-3 h-1.5 rounded-full bg-borderDefault"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderDefault"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                                <div class="w-3 h-1.5 rounded-full bg-borderSubtle"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Override Toggle Row -->
+                <div class="flex items-start justify-between py-3 mt-2 border-t border-borderSubtle">
+                    <div class="flex flex-col gap-0.5 pr-4">
+                        <span class="font-sans text-[14px] font-medium text-textPrimary">Show unavailable crew</span>
+                        <span class="font-sans text-[11px] text-textTertiary leading-tight">Enabling this shows crew with scheduling conflicts.</span>
+                    </div>
+                    <!-- Toggle Switch (Off state) -->
+                    <div onclick="toggleUnavailable()" id="toggle_switch" class="w-11 h-6 bg-borderDefault rounded-full relative cursor-pointer shrink-0 transition-colors duration-200">
+                        <div id="toggle_knob" class="w-5 h-5 bg-white rounded-full absolute left-0.5 top-0.5 shadow-sm transition-transform duration-200"></div>
+                    </div>
+                </div>
+
+                <!-- Notes Input -->
+                <div class="flex flex-col gap-1.5 mt-4">
+                    <label class="font-sans text-[11px] font-medium text-textTertiary uppercase tracking-wider">NOTES FOR CREW MEMBER</label>
+                    <input type="text" placeholder="Any special instructions for this job?" class="w-full h-[52px] bg-surface border border-borderSubtle rounded-[12px] px-4 font-sans text-[14px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-brandBlue focus:ring-1 focus:ring-brandBlue transition-all">
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Assignment Actions Footer -->
+        <div id="assignment_actions_footer" class="absolute bottom-0 left-0 right-0 p-5 bg-surface border-t border-borderSubtle flex flex-col gap-2 pb-8">
+            <button onclick="confirmAssignment()" class="w-full h-[48px] bg-brandBlue text-white rounded-[12px] font-sans text-[15px] font-semibold hover:bg-brandBlueHover transition-colors shadow-sm">
+                Confirm Assignment
+            </button>
+            <p id="notification_text" class="font-sans text-[12px] text-textTertiary text-center">
+                Jordan will receive a push notification immediately.
+            </p>
+        </div>
+
+    </div>
+
+    <script>
+        let selectedCrew = 'jordan';
+        let toggleOn = false;
+
+        function openBottomSheet() {
+            document.getElementById('backdrop_layer').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('bottom_sheet_container').classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function closeBottomSheet() {
+            document.getElementById('bottom_sheet_container').classList.add('translate-y-full');
+            setTimeout(() => {
+                document.getElementById('backdrop_layer').classList.add('hidden');
+            }, 300);
+        }
+
+        function selectCrew(crew) {
+            // Remove selection from all cards
+            document.getElementById('crew_jordan').className = 'bg-surface rounded-[12px] p-3 border border-borderSubtle w-full flex items-start gap-3 cursor-pointer hover:bg-primary transition-colors';
+            document.getElementById('crew_kayla').className = 'bg-surface rounded-[12px] p-3 border border-borderSubtle w-full flex items-start gap-3 cursor-pointer hover:bg-primary transition-colors';
+            
+            // Remove checkmarks
+            const checkmarks = document.querySelectorAll('#crew_jordan > div:last-child, #crew_kayla > div:last-child');
+            checkmarks.forEach(c => c.remove());
+
+            // Add selection to clicked card
+            selectedCrew = crew;
+            const selectedCard = document.getElementById('crew_' + crew);
+            selectedCard.className = 'bg-surface rounded-[12px] p-3 border-2 border-brandBlue w-full flex items-start gap-3 cursor-pointer shadow-sm relative';
+            
+            // Add checkmark
+            const checkmark = document.createElement('div');
+            checkmark.className = 'w-6 h-6 rounded-full bg-brandBlue flex items-center justify-center shrink-0';
+            checkmark.innerHTML = '<i class="fa-solid fa-check text-white text-[12px]"></i>';
+            selectedCard.appendChild(checkmark);
+
+            // Update notification text
+            const names = {jordan: 'Jordan', kayla: 'Kayla'};
+            document.getElementById('notification_text').textContent = names[crew] + ' will receive a push notification immediately.';
+        }
+
+        function toggleUnavailable() {
+            toggleOn = !toggleOn;
+            const toggle = document.getElementById('toggle_switch');
+            const knob = document.getElementById('toggle_knob');
+            
+            if (toggleOn) {
+                toggle.classList.remove('bg-borderDefault');
+                toggle.classList.add('bg-brandBlue');
+                knob.classList.add('translate-x-5');
+            } else {
+                toggle.classList.add('bg-borderDefault');
+                toggle.classList.remove('bg-brandBlue');
+                knob.classList.remove('translate-x-5');
+            }
+        }
+
+        function confirmAssignment() {
+            closeBottomSheet();
+        }
+
+        // Close on backdrop click
+        document.getElementById('backdrop_layer').addEventListener('click', closeBottomSheet);
+
+        // Auto-open for demonstration
+        window.addEventListener('load', function() {
+            setTimeout(openBottomSheet, 500);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build Appointment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            elevated: '#FFFFFF'
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8'
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4'
+                        },
+                        brand: {
+                            default: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.1)'
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                            successSubtle: 'rgba(22, 163, 74, 0.10)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                        'level-2': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)',
+                        'level-3': '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .bottom-sheet {
+            transform: translateY(100%);
+            transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .bottom-sheet.active {
+            transform: translateY(0);
+        }
+        
+        .backdrop {
+            opacity: 0;
+            transition: opacity 200ms ease;
+            pointer-events: none;
+        }
+        
+        .backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .toast {
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 200ms ease;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        @keyframes pulse-highlight {
+            0%, 100% { background-color: #FFFFFF; }
+            50% { background-color: rgba(51, 157, 199, 0.1); }
+        }
+        
+        .highlight-pulse {
+            animation: pulse-highlight 600ms ease;
+        }
+    </style>
+</head>
+<body class="font-sans text-text-primary antialiased flex justify-center w-full bg-background-primary">
+    <div class="w-full max-w-[375px] min-h-[840px] bg-background-primary relative flex flex-col overflow-hidden shadow-level-3">
+        
+        <!-- Header -->
+        <header id="modal-header" class="w-full bg-background-elevated px-4 pt-12 pb-4 border-b border-border-subtle z-50 flex-shrink-0">
+            <div class="flex items-center justify-between mb-4">
+                <button class="w-10 h-10 flex items-center justify-start">
+                    <i data-lucide="chevron-left" class="w-6 h-6 text-text-primary"></i>
+                </button>
+                <h1 class="font-sans text-[17px] font-semibold text-text-primary">Build Appointment</h1>
+                <div class="w-10 text-right">
+                    <span class="font-sans text-[13px] text-text-tertiary">1 of 4</span>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full h-[4px] bg-border-subtle rounded-[8px] overflow-hidden">
+                <div class="h-full bg-brand-default rounded-[8px]" style="width: 25%;"></div>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <main class="flex-1 overflow-y-auto hide-scrollbar pb-[140px]">
+            
+            <!-- Main Instruction -->
+            <section id="instruction" class="px-4 py-6">
+                <h2 class="font-sans text-[20px] font-semibold text-text-primary mb-2">Choose what each vehicle needs.</h2>
+                <p class="font-sans text-[14px] text-text-secondary leading-relaxed">Add services to one or more vehicles. Marcus will handle everything in one visit.</p>
+            </section>
+
+            <!-- Your Vehicles Section -->
+            <section id="vehicles-section" class="px-4 pb-4">
+                <h3 class="text-[11px] font-medium uppercase text-text-tertiary tracking-wider mb-4">YOUR VEHICLES</h3>
+                
+                <!-- Vehicle Package Card 1 -->
+                <div id="vehicle-card-1" class="w-full bg-background-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-4 mb-3">
+                    <!-- Vehicle Header -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="car" class="w-5 h-5 text-brand-default"></i>
+                            <span class="font-sans text-[16px] font-semibold text-text-primary">2021 Audi Q5 · Black</span>
+                        </div>
+                        <button class="font-sans text-[13px] text-text-tertiary hover:text-text-secondary transition-colors">Edit</button>
+                    </div>
+
+                    <!-- Services List -->
+                    <div id="services-list-1" class="space-y-3 mb-4">
+                        <!-- Service 1 -->
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="font-sans text-[14px] font-medium text-text-primary">Full Interior Detail</p>
+                                <p class="font-sans text-[12px] text-text-tertiary mt-0.5">~2.5 hrs</p>
+                            </div>
+                            <div class="flex items-center gap-3 ml-3">
+                                <span class="font-sans text-[14px] font-semibold text-text-primary">$220</span>
+                                <button class="text-text-tertiary hover:text-semantic-error transition-colors">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Service 2 -->
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="font-sans text-[14px] font-medium text-text-primary">Headlight Restoration</p>
+                                <p class="font-sans text-[12px] text-text-tertiary mt-0.5">~45 min</p>
+                            </div>
+                            <div class="flex items-center gap-3 ml-3">
+                                <span class="font-sans text-[14px] font-semibold text-text-primary">$95</span>
+                                <button class="text-text-tertiary hover:text-semantic-error transition-colors">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="w-full h-[1px] bg-border-subtle mb-3"></div>
+
+                    <!-- Subtotal -->
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="font-sans text-[14px] text-text-secondary">Vehicle subtotal</span>
+                        <span id="subtotal-1" class="font-sans text-[16px] font-semibold text-text-primary">$315</span>
+                    </div>
+
+                    <!-- Add Service Button -->
+                    <button onclick="openBottomSheet('vehicle-1')" class="w-full h-[44px] bg-background-primary border border-border-subtle rounded-[8px] flex items-center justify-center gap-2 hover:bg-background-secondary transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4 text-brand-default"></i>
+                        <span class="font-sans text-[14px] font-medium text-brand-default">Add another service</span>
+                    </button>
+                </div>
+
+                <!-- Vehicle Package Card 2 -->
+                <div id="vehicle-card-2" class="w-full bg-background-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-4 mb-3">
+                    <!-- Vehicle Header -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="car" class="w-5 h-5 text-brand-default"></i>
+                            <span class="font-sans text-[16px] font-semibold text-text-primary">2020 BMW X5 · White</span>
+                        </div>
+                        <button class="font-sans text-[13px] text-text-tertiary hover:text-text-secondary transition-colors">Edit</button>
+                    </div>
+
+                    <!-- Services List -->
+                    <div id="services-list-2" class="space-y-3 mb-4">
+                        <!-- Service 1 -->
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="font-sans text-[14px] font-medium text-text-primary">Exterior Wash + Clay Bar</p>
+                                <p class="font-sans text-[12px] text-text-tertiary mt-0.5">~1.5 hrs</p>
+                            </div>
+                            <div class="flex items-center gap-3 ml-3">
+                                <span class="font-sans text-[14px] font-semibold text-text-primary">$120</span>
+                                <button class="text-text-tertiary hover:text-semantic-error transition-colors">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="w-full h-[1px] bg-border-subtle mb-3"></div>
+
+                    <!-- Subtotal -->
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="font-sans text-[14px] text-text-secondary">Vehicle subtotal</span>
+                        <span id="subtotal-2" class="font-sans text-[16px] font-semibold text-text-primary">$120</span>
+                    </div>
+
+                    <!-- Add Service Button -->
+                    <button onclick="openBottomSheet('vehicle-2')" class="w-full h-[44px] bg-background-primary border border-border-subtle rounded-[8px] flex items-center justify-center gap-2 hover:bg-background-secondary transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4 text-brand-default"></i>
+                        <span class="font-sans text-[14px] font-medium text-brand-default">Add another service</span>
+                    </button>
+                </div>
+
+                <!-- Add Vehicle Card -->
+                <button id="add-vehicle-card" class="w-full bg-background-elevated rounded-[16px] border-2 border-dashed border-border-default p-4 flex flex-col items-center justify-center gap-2 hover:bg-brand-subtle transition-colors min-h-[96px]">
+                    <i data-lucide="plus-circle" class="w-6 h-6 text-brand-default"></i>
+                    <div class="text-center">
+                        <p class="font-sans text-[14px] font-medium text-brand-default">Add another vehicle</p>
+                        <p class="font-sans text-[12px] text-text-tertiary mt-1">Book multiple cars in the same appointment</p>
+                    </div>
+                </button>
+            </section>
+
+            <!-- Appointment Estimate -->
+            <section id="appointment-estimate" class="px-4 pb-4">
+                <div class="w-full bg-background-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-4">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-text-secondary">Vehicles</span>
+                            <span class="font-sans text-[14px] font-medium text-text-primary">2</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-text-secondary">Services</span>
+                            <span id="total-services" class="font-sans text-[14px] font-medium text-text-primary">3</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-text-secondary">Estimated time</span>
+                            <span id="total-time" class="font-sans text-[14px] font-medium text-text-primary">~4 hr 45 min</span>
+                        </div>
+                        
+                        <!-- Divider -->
+                        <div class="w-full h-[1px] bg-border-subtle"></div>
+                        
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[16px] font-semibold text-text-primary">Subtotal</span>
+                            <span id="grand-total" class="font-sans text-[20px] font-semibold text-brand-default">$435</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Fixed Bottom CTA -->
+        <section id="fixed-cta" class="absolute bottom-0 w-full bg-background-elevated px-4 pt-4 pb-8 border-t border-border-subtle shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
+            <button class="w-full h-[48px] bg-brand-default text-white rounded-[8px] text-[15px] font-medium hover:bg-brand-hover transition-colors mb-2 shadow-sm flex items-center justify-center">
+                Continue
+            </button>
+            <p class="text-center text-[12px] text-text-tertiary font-sans">Step 2: Date, time & location</p>
+        </section>
+
+        <!-- Backdrop -->
+        <div id="backdrop" class="backdrop fixed inset-0 bg-black bg-opacity-30 z-[60]" onclick="closeBottomSheet()"></div>
+
+        <!-- Bottom Sheet -->
+        <div id="bottom-sheet" class="bottom-sheet fixed bottom-0 left-0 right-0 bg-background-elevated rounded-t-[20px] z-[70] shadow-level-3" style="height: 75vh; max-width: 375px; margin: 0 auto;">
+            
+            <!-- Drag Handle -->
+            <div class="flex justify-center pt-3 pb-2">
+                <div class="w-[32px] h-[4px] bg-border-default rounded-full"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="px-4 pt-2 pb-4 border-b border-border-subtle">
+                <h2 class="font-sans text-[16px] font-semibold text-text-primary mb-1">Add a service</h2>
+                <p class="font-sans text-[13px] text-text-secondary">Select a service for this vehicle</p>
+            </div>
+
+            <!-- Context Bar -->
+            <div id="context-bar" class="px-4 py-3 bg-brand-subtle border-b border-border-subtle flex items-center gap-2">
+                <i data-lucide="car" class="w-4 h-4 text-brand-default"></i>
+                <div class="flex-1">
+                    <span id="selected-vehicle-name" class="font-sans text-[14px] font-medium text-text-primary">2021 Audi Q5 · Black</span>
+                    <span id="selected-vehicle-count" class="font-sans text-[12px] text-text-tertiary ml-2">2 services selected</span>
+                </div>
+            </div>
+
+            <!-- Service List (Scrollable) -->
+            <div class="flex-1 overflow-y-auto hide-scrollbar px-4 py-4 space-y-3" style="max-height: calc(75vh - 180px);">
+                
+                <!-- Service Card 1 -->
+                <button onclick="addService('Full Interior Detail', 220, 2.5, 'Deep vacuum, steam clean, leather conditioning')" class="w-full bg-background-elevated border border-border-subtle rounded-[12px] p-4 text-left hover:bg-brand-subtle hover:border-brand-default transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary">Full Interior Detail</h3>
+                        <span class="font-sans text-[14px] font-semibold text-brand-default ml-3">$220</span>
+                    </div>
+                    <p class="font-sans text-[12px] text-text-secondary mb-2">~2.5 hrs</p>
+                    <p class="font-sans text-[13px] text-text-tertiary leading-relaxed">Deep vacuum, steam clean, leather conditioning</p>
+                </button>
+
+                <!-- Service Card 2 -->
+                <button onclick="addService('Exterior Wash + Clay Bar', 120, 1.5, 'Premium wash, clay treatment, gloss sealant')" class="w-full bg-background-elevated border border-border-subtle rounded-[12px] p-4 text-left hover:bg-brand-subtle hover:border-brand-default transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary">Exterior Wash + Clay Bar</h3>
+                        <span class="font-sans text-[14px] font-semibold text-brand-default ml-3">$120</span>
+                    </div>
+                    <p class="font-sans text-[12px] text-text-secondary mb-2">~1.5 hrs</p>
+                    <p class="font-sans text-[13px] text-text-tertiary leading-relaxed">Premium wash, clay treatment, gloss sealant</p>
+                </button>
+
+                <!-- Service Card 3 -->
+                <button onclick="addService('Headlight Restoration', 95, 0.75, 'Restore cloudy headlights')" class="w-full bg-background-elevated border border-border-subtle rounded-[12px] p-4 text-left hover:bg-brand-subtle hover:border-brand-default transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary">Headlight Restoration</h3>
+                        <span class="font-sans text-[14px] font-semibold text-brand-default ml-3">$95</span>
+                    </div>
+                    <p class="font-sans text-[12px] text-text-secondary mb-2">~45 min</p>
+                    <p class="font-sans text-[13px] text-text-tertiary leading-relaxed">Restore cloudy headlights</p>
+                </button>
+
+                <!-- Service Card 4 -->
+                <button onclick="addService('Paint Correction + Ceramic Coat', 450, 4, 'Multi-stage polish + ceramic protection')" class="w-full bg-background-elevated border border-border-subtle rounded-[12px] p-4 text-left hover:bg-brand-subtle hover:border-brand-default transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary">Paint Correction + Ceramic Coat</h3>
+                        <span class="font-sans text-[14px] font-semibold text-brand-default ml-3">$450</span>
+                    </div>
+                    <p class="font-sans text-[12px] text-text-secondary mb-2">~4 hrs</p>
+                    <p class="font-sans text-[13px] text-text-tertiary leading-relaxed">Multi-stage polish + ceramic protection</p>
+                </button>
+
+                <!-- Service Card 5 -->
+                <button onclick="addService('Engine Bay Detailing', 85, 1, 'Degrease and restore engine compartment')" class="w-full bg-background-elevated border border-border-subtle rounded-[12px] p-4 text-left hover:bg-brand-subtle hover:border-brand-default transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary">Engine Bay Detailing</h3>
+                        <span class="font-sans text-[14px] font-semibold text-brand-default ml-3">$85</span>
+                    </div>
+                    <p class="font-sans text-[12px] text-text-secondary mb-2">~1 hr</p>
+                    <p class="font-sans text-[13px] text-text-tertiary leading-relaxed">Degrease and restore engine compartment</p>
+                </button>
+
+                <!-- Service Card 6 -->
+                <button onclick="addService('Odor Elimination Treatment', 65, 0.5, 'Ozone treatment for smoke or pet odors')" class="w-full bg-background-elevated border border-border-subtle rounded-[12px] p-4 text-left hover:bg-brand-subtle hover:border-brand-default transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary">Odor Elimination Treatment</h3>
+                        <span class="font-sans text-[14px] font-semibold text-brand-default ml-3">$65</span>
+                    </div>
+                    <p class="font-sans text-[12px] text-text-secondary mb-2">~30 min</p>
+                    <p class="font-sans text-[13px] text-text-tertiary leading-relaxed">Ozone treatment for smoke or pet odors</p>
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast fixed bottom-24 left-1/2 -translate-x-1/2 bg-text-primary text-white px-4 py-3 rounded-[8px] shadow-level-2 z-[80] flex items-center gap-2" style="max-width: 343px;">
+            <i data-lucide="check-circle" class="w-4 h-4 text-semantic-success"></i>
+            <span id="toast-message" class="font-sans text-[14px] font-medium">Service added</span>
+        </div>
+
+    </div>
+
+    <script>
+        let currentVehicle = null;
+        
+        function openBottomSheet(vehicleId) {
+            currentVehicle = vehicleId;
+            
+            // Update context bar with vehicle info
+            if (vehicleId === 'vehicle-1') {
+                document.getElementById('selected-vehicle-name').textContent = '2021 Audi Q5 · Black';
+                document.getElementById('selected-vehicle-count').textContent = '2 services selected';
+            } else if (vehicleId === 'vehicle-2') {
+                document.getElementById('selected-vehicle-name').textContent = '2020 BMW X5 · White';
+                document.getElementById('selected-vehicle-count').textContent = '1 service selected';
+            }
+            
+            document.getElementById('backdrop').classList.add('active');
+            document.getElementById('bottom-sheet').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBottomSheet() {
+            document.getElementById('backdrop').classList.remove('active');
+            document.getElementById('bottom-sheet').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        function addService(name, price, hours, description) {
+            // Close bottom sheet
+            closeBottomSheet();
+            
+            // Show toast
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = `${name} added`;
+            toast.classList.add('show');
+            
+            // Hide toast after 2 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+            
+            // Add service to vehicle card (demo - would need full implementation)
+            const vehicleCard = document.getElementById(`vehicle-card-${currentVehicle === 'vehicle-1' ? '1' : '2'}`);
+            vehicleCard.classList.add('highlight-pulse');
+            
+            setTimeout(() => {
+                vehicleCard.classList.remove('highlight-pulse');
+            }, 600);
+            
+            // Update totals (demo values)
+            lucide.createIcons();
+        }
+        
+        lucide.createIcons();
+    </script>
+</body>
+</html>

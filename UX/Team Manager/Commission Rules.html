@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Commission Rules</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        successSubtle: 'rgba(22, 163, 74, 0.08)',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-32 relative min-h-screen">
+
+    <header id="header" class="px-5 py-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle">
+        <div class="flex items-center justify-between">
+            <button class="w-8 h-8 flex items-center justify-center active:opacity-70 transition-opacity">
+                <i class="fa-solid fa-chevron-left text-[18px] text-textPrimary"></i>
+            </button>
+            <h1 class="font-sans text-[17px] font-semibold text-textPrimary">Commission Rules</h1>
+            <div class="w-8"></div>
+        </div>
+    </header>
+
+    <main class="pb-40">
+        
+        <section id="intro-card" class="px-4 pt-4">
+            <div class="bg-brandBlueSubtle rounded-[12px] p-3 flex gap-3">
+                <div class="flex-shrink-0 mt-0.5">
+                    <i class="fa-solid fa-circle-info text-[16px] text-brandBlue"></i>
+                </div>
+                <p class="font-sans text-[13px] text-textSecondary leading-relaxed">Commission rules determine how each job's revenue is split between your business and your team. Changes apply to future jobs only.</p>
+            </div>
+        </section>
+
+        <section id="default-rate-section" class="px-4 pt-6">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide mb-1">DEFAULT RATE</p>
+                <p class="font-sans text-[13px] text-textSecondary mb-6">All new team members start at this rate unless overridden.</p>
+                
+                <div class="flex items-center justify-center gap-4 py-4">
+                    <button class="w-10 h-10 rounded-full border border-borderSubtle bg-surface flex items-center justify-center active:bg-secondary transition-colors" id="decrease-btn">
+                        <i class="fa-solid fa-minus text-[14px] text-textSecondary"></i>
+                    </button>
+                    
+                    <div class="flex items-baseline gap-1">
+                        <span class="font-sans text-[32px] font-semibold text-textPrimary" id="default-rate">38</span>
+                        <span class="font-sans text-[20px] text-textSecondary">%</span>
+                    </div>
+                    
+                    <button class="w-10 h-10 rounded-full border border-borderSubtle bg-surface flex items-center justify-center active:bg-secondary transition-colors" id="increase-btn">
+                        <i class="fa-solid fa-plus text-[14px] text-textSecondary"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="member-overrides-section" class="px-4 pt-6">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 overflow-hidden">
+                <div class="p-4 pb-3">
+                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide">MEMBER OVERRIDES</p>
+                </div>
+                
+                <div class="divide-y divide-borderSubtle">
+                    <div class="px-4 py-3 flex items-center justify-between" id="member-1">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brandBlue flex items-center justify-center flex-shrink-0">
+                                <span class="font-sans text-[13px] font-bold text-white">JK</span>
+                            </div>
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Jordan K.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-sans text-[13px] font-semibold text-brandBlue">42%</span>
+                            <button class="font-sans text-[13px] font-medium text-brandBlue active:opacity-70 transition-opacity">Edit</button>
+                        </div>
+                    </div>
+
+                    <div class="px-4 py-3 flex items-center justify-between" id="member-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brandBlue flex items-center justify-center flex-shrink-0">
+                                <span class="font-sans text-[13px] font-bold text-white">KM</span>
+                            </div>
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Kayla M.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-sans text-[13px] text-textTertiary">38% (default)</span>
+                            <button class="font-sans text-[13px] font-medium text-brandBlue active:opacity-70 transition-opacity">Override</button>
+                        </div>
+                    </div>
+
+                    <div class="px-4 py-3 flex items-center justify-between" id="member-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brandBlue flex items-center justify-center flex-shrink-0">
+                                <span class="font-sans text-[13px] font-bold text-white">DR</span>
+                            </div>
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Devon R.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-sans text-[13px] text-textTertiary">38% (default)</span>
+                            <button class="font-sans text-[13px] font-medium text-brandBlue active:opacity-70 transition-opacity">Override</button>
+                        </div>
+                    </div>
+
+                    <div class="px-4 py-3 flex items-center justify-between" id="member-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brandBlue flex items-center justify-center flex-shrink-0">
+                                <span class="font-sans text-[13px] font-bold text-white">TS</span>
+                            </div>
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Trey S.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-sans text-[13px] font-semibold text-brandBlue">40%</span>
+                            <button class="font-sans text-[13px] font-medium text-brandBlue active:opacity-70 transition-opacity">Edit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tip-distribution-section" class="px-4 pt-6">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide mb-1">TIP DISTRIBUTION</p>
+                <p class="font-sans text-[13px] text-textSecondary mb-4">When customers add a tip, how is it split?</p>
+                
+                <div class="space-y-3">
+                    <div class="border-2 border-brandBlue rounded-[12px] p-3 active:opacity-90 transition-opacity cursor-pointer relative" id="tip-option-1">
+                        <div class="absolute top-3 right-3 w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center">
+                            <i class="fa-solid fa-check text-white text-[10px]"></i>
+                        </div>
+                        <p class="font-sans text-[14px] font-semibold text-textPrimary pr-6">Full tip to assigned crew member</p>
+                    </div>
+
+                    <div class="border border-borderSubtle rounded-[12px] p-3 active:opacity-90 transition-opacity cursor-pointer" id="tip-option-2">
+                        <p class="font-sans text-[14px] font-semibold text-textPrimary">Split tip equally among today's crew</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="bottom-cta" class="fixed bottom-20 left-0 right-0 bg-surface border-t border-borderSubtle px-4 py-4 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button class="w-full h-[48px] rounded-lg bg-brandBlue font-sans text-[14px] font-semibold text-white active:bg-brandBlueHover transition-colors" id="save-rules-btn">
+            Save Rules
+        </button>
+        <p class="font-sans text-[12px] text-textTertiary text-center mt-2">Applies to jobs created after this change.</p>
+    </div>
+
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+    <script>
+        const decreaseBtn = document.getElementById('decrease-btn');
+        const increaseBtn = document.getElementById('increase-btn');
+        const defaultRateSpan = document.getElementById('default-rate');
+        const tipOption1 = document.getElementById('tip-option-1');
+        const tipOption2 = document.getElementById('tip-option-2');
+
+        let currentRate = 38;
+
+        decreaseBtn.addEventListener('click', function() {
+            if(currentRate > 0) {
+                currentRate--;
+                defaultRateSpan.textContent = currentRate;
+            }
+        });
+
+        increaseBtn.addEventListener('click', function() {
+            if(currentRate < 100) {
+                currentRate++;
+                defaultRateSpan.textContent = currentRate;
+            }
+        });
+
+        tipOption1.addEventListener('click', function() {
+            tipOption1.classList.remove('border-borderSubtle');
+            tipOption1.classList.add('border-2', 'border-brandBlue');
+            
+            if(!tipOption1.querySelector('.absolute')) {
+                const checkmark = document.createElement('div');
+                checkmark.className = 'absolute top-3 right-3 w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center';
+                checkmark.innerHTML = '<i class="fa-solid fa-check text-white text-[10px]"></i>';
+                tipOption1.appendChild(checkmark);
+            } else {
+                tipOption1.querySelector('.absolute').classList.remove('hidden');
+            }
+            
+            tipOption2.classList.remove('border-2', 'border-brandBlue');
+            tipOption2.classList.add('border', 'border-borderSubtle');
+            if(tipOption2.querySelector('.absolute')) {
+                tipOption2.querySelector('.absolute').classList.add('hidden');
+            }
+        });
+
+        tipOption2.addEventListener('click', function() {
+            tipOption2.classList.remove('border-borderSubtle');
+            tipOption2.classList.add('border-2', 'border-brandBlue');
+            
+            if(!tipOption2.querySelector('.absolute')) {
+                const checkmark = document.createElement('div');
+                checkmark.className = 'absolute top-3 right-3 w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center';
+                checkmark.innerHTML = '<i class="fa-solid fa-check text-white text-[10px]"></i>';
+                tipOption2.appendChild(checkmark);
+            } else {
+                tipOption2.querySelector('.absolute').classList.remove('hidden');
+            }
+            
+            tipOption1.classList.remove('border-2', 'border-brandBlue');
+            tipOption1.classList.add('border', 'border-borderSubtle');
+            if(tipOption1.querySelector('.absolute')) {
+                tipOption1.querySelector('.absolute').classList.add('hidden');
+            }
+        });
+    </script>
+
+</body>
+</html>

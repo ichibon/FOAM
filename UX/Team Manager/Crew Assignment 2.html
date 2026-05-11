@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pending Approval</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            surface: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4',
+                        },
+                        brand: {
+                            primary: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51,157,199,0.10)',
+                            card2: '#6BB8D4',
+                            card3: '#E1F0F7',
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif'],
+                    },
+                    spacing: {
+                        'screen-w': '375px',
+                        'screen-h': '840px',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 400ms ease-out forwards',
+                        'fade-in': 'fadeIn 300ms ease-out forwards',
+                        'scale-in': 'scaleIn 400ms ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.9)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { margin: 0; padding: 0; background-color: #FAFAFA; overscroll-behavior-y: none; }
+    </style>
+</head>
+<body class="bg-background-primary flex items-center justify-center min-h-[100dvh] antialiased m-0 p-0">
+
+    <main id="main-container" class="w-full max-w-[375px] h-[840px] max-h-[100dvh] bg-background-primary relative flex flex-col overflow-hidden mx-auto shadow-[0_0_40px_rgba(0,0,0,0.05)] sm:rounded-[40px] sm:my-8 sm:h-[840px] sm:border-[8px] sm:border-gray-900">
+        
+        <section id="pending_approval_section" class="w-full h-full flex flex-col px-[16px] py-[24px] overflow-y-auto">
+            
+            <div id="success_icon_container" class="w-full flex items-center justify-center mt-[60px] mb-[32px] animate-scale-in">
+                <div class="w-[80px] h-[80px] rounded-full bg-brand-subtle flex items-center justify-center relative">
+                    <div class="absolute inset-0 rounded-full bg-brand-primary opacity-20 animate-ping" style="animation-duration: 2s;"></div>
+                    <i data-lucide="check-circle" class="w-[44px] h-[44px] text-brand-primary relative z-10"></i>
+                </div>
+            </div>
+
+            <div id="headline_section" class="w-full text-center animate-fade-in" style="animation-delay: 100ms;">
+                <h1 class="font-playfair text-[28px] font-[700] text-text-primary leading-[1.15] tracking-tight px-[8px]">
+                    You're building something real.
+                </h1>
+                <p class="font-inter text-[15px] font-[400] text-text-secondary mt-[12px] px-[12px] leading-[1.5]">
+                    We review every detailer and their locations before they go live. Usually less than 24 hours.
+                </p>
+            </div>
+
+            <div id="checklist_card" class="w-full bg-background-surface border border-border-subtle rounded-[16px] p-[20px] mt-[32px] animate-slide-up" style="animation-delay: 200ms;">
+                <div class="flex flex-col gap-[14px]">
+                    
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-background-surface"></i>
+                        </div>
+                        <span class="font-inter text-[15px] font-[500] text-text-primary">Profile created</span>
+                    </div>
+
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-background-surface"></i>
+                        </div>
+                        <span class="font-inter text-[15px] font-[500] text-text-primary">2 locations added</span>
+                    </div>
+
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-background-surface"></i>
+                        </div>
+                        <span class="font-inter text-[15px] font-[500] text-text-primary">Crew assigned</span>
+                    </div>
+
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-semantic-success flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-background-surface"></i>
+                        </div>
+                        <span class="font-inter text-[15px] font-[500] text-text-primary">Stripe account connected</span>
+                    </div>
+
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-background-secondary flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="clock" class="w-[14px] h-[14px] text-text-tertiary"></i>
+                        </div>
+                        <span class="font-inter text-[15px] font-[500] text-text-tertiary">FOAM review</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="what_happens_section" class="w-full bg-brand-card3 border border-border-subtle rounded-[16px] p-[20px] mt-[16px] animate-slide-up" style="animation-delay: 300ms;">
+                <h3 class="font-inter text-[13px] font-[600] text-text-primary uppercase tracking-wide mb-[12px]">What happens next?</h3>
+                
+                <div class="flex flex-col gap-[12px]">
+                    <div class="flex items-start gap-[10px]">
+                        <div class="w-[6px] h-[6px] rounded-full bg-brand-primary flex-shrink-0 mt-[6px]"></div>
+                        <p class="font-inter text-[14px] text-text-secondary leading-[1.5]">
+                            We'll review all your locations and configurations
+                        </p>
+                    </div>
+                    
+                    <div class="flex items-start gap-[10px]">
+                        <div class="w-[6px] h-[6px] rounded-full bg-brand-primary flex-shrink-0 mt-[6px]"></div>
+                        <p class="font-inter text-[14px] text-text-secondary leading-[1.5]">
+                            Each location goes live separately as it's approved
+                        </p>
+                    </div>
+                    
+                    <div class="flex items-start gap-[10px]">
+                        <div class="w-[6px] h-[6px] rounded-full bg-brand-primary flex-shrink-0 mt-[6px]"></div>
+                        <p class="font-inter text-[14px] text-text-secondary leading-[1.5]">
+                            You'll get a push notification as each one is approved
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cta_section" class="w-full mt-[32px] mb-[24px] flex flex-col gap-[12px] animate-fade-in" style="animation-delay: 400ms;">
+                <button id="explore_btn" class="w-full h-[48px] bg-brand-primary text-background-surface font-inter text-[14px] font-[600] rounded-[8px] flex items-center justify-center transition-transform active:scale-[0.98] hover:bg-brand-hover shadow-[0_4px_12px_rgba(51,157,199,0.2)]">
+                    Explore the App
+                </button>
+
+                <button id="contact_btn" class="w-full h-[48px] text-brand-primary font-inter text-[14px] font-[600] flex items-center justify-center gap-[6px] transition-all active:scale-[0.98] hover:text-brand-hover">
+                    Have questions? Contact us
+                    <i data-lucide="arrow-right" class="w-[16px] h-[16px]"></i>
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

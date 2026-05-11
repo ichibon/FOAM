@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Jobs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                        'level-2': '0 2px 6px rgba(0,0,0,0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .drawer-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .drawer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            z-index: 101;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .drawer.active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden">
+
+    <header id="header" class="px-4 pt-12 pb-5 bg-surface-primary">
+        <div>
+            <h1 class="font-serif text-[28px] font-bold leading-tight text-text-primary">Good morning, Marcus</h1>
+            <div class="flex items-center space-x-2 mt-1">
+                <i data-lucide="users" class="w-4 h-4 text-foam-blue"></i>
+                <span class="font-sans text-[14px] font-medium text-text-secondary">Marcus T. Detailing</span>
+            </div>
+            <p class="font-sans text-[13px] text-text-tertiary mt-0.5">Thursday, May 2</p>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-4 pb-24 space-y-5">
+
+        <section id="jobs-list" class="space-y-4">
+            <h2 class="font-sans text-[12px] font-medium text-text-tertiary uppercase tracking-wider">MY JOBS TODAY — 4 ASSIGNED</h2>
+            
+            <div class="space-y-4 pb-8">
+                
+                <button onclick="openDrawer('pending')" class="w-full bg-surface-elevated rounded-[16px] p-4 border-l-[3px] border-l-status-success border-y border-r border-y-border-subtle border-r-border-subtle shadow-level-1 text-left active:scale-[0.98] transition-transform" style="background-color: rgba(22,163,74,0.04);">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">9:00 AM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~2.5 hrs</span>
+                        </div>
+                        <div class="bg-amber-50 text-status-warning px-2.5 py-1 rounded-full flex items-center">
+                            <span class="font-sans text-xs font-medium">Payment Pending</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Terrence W.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2021 BMW X5 · Midnight Blue</p>
+                        <p class="font-sans text-[13px] text-text-tertiary mb-1">Full Interior Detail</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">Assigned by Marcus T.</p>
+                        
+                        <div class="flex items-center space-x-2 mt-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-status-success"></i>
+                            <span class="font-sans text-[13px] text-status-success">Job complete · Invoice sent</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+
+                <button onclick="openDrawer('active')" class="w-full bg-surface-elevated rounded-[16px] p-4 border-l-[3px] border-l-foam-blue border-y border-r border-y-border-subtle border-r-border-subtle shadow-level-2 text-left active:scale-[0.98] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">12:30 PM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~1.5 hrs</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Alicia M.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2019 Honda Accord · White</p>
+                        <p class="font-sans text-[13px] text-text-tertiary mb-1">Exterior Wash + Clay Bar</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">Assigned by Marcus T.</p>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+
+                <button onclick="openDrawer('upcoming')" class="w-full bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1 text-left active:scale-[0.98] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">3:00 PM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~4 hrs</span>
+                        </div>
+                        <div class="bg-surface-primary border border-border-default text-text-tertiary px-2.5 py-1 rounded-full">
+                            <span class="font-sans text-xs font-medium">Upcoming</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Dante R.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2023 Tesla Model 3 · Black</p>
+                        <p class="font-sans text-[13px] text-text-tertiary mb-1">Paint Correction + Ceramic Coat</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">Assigned by Marcus T.</p>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+
+                <button onclick="openDrawer('upcoming2')" class="w-full bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1 text-left active:scale-[0.98] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">5:30 PM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~2 hrs</span>
+                        </div>
+                        <div class="bg-surface-primary border border-border-default text-text-tertiary px-2.5 py-1 rounded-full">
+                            <span class="font-sans text-xs font-medium">Upcoming</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Sarah L.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2022 Audi Q7 · Silver</p>
+                        <p class="font-sans text-[13px] text-text-tertiary mb-1">Full Detail + Wax</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">Assigned by Marcus T.</p>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+                
+                <div class="pt-2">
+                    <h3 class="font-sans text-[13px] text-text-tertiary">Tomorrow</h3>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle z-50">
+        <div class="grid grid-cols-3 h-[64px]">
+            <button class="flex flex-col items-center justify-center space-y-1 text-foam-blue active:bg-gray-50 transition-colors">
+                <i data-lucide="briefcase" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">My Jobs</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Earnings</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <div id="drawer-overlay" class="drawer-overlay" onclick="closeDrawer()"></div>
+
+    <div id="payment-drawer" class="drawer">
+        <div class="sticky top-0 bg-white px-6 pt-5 pb-3 border-b border-border-subtle">
+            <div class="flex justify-between items-center">
+                <h2 class="font-sans text-[20px] font-semibold text-text-primary">Payment Status</h2>
+                <button onclick="closeDrawer()" class="w-8 h-8 flex items-center justify-center text-text-tertiary active:bg-surface-primary rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="px-6 py-6 space-y-5">
+            <div class="bg-amber-50 rounded-[12px] p-4 border border-amber-200">
+                <div class="flex items-start space-x-3 mb-3">
+                    <i data-lucide="clock" class="w-5 h-5 text-status-warning mt-0.5"></i>
+                    <div class="flex-1">
+                        <h3 class="font-sans text-[15px] font-semibold text-text-primary mb-1">Payment Pending</h3>
+                        <p class="font-sans text-[13px] text-text-secondary">Waiting for customer to confirm payment</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-[8px] p-3 mt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-sans text-[13px] text-text-tertiary">Service Amount</span>
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$220.00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-sans text-[13px] text-text-tertiary">Expected Release</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Within 24 hours</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full bg-status-success flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-sans text-[14px] font-medium text-text-primary">Job Completed</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">9:00 AM - 11:30 AM</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full bg-status-success flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-sans text-[14px] font-medium text-text-primary">Invoice Sent</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">11:32 AM</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div class="w-2 h-2 rounded-full bg-status-warning"></div>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-sans text-[14px] font-medium text-text-primary">Awaiting Customer Approval</p>
+                        <p class="font-sans text-[12px] text-text-tertiary">Customer notified</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pt-4">
+                <button class="w-full text-center font-sans text-[14px] font-medium text-foam-blue flex items-center justify-center space-x-2 h-[44px] active:opacity-70 transition-opacity">
+                    <span>View Job Details</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        function openDrawer(type) {
+            const overlay = document.getElementById('drawer-overlay');
+            const drawer = document.getElementById('payment-drawer');
+            
+            overlay.classList.add('active');
+            drawer.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeDrawer() {
+            const overlay = document.getElementById('drawer-overlay');
+            const drawer = document.getElementById('payment-drawer');
+            
+            overlay.classList.remove('active');
+            drawer.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    </script>
+</body>
+</html>

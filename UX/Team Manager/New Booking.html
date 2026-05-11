@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>New Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24 relative min-h-screen">
+
+    <header id="header" class="px-5 pt-4 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle">
+        <div class="flex items-center justify-between">
+            <button class="w-8 h-8 flex items-center justify-center text-textPrimary active:opacity-70 transition-opacity">
+                <i class="fa-solid fa-chevron-left text-[20px]"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <h1 class="font-sans text-[17px] font-semibold text-textPrimary">New Booking</h1>
+                <div class="px-2 py-0.5 rounded-full bg-brandBlue">
+                    <span class="font-sans text-[10px] font-bold text-white">NEW</span>
+                </div>
+            </div>
+            <div class="w-8"></div>
+        </div>
+    </header>
+
+    <main class="px-5 py-4 flex flex-col gap-3 pb-48">
+        
+        <section id="booking-details-card" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-white text-[16px] font-semibold">
+                            <span class="text-textPrimary">CL</span>
+                        </div>
+                        <div>
+                            <p class="font-sans text-[17px] font-semibold text-textPrimary">Christina L.</p>
+                            <p class="font-sans text-[13px] text-textSecondary">★ 4.8 · 12 bookings</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3 mb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-car text-textTertiary text-[14px]"></i>
+                        <p class="font-sans text-[14px] text-textSecondary">2022 Mercedes GLE · Silver</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-wrench text-textTertiary text-[14px]"></i>
+                        <p class="font-sans text-[15px] font-medium text-textPrimary">Full Interior Detail · ~2 hrs</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-map-pin text-textTertiary text-[14px] mt-0.5"></i>
+                        <p class="font-sans text-[13px] text-textSecondary">1847 Peachtree Rd NE, Atlanta</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-calendar text-textTertiary text-[14px]"></i>
+                        <p class="font-sans text-[14px] font-semibold text-textPrimary">Thu, May 2 · 11:30 AM</p>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-borderSubtle flex items-center justify-between">
+                    <p class="font-sans text-[13px] text-textTertiary">Job Value</p>
+                    <p class="font-sans text-[20px] font-bold text-brandBlue">$220</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="availability-card" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3">WHO'S AVAILABLE?</p>
+                
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between py-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-[14px] font-semibold">
+                                <span class="text-textPrimary">JK</span>
+                            </div>
+                            <div>
+                                <p class="font-sans text-[14px] font-semibold text-textPrimary">Jordan K.</p>
+                                <p class="font-sans text-[12px] text-textTertiary">2 jobs today · 4.9 ★</p>
+                            </div>
+                        </div>
+                        <div class="px-3 py-1 rounded-full bg-green-50 border border-success">
+                            <span class="font-sans text-[12px] font-medium text-success">Available</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between py-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-[14px] font-semibold">
+                                <span class="text-textPrimary">KM</span>
+                            </div>
+                            <div>
+                                <p class="font-sans text-[14px] font-semibold text-textPrimary">Kayla M.</p>
+                                <p class="font-sans text-[12px] text-textTertiary">1 job today · 4.8 ★</p>
+                            </div>
+                        </div>
+                        <div class="px-3 py-1 rounded-full bg-green-50 border border-success">
+                            <span class="font-sans text-[12px] font-medium text-success">Available</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between py-2 opacity-40">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-borderDefault flex items-center justify-center text-[14px] font-semibold text-textTertiary">
+                                DR
+                            </div>
+                            <div>
+                                <p class="font-sans text-[14px] font-semibold text-textSecondary">Devon R.</p>
+                                <p class="font-sans text-[12px] text-textTertiary">4 jobs today · 4.7 ★</p>
+                            </div>
+                        </div>
+                        <div class="px-3 py-1 rounded-full bg-borderSubtle">
+                            <span class="font-sans text-[12px] font-medium text-textTertiary">Unavailable</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="customer-notes-card" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2">CUSTOMER NOTES</p>
+                <p class="font-sans text-[14px] text-textSecondary italic">"Need this done before a business meeting at 3 PM. Please be thorough with the leather seats."</p>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="action-buttons" class="fixed bottom-[72px] left-0 right-0 w-full bg-primary px-5 pb-4 pt-3 space-y-2 z-40">
+        <button class="w-full h-[48px] bg-brandBlue text-white rounded-[8px] font-sans text-[14px] font-semibold active:bg-brandBlueHover transition-colors shadow-level1">
+            Accept & Assign
+        </button>
+        <button class="w-full h-[48px] border-2 border-brandBlue text-brandBlue rounded-[8px] font-sans text-[14px] font-semibold active:bg-brandBlueSubtle transition-colors">
+            Accept — Assign Later
+        </button>
+        <button class="w-full h-[44px] text-error font-sans text-[14px] font-medium active:opacity-70 transition-opacity">
+            Decline
+        </button>
+    </div>
+
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+</body>
+</html>

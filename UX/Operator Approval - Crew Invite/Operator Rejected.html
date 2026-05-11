@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Application Update</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .notification-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            animation: slideDown 0.4s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="push-notification" class="notification-banner px-4 py-3">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-brandBlue flex items-center justify-center flex-shrink-0">
+                <span class="font-sans text-[14px] font-bold text-white">F</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-sans text-[14px] font-semibold text-textPrimary leading-tight">FOAM</p>
+                <p class="font-sans text-[13px] text-textSecondary leading-snug mt-0.5">Your application needs a small update. Tap to see what to fix.</p>
+            </div>
+            <span class="font-sans text-[11px] text-textTertiary flex-shrink-0">now</span>
+        </div>
+    </div>
+
+    <div id="rejection-screen" class="min-h-screen bg-primary flex items-center justify-center px-4 pt-24 pb-8 fade-in">
+        <div class="w-full max-w-md flex flex-col items-center">
+            
+            <div class="w-20 h-20 rounded-full bg-warningSubtle flex items-center justify-center mb-6">
+                <i class="fa-regular fa-circle-exclamation text-warning text-[48px]"></i>
+            </div>
+
+            <h1 class="font-serif text-[28px] font-bold text-textPrimary text-center leading-tight mb-3">
+                One more thing.
+            </h1>
+
+            <p class="font-sans text-[15px] text-textSecondary text-center leading-relaxed mb-8">
+                We couldn't approve your application yet. Here's what needs attention.
+            </p>
+
+            <div class="w-full bg-surface rounded-[16px] p-4 border border-borderSubtle shadow-level1 mb-4">
+                <h2 class="font-sans text-[11px] font-medium text-warning uppercase tracking-wider mb-4">WHAT NEEDS ATTENTION</h2>
+                
+                <div class="flex flex-col gap-4">
+                    
+                    <div class="flex items-start gap-3 pb-4 border-b border-borderSubtle">
+                        <i class="fa-solid fa-triangle-exclamation text-warning text-[18px] flex-shrink-0 mt-0.5"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-sans text-[14px] font-semibold text-textPrimary leading-tight mb-1">Profile photo missing</p>
+                            <p class="font-sans text-[13px] text-textSecondary leading-snug">Add a clear photo of yourself or your work. Customers use this to choose.</p>
+                        </div>
+                        <a href="#" class="font-sans text-[13px] text-brandBlue font-semibold whitespace-nowrap flex-shrink-0">Fix this →</a>
+                    </div>
+
+                    <div class="flex items-start gap-3 pb-4 border-b border-borderSubtle">
+                        <i class="fa-solid fa-triangle-exclamation text-warning text-[18px] flex-shrink-0 mt-0.5"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-sans text-[14px] font-semibold text-textPrimary leading-tight mb-1">No services added</p>
+                            <p class="font-sans text-[13px] text-textSecondary leading-snug">Add at least one service with pricing to continue.</p>
+                        </div>
+                        <a href="#" class="font-sans text-[13px] text-brandBlue font-semibold whitespace-nowrap flex-shrink-0">Fix this →</a>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-triangle-exclamation text-warning text-[18px] flex-shrink-0 mt-0.5"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-sans text-[14px] font-semibold text-textPrimary leading-tight mb-1">Business license couldn't be verified</p>
+                            <p class="font-sans text-[13px] text-textSecondary leading-snug">The license number you provided didn't match state records. Upload a photo of your license instead.</p>
+                        </div>
+                        <a href="#" class="font-sans text-[13px] text-brandBlue font-semibold whitespace-nowrap flex-shrink-0">Fix this →</a>
+                    </div>
+
+                </div>
+            </div>
+
+            <p class="font-sans text-[13px] text-textTertiary text-center leading-relaxed italic mb-8 px-4">
+                Once you fix these, resubmit and we'll review again within 24 hours.
+            </p>
+
+            <div class="w-full flex flex-col gap-3">
+                <button class="w-full h-[48px] bg-brandBlue hover:bg-brandBlueHover active:bg-brandBlueHover text-white font-sans text-[15px] font-semibold rounded-[12px] transition-colors">
+                    Fix & Resubmit
+                </button>
+                <button class="w-full h-[48px] text-brandBlue hover:text-brandBlueHover active:text-brandBlueHover font-sans text-[15px] font-semibold transition-colors">
+                    Contact FOAM support
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('push-notification').style.display = 'none';
+            }, 4000);
+        });
+    </script>
+
+</body>
+</html>

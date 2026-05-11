@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Today - Morning State</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24 relative min-h-screen">
+
+    <!-- Header Section -->
+    <header id="main-header" class="px-5 pt-12 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+            <h1 class="font-serif text-[32px] font-bold text-textPrimary">Good morning, Marcus.</h1>
+            <button class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center relative active:bg-borderDefault transition-colors" aria-label="View all activity alerts">
+                <i class="fa-solid fa-bell text-textPrimary text-[18px]"></i>
+            </button>
+        </div>
+        <p class="font-sans text-[14px] font-semibold text-success">Thursday, May 2 &middot; 6 jobs today &middot; All assigned</p>
+    </header>
+
+    <main class="px-5 py-4 flex flex-col gap-6 max-w-lg mx-auto" id="main-content">
+        
+        <!-- Team Status Scroll -->
+        <section id="team-status" class="flex flex-col gap-3">
+            <h2 class="font-sans text-[15px] font-semibold text-textPrimary">Team Status</h2>
+            <div class="flex overflow-x-auto hide-scrollbar gap-3 pb-2">
+                <!-- Jordan -->
+                <button class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm opacity-60 active:opacity-100 active:scale-95 transition-all">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">JO</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Jordan</span>
+                    <span class="font-sans text-[11px] text-textTertiary ml-1">Available</span>
+                </button>
+                <!-- Kayla -->
+                <button class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm opacity-60 active:opacity-100 active:scale-95 transition-all">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">KA</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Kayla</span>
+                    <span class="font-sans text-[11px] text-textTertiary ml-1">Available</span>
+                </button>
+                <!-- Devon -->
+                <button class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm opacity-60 active:opacity-100 active:scale-95 transition-all">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">DE</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Devon</span>
+                    <span class="font-sans text-[11px] text-textTertiary ml-1">Available</span>
+                </button>
+                <!-- Trey -->
+                <button class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm opacity-60 active:opacity-100 active:scale-95 transition-all">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">TR</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Trey</span>
+                    <span class="font-sans text-[11px] text-textTertiary ml-1">Available</span>
+                </button>
+                <!-- Simone -->
+                <button class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm opacity-60 active:opacity-100 active:scale-95 transition-all">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">SI</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Simone</span>
+                    <span class="font-sans text-[11px] text-textTertiary ml-1">Off Today</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Summary Metrics -->
+        <section id="summary-metrics" class="grid grid-cols-3 gap-3">
+            <button class="bg-surface rounded-[12px] p-3 border border-borderSubtle shadow-sm flex flex-col items-center justify-center text-center active:opacity-100 active:scale-95 transition-all min-h-[72px]" aria-label="View in progress jobs">
+                <span class="font-sans text-[20px] font-semibold text-brandBlue">0</span>
+                <span class="font-sans text-[11px] text-textSecondary mt-1">In Progress</span>
+            </button>
+            <button class="bg-surface rounded-[12px] p-3 border border-borderSubtle shadow-sm flex flex-col items-center justify-center text-center active:opacity-100 active:scale-95 transition-all min-h-[72px]" aria-label="View completed jobs">
+                <span class="font-sans text-[20px] font-semibold text-success">0</span>
+                <span class="font-sans text-[11px] text-textSecondary mt-1">Completed</span>
+            </button>
+            <button class="bg-surface rounded-[12px] p-3 border border-borderSubtle shadow-sm flex flex-col items-center justify-center text-center relative active:opacity-100 active:scale-95 transition-all min-h-[72px]" aria-label="View unassigned jobs">
+                <span class="font-sans text-[20px] font-semibold text-textTertiary">0</span>
+                <span class="font-sans text-[11px] text-textTertiary mt-1">Unassigned</span>
+                <i class="fa-solid fa-chevron-right text-textTertiary text-[12px] absolute bottom-2 right-2"></i>
+            </button>
+        </section>
+
+        <!-- Success Banner -->
+        <section id="success-banner" class="bg-[#DCFCE7] rounded-[12px] p-3 flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-success text-[16px]"></i>
+            <span class="font-sans text-[13px] font-medium text-success">All 6 jobs assigned and ready.</span>
+        </section>
+
+        <!-- Job List -->
+        <section id="job-list" class="flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-sans text-[15px] font-semibold text-textPrimary">Live Jobs</h2>
+                <a href="#" class="font-sans text-[13px] text-brandBlue font-medium active:text-brandBlueHover">View All</a>
+            </div>
+
+            <!-- Job 1 -->
+            <button class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 flex flex-col gap-3 text-left w-full active:scale-[0.98] transition-transform">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-brandBlueSubtle flex items-center justify-center text-[12px] font-semibold text-brandBlue">JO</div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Jordan</span>
+                            <span class="font-sans text-[12px] text-textTertiary mt-0.5">Starts in 45 min</span>
+                        </div>
+                    </div>
+                    <div class="bg-surface border border-borderSubtle text-textTertiary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                        Upcoming
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1 mt-2">
+                    <span class="font-sans text-[14px] font-medium text-textPrimary">9:00 AM &middot; Terrence W.</span>
+                    <span class="font-sans text-[13px] text-textSecondary">BMW X5 &middot; Full Interior Detail</span>
+                </div>
+            </button>
+
+            <!-- Job 2 -->
+            <button class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 flex flex-col gap-3 opacity-90 text-left w-full active:scale-[0.98] transition-transform">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[12px] font-semibold text-textPrimary">KA</div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Kayla</span>
+                        </div>
+                    </div>
+                    <div class="bg-surface border border-borderSubtle text-textTertiary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                        Upcoming
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1 mt-2">
+                    <span class="font-sans text-[14px] font-medium text-textPrimary">10:30 AM &middot; Sarah M.</span>
+                    <span class="font-sans text-[13px] text-textSecondary">Tesla Model 3 &middot; Standard Wash</span>
+                </div>
+            </button>
+
+            <!-- Job 3 -->
+            <button class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 flex flex-col gap-3 opacity-90 text-left w-full active:scale-[0.98] transition-transform">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[12px] font-semibold text-textPrimary">DE</div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Devon</span>
+                        </div>
+                    </div>
+                    <div class="bg-surface border border-borderSubtle text-textTertiary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                        Upcoming
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1 mt-2">
+                    <span class="font-sans text-[14px] font-medium text-textPrimary">1:00 PM &middot; Michael P.</span>
+                    <span class="font-sans text-[13px] text-textSecondary">Ford F-150 &middot; Full Detail + Ceramic</span>
+                </div>
+            </button>
+            
+            <!-- Additional jobs would scroll here -->
+            <div class="flex justify-center mt-2">
+                <span class="font-sans text-[12px] text-textTertiary">+ 3 more jobs today</span>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue relative min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Complete Job</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-surface-primary relative m-0 p-0">
+
+    <header id="header" class="px-4 pt-12 pb-4 bg-surface-primary sticky top-0 z-10 border-b border-border-subtle">
+        <div class="flex justify-between items-center relative">
+            <button class="p-2 -ml-2 text-text-primary active:opacity-70 transition-opacity">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <h1 class="font-sans text-[17px] font-semibold absolute left-1/2 -translate-x-1/2">Complete Job</h1>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-4 pb-40 space-y-6 pt-6">
+        
+        <section id="photo-upload" class="space-y-3">
+            <div class="flex space-x-3">
+                <div class="flex-1 bg-surface-elevated rounded-[12px] p-3 border border-border-subtle shadow-level-1 h-[160px] flex flex-col relative overflow-hidden">
+                    <p class="font-sans text-[12px] font-medium text-text-tertiary mb-2 z-10">Before</p>
+                    <div class="absolute inset-0 top-9 mx-3 mb-3 rounded-[8px] overflow-hidden bg-gray-100">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/7a74430e23-65849c1e0af30d32d0c0.png" alt="dirty car interior before detailing" />
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <div class="w-10 h-10 bg-foam-blue rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                                <i data-lucide="check" class="w-5 h-5 text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="flex-1 bg-surface-primary rounded-[12px] p-3 border-2 border-dashed border-border-default h-[160px] flex flex-col items-center justify-center relative active:bg-gray-50 transition-colors">
+                    <p class="font-sans text-[12px] font-medium text-text-tertiary absolute top-3 left-3">After</p>
+                    <div class="flex flex-col items-center space-y-2 mt-4">
+                        <i data-lucide="camera" class="w-8 h-8 text-text-tertiary"></i>
+                        <span class="font-sans text-[13px] font-medium text-text-tertiary">Add Photos</span>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <section id="appointment-summary" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-sans text-[11px] font-medium text-text-tertiary uppercase tracking-wide">APPOINTMENT SUMMARY</h2>
+                <i data-lucide="lock" class="w-[14px] h-[14px] text-text-tertiary"></i>
+            </div>
+            
+            <div class="space-y-5">
+                <div id="vehicle-1">
+                    <h3 class="font-sans text-[15px] font-semibold text-text-primary mb-3">2021 Audi Q5 · Black</h3>
+                    <div class="space-y-2.5 mb-3">
+                        <div class="flex justify-between items-center pl-3 border-l-4 border-foam-blue">
+                            <span class="font-sans text-[14px] text-text-primary">Full Interior Detail</span>
+                            <span class="font-sans text-[14px] text-text-primary">$220</span>
+                        </div>
+                        <div class="flex justify-between items-center pl-3 border-l-4 border-foam-blue">
+                            <span class="font-sans text-[14px] text-text-primary">Headlight Restoration</span>
+                            <span class="font-sans text-[14px] text-text-primary">$95</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-sans text-[13px] text-text-tertiary">Subtotal</span>
+                        <span class="font-sans text-[14px] font-semibold text-text-primary">$315</span>
+                    </div>
+                </div>
+
+                <div id="vehicle-2">
+                    <h3 class="font-sans text-[15px] font-semibold text-text-primary mb-3">2020 BMW X5 · White</h3>
+                    <div class="space-y-2.5 mb-3">
+                        <div class="flex justify-between items-center pl-3 border-l-4 border-foam-blue">
+                            <span class="font-sans text-[14px] text-text-primary">Exterior Wash + Clay Bar</span>
+                            <span class="font-sans text-[14px] text-text-primary">$120</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-sans text-[13px] text-text-tertiary">Subtotal</span>
+                        <span class="font-sans text-[14px] font-semibold text-text-primary">$120</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-border-subtle pt-4 space-y-2.5">
+                    <div class="flex justify-between items-center">
+                        <span class="font-sans text-[13px] text-text-secondary">Services subtotal</span>
+                        <span class="font-sans text-[14px] text-text-primary">$435</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-sans text-[13px] text-text-secondary">Tip</span>
+                        <span class="font-sans text-[12px] text-text-tertiary italic">Customer will add after payment</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2">
+                        <span class="font-sans text-[16px] font-semibold text-text-primary">Total</span>
+                        <span class="font-sans text-[18px] font-bold text-foam-blue">$435</span>
+                    </div>
+                </div>
+
+                <p class="font-sans text-[12px] text-text-tertiary italic text-center leading-relaxed pt-2">Review this with your customer before submitting.</p>
+            </div>
+        </section>
+
+        <section id="manager-notes" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <h2 class="font-sans text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-3">NOTE FOR YOUR MANAGER</h2>
+            
+            <div class="relative">
+                <textarea 
+                    id="manager-note-input"
+                    class="w-full h-[88px] rounded-[12px] border border-border-subtle p-4 font-sans text-[14px] text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-foam-blue focus:border-transparent transition-all"
+                    placeholder="Anything your manager should know? (optional)"
+                    maxlength="300"
+                ></textarea>
+                <div class="flex justify-between items-center mt-2">
+                    <p class="font-sans text-[12px] text-text-tertiary">Pre-existing scratch found · Customer wants to rebook monthly</p>
+                    <span id="char-count" class="font-sans text-[12px] text-text-tertiary">0 / 300</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div class="fixed bottom-[64px] left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle p-4 pb-6 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button id="submit-btn" class="w-full h-[48px] bg-foam-blue text-white rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center space-x-2 active:bg-foam-hover transition-colors shadow-sm mb-2 opacity-50 cursor-not-allowed" disabled>
+            <span>Submit Job</span>
+        </button>
+        <p class="font-sans text-[12px] text-text-tertiary text-center leading-relaxed">Terrence will receive their payment request instantly.</p>
+    </div>
+
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle z-50">
+        <div class="grid grid-cols-3 h-[64px]">
+            <button class="flex flex-col items-center justify-center space-y-1 text-foam-blue active:bg-gray-50 transition-colors">
+                <i data-lucide="briefcase" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">My Jobs</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Earnings</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+
+        const textarea = document.getElementById('manager-note-input');
+        const charCount = document.getElementById('char-count');
+        
+        textarea.addEventListener('input', function() {
+            const length = this.value.length;
+            charCount.textContent = length + ' / 300';
+        });
+    </script>
+</body>
+</html>

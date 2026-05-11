@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Operator: Set Service Radius</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        elevated: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        foamBlue: '#339DC7',
+                        foamBlueHover: '#2B85A9',
+                        foamBlueSubtle: 'rgba(51,157,199,0.10)',
+                        accentSubtle: '#E1F0F7',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        error: '#DC2626',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level-2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'sheet': '0 -4px 20px -2px rgba(0, 0, 0, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #FAFAFA;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @media (max-width: 375px) {
+            .mobile-container {
+                max-width: 375px;
+                margin: 0 auto;
+                min-height: 840px;
+                background-color: #FAFAFA;
+                position: relative;
+            }
+        }
+
+        /* Toggle switch styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #339DC7;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #339DC7;
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+
+        /* Slider Custom Range */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%; 
+            background: white;
+            border: 2px solid #339DC7;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            margin-top: -10px; /* Centers thumb on track */
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: linear-gradient(to right, #339DC7 0%, #339DC7 22%, #E4E4E7 22%, #E4E4E7 100%);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="text-textPrimary bg-primary selection:bg-foamBlue selection:text-white m-0 p-0">
+
+    <div id="app-container" class="w-full max-w-[375px] mx-auto min-h-[840px] bg-primary relative flex flex-col shadow-2xl md:shadow-none overflow-hidden">
+        
+        <!-- Progress Header -->
+        <header id="progress-header" class="w-full pt-12 pb-4 px-4 bg-primary z-20 flex flex-col gap-4">
+            <div class="flex items-center justify-between w-full">
+                <button type="button" class="w-10 h-10 flex items-center justify-center text-textPrimary -ml-2">
+                    <i class="fa-solid fa-arrow-left text-[20px]"></i>
+                </button>
+                <span class="font-sans text-[14px] font-semibold text-textPrimary">Step 4 of 4</span>
+                <div class="w-10 h-10"></div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full h-[4px] bg-secondary rounded-full overflow-hidden">
+                <div class="h-full bg-foamBlue w-full rounded-full transition-all duration-500"></div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="flex-1 overflow-y-auto no-scrollbar flex flex-col pb-[120px] relative z-10">
+            
+            <!-- Header Section -->
+            <section id="header-section" class="mt-[16px] mb-[24px] px-4">
+                <h1 class="font-serif text-[26px] font-bold text-textPrimary leading-tight mb-[8px]">
+                    Your territory.
+                </h1>
+                <p class="font-sans text-[15px] text-textSecondary leading-relaxed">
+                    Set how far you'll travel and where you're based.
+                </p>
+            </section>
+
+            <!-- Map Section -->
+            <section id="map-section" class="w-full h-[220px] relative mb-[24px] bg-secondary overflow-hidden">
+                <!-- Simulated Map Background -->
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/7f85bfbffd-4a6c3ce9bb00c0abccf0.png" alt="light minimal map tile showing atlanta buckhead area streets soft gray and white tones" />
+                
+                <!-- Radius Overlay -->
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-[180px] h-[180px] rounded-full border-2 border-dashed border-foamBlue bg-[rgba(51,157,199,0.12)] relative flex items-center justify-center">
+                        <!-- Center Pin -->
+                        <div class="text-foamBlue text-[28px] -mt-4 drop-shadow-md">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </div>
+                        <!-- Drag Handle -->
+                        <div class="absolute right-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full border-2 border-foamBlue shadow-sm"></div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="px-4 flex flex-col gap-[12px]">
+                
+                <!-- Home Base Address -->
+                <section id="home-base" class="w-full bg-elevated rounded-[12px] p-[12px] border border-borderSubtle shadow-level-1 flex items-center justify-between">
+                    <div class="flex items-center gap-[12px]">
+                        <i class="fa-solid fa-map-pin text-foamBlue text-[18px]"></i>
+                        <span class="font-sans text-[14px] text-textPrimary">1847 Peachtree Rd NE, Atlanta, GA</span>
+                    </div>
+                    <button class="font-sans text-[13px] font-medium text-foamBlue hover:text-foamBlueHover transition-colors">
+                        Change
+                    </button>
+                </section>
+
+                <!-- Radius Selector -->
+                <section id="radius-selector" class="w-full bg-elevated rounded-[12px] p-[12px] border border-borderSubtle shadow-level-1 flex flex-col gap-[16px]">
+                    <div class="w-full text-center">
+                        <span class="font-sans text-[11px] font-medium text-textTertiary uppercase tracking-wide">TRAVEL RADIUS</span>
+                        <div class="mt-1 font-sans text-[24px] font-semibold text-textPrimary">15 miles</div>
+                    </div>
+
+                    <div class="px-2">
+                        <input type="range" min="5" max="50" value="15" class="w-full appearance-none bg-transparent" id="radius-slider">
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-sans text-[12px] text-textTertiary">5 mi</span>
+                            <span class="font-sans text-[12px] text-textTertiary">50 mi</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-accentSubtle rounded-[8px] p-[8px] text-center">
+                        <span class="font-sans text-[13px] text-textSecondary">
+                            At 15 miles you'll reach approximately 340,000 potential customers in Atlanta.
+                        </span>
+                    </div>
+                </section>
+
+                <!-- Availability Schedule -->
+                <section id="availability-schedule" class="w-full bg-elevated rounded-[12px] p-[12px] border border-borderSubtle shadow-level-1 flex flex-col gap-[16px]">
+                    <span class="font-sans text-[11px] font-medium text-textTertiary uppercase tracking-wide">DEFAULT AVAILABILITY</span>
+                    
+                    <div class="flex flex-col gap-[16px]">
+                        <!-- Monday -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Mon</span>
+                            <div class="flex-1 text-center">
+                                <button class="font-sans text-[13px] text-textSecondary hover:text-textPrimary transition-colors">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-mon" id="toggle-mon" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10" checked/>
+                                <label for="toggle-mon" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+
+                        <!-- Tuesday -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Tue</span>
+                            <div class="flex-1 text-center">
+                                <button class="font-sans text-[13px] text-textSecondary hover:text-textPrimary transition-colors">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-tue" id="toggle-tue" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10" checked/>
+                                <label for="toggle-tue" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+
+                        <!-- Wednesday -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Wed</span>
+                            <div class="flex-1 text-center">
+                                <button class="font-sans text-[13px] text-textSecondary hover:text-textPrimary transition-colors">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-wed" id="toggle-wed" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10" checked/>
+                                <label for="toggle-wed" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+
+                        <!-- Thursday -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Thu</span>
+                            <div class="flex-1 text-center">
+                                <button class="font-sans text-[13px] text-textSecondary hover:text-textPrimary transition-colors">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-thu" id="toggle-thu" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10" checked/>
+                                <label for="toggle-thu" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+
+                        <!-- Friday -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Fri</span>
+                            <div class="flex-1 text-center">
+                                <button class="font-sans text-[13px] text-textSecondary hover:text-textPrimary transition-colors">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-fri" id="toggle-fri" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10" checked/>
+                                <label for="toggle-fri" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+
+                        <!-- Saturday -->
+                        <div class="flex items-center justify-between opacity-50">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Sat</span>
+                            <div class="flex-1 text-center">
+                                <span class="font-sans text-[13px] text-textTertiary">Unavailable</span>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-sat" id="toggle-sat" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10"/>
+                                <label for="toggle-sat" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+
+                        <!-- Sunday -->
+                        <div class="flex items-center justify-between opacity-50">
+                            <span class="font-sans text-[14px] text-textPrimary w-12">Sun</span>
+                            <div class="flex-1 text-center">
+                                <span class="font-sans text-[13px] text-textTertiary">Unavailable</span>
+                            </div>
+                            <div class="relative inline-block w-[44px] align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle-sun" id="toggle-sun" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10"/>
+                                <label for="toggle-sun" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+        </main>
+
+        <!-- Fixed Action Footer -->
+        <footer id="action-footer" class="fixed bottom-0 w-full max-w-[375px] bg-gradient-to-t from-primary via-primary to-transparent pt-12 pb-[24px] px-[16px] z-20">
+            <button type="button" class="w-full h-[48px] bg-foamBlue hover:bg-foamBlueHover active:bg-foamBlueHover text-white font-sans text-[16px] font-semibold rounded-[12px] transition-colors duration-200 shadow-level-2 flex items-center justify-center">
+                Finish Setup
+            </button>
+        </footer>
+
+    </div>
+
+    <script>
+        // Simple slider visual update logic
+        const slider = document.getElementById('radius-slider');
+        slider.addEventListener('input', function() {
+            const value = (this.value - this.min) / (this.max - this.min) * 100;
+            this.style.background = `linear-gradient(to right, #339DC7 0%, #339DC7 ${value}%, #E4E4E7 ${value}%, #E4E4E7 100%)`;
+        });
+    </script>
+</body>
+</html>

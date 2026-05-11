@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Business</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .drawer-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 60;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .drawer-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .drawer-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 430px;
+            margin: 0 auto;
+            background-color: #FAFAFA;
+            border-radius: 24px 24px 0 0;
+            z-index: 70;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .drawer-container.active {
+            transform: translateY(0);
+        }
+        .drawer-handle {
+            width: 36px;
+            height: 4px;
+            background-color: #D4D4D8;
+            border-radius: 2px;
+            margin: 12px auto 0;
+        }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-surface-primary relative m-0 p-0">
+
+    <!-- Header -->
+    <header id="header" class="w-full px-4 pt-6 pb-4 bg-surface-primary sticky top-0 z-40">
+        <h1 class="font-sans text-[22px] font-semibold text-text-primary">Business</h1>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto px-4 pb-32 flex flex-col space-y-6">
+        
+        <!-- Period Filter Chips -->
+        <section id="period-filter" class="w-full overflow-x-auto hide-scrollbar -mx-4 px-4 pb-2">
+            <div class="flex space-x-2 w-max">
+                <button data-period="today" class="period-btn px-4 py-2 rounded-[12px] bg-foam-blue text-white font-sans text-[13px] font-medium whitespace-nowrap">
+                    Today
+                </button>
+                <button data-period="week" class="period-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors">
+                    This Week
+                </button>
+                <button data-period="month" class="period-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors">
+                    This Month
+                </button>
+                <button data-period="alltime" class="period-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors">
+                    All Time
+                </button>
+            </div>
+        </section>
+
+        <!-- Earnings Summary Card -->
+        <section id="earnings-summary" class="w-full">
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-5">
+                <div class="flex flex-col space-y-1">
+                    <span class="font-serif text-[36px] font-bold text-text-primary leading-none">$340</span>
+                    <span class="font-sans text-[13px] text-text-tertiary mt-1">Earned Today</span>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-border-subtle flex gap-3">
+                    <span class="px-3 py-1.5 rounded-[6px] bg-status-warning/10 text-status-warning font-sans text-[13px] font-medium">
+                        $120 pending
+                    </span>
+                    <span class="px-3 py-1.5 rounded-[6px] bg-status-success/10 text-status-success font-sans text-[13px] font-medium">
+                        $220 paid out
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic Chart Section -->
+        <section id="dynamic-chart-section" class="w-full bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="chart-period-label" class="font-sans text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Today</h2>
+                <div id="chart-legend" class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-3 h-3 rounded-sm bg-foam-blue"></div>
+                        <span class="font-sans text-[11px] text-text-tertiary">Service</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-3 h-3 rounded-sm bg-[#E1F0F7] border border-foam-blue"></div>
+                        <span class="font-sans text-[11px] text-text-tertiary">Tip</span>
+                    </div>
+                </div>
+            </div>
+            <div id="chart-container" class="w-full h-[200px] overflow-x-auto"></div>
+        </section>
+
+        <!-- Recent Jobs List -->
+        <section id="recent-jobs" class="w-full space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-sans text-[16px] font-semibold text-text-primary">Today's Breakdown</h2>
+                <button class="font-sans text-[13px] font-medium text-foam-blue">See All</button>
+            </div>
+            
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 overflow-hidden">
+                <!-- Job Row 1 -->
+                <div class="flex items-center justify-between p-4 border-b border-border-subtle">
+                    <div class="flex flex-col space-y-1">
+                        <span class="font-sans text-[14px] font-medium text-text-primary">Sarah J. &middot; Tesla Model 3</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Premium Interior Detail</span>
+                    </div>
+                    <div class="flex flex-col items-end space-y-1">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$120</span>
+                        <span class="px-2 py-0.5 rounded-[4px] bg-status-success/10 text-status-success font-sans text-[11px] font-medium">Paid</span>
+                    </div>
+                </div>
+                
+                <!-- Job Row 2 -->
+                <div class="flex items-center justify-between p-4 border-b border-border-subtle">
+                    <div class="flex flex-col space-y-1">
+                        <span class="font-sans text-[14px] font-medium text-text-primary">Mike T. &middot; Ford F-150</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Full Exterior Wash</span>
+                    </div>
+                    <div class="flex flex-col items-end space-y-1">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$100</span>
+                        <span class="px-2 py-0.5 rounded-[4px] bg-status-success/10 text-status-success font-sans text-[11px] font-medium">Paid</span>
+                    </div>
+                </div>
+                
+                <!-- Job Row 3 -->
+                <div class="flex items-center justify-between p-4">
+                    <div class="flex flex-col space-y-1">
+                        <span class="font-sans text-[14px] font-medium text-text-primary">Elena R. &middot; BMW X5</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Complete Detail Package</span>
+                    </div>
+                    <div class="flex flex-col items-end space-y-1">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$120</span>
+                        <span class="px-2 py-0.5 rounded-[4px] bg-status-warning/10 text-status-warning font-sans text-[11px] font-medium">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Next Payout Section -->
+        <section id="payout-section" class="w-full mt-4">
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-5">
+                <span class="font-sans text-[12px] text-text-tertiary block mb-2">Next Payout</span>
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex flex-col space-y-1">
+                        <span class="font-sans text-[17px] font-semibold text-text-primary">Tomorrow &middot; $340</span>
+                        <span class="font-sans text-[13px] text-text-secondary flex items-center mt-1">
+                            <i data-lucide="building-2" class="w-3.5 h-3.5 mr-1.5 opacity-70"></i>
+                            Chase &middot;&middot;&middot;&middot;4821
+                        </span>
+                    </div>
+                </div>
+                <button class="w-full h-[44px] border border-border-default text-foam-blue rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center active:bg-surface-primary transition-colors">
+                    View Payout History
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle flex justify-between items-center px-6 pb-safe pt-3 z-50">
+        <button class="flex flex-col items-center space-y-1 text-text-tertiary active:text-text-secondary transition-colors">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </button>
+        <button class="flex flex-col items-center space-y-1 text-text-tertiary active:text-text-secondary transition-colors">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </button>
+        <button class="flex flex-col items-center space-y-1 text-text-tertiary active:text-text-secondary transition-colors">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            <span class="font-sans text-[10px] font-medium">Customers</span>
+        </button>
+        <button id="business-tab-btn" class="flex flex-col items-center space-y-1 text-foam-blue">
+            <i data-lucide="briefcase" class="w-5 h-5"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </button>
+        <button class="flex flex-col items-center space-y-1 text-text-tertiary active:text-text-secondary transition-colors">
+            <i data-lucide="user" class="w-5 h-5"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </button>
+    </nav>
+
+    <!-- Drawer Backdrop -->
+    <div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+    <!-- Stripe Not Connected Drawer -->
+    <div id="stripe-drawer" class="drawer-container">
+        <div class="drawer-handle"></div>
+        
+        <div class="px-4 pt-6 pb-8">
+            <!-- Icon -->
+            <div class="flex justify-center mb-6">
+                <div class="w-20 h-20 rounded-full bg-status-warning/10 flex items-center justify-center">
+                    <i data-lucide="dollar-sign" class="w-12 h-12 text-status-warning"></i>
+                </div>
+            </div>
+
+            <!-- Title & Description -->
+            <h2 class="font-sans text-[20px] font-semibold text-text-primary text-center mb-3">Stripe isn't connected.</h2>
+            <p class="font-sans text-[14px] text-text-secondary text-center mb-6 px-4">Connect your bank account to receive payouts from your completed jobs.</p>
+
+            <!-- Earnings at Stake Card -->
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-4 mb-4">
+                <span class="font-sans text-[11px] font-medium text-status-warning uppercase tracking-wider block mb-3">WAITING FOR YOU</span>
+                <div class="text-center">
+                    <span class="font-serif text-[32px] font-bold text-text-primary block leading-none">$1,820</span>
+                    <span class="font-sans text-[13px] text-text-tertiary block mt-2 mb-4">In completed job earnings</span>
+                    <div class="border-t border-border-subtle pt-3">
+                        <span class="font-sans text-[13px] text-text-secondary">4 jobs completed · payouts on hold</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What You'll Need Section -->
+            <div class="bg-surface-elevated rounded-[12px] border border-border-subtle p-3 mb-4">
+                <span class="font-sans text-[11px] font-medium text-text-tertiary uppercase tracking-wider block mb-3">YOU'LL NEED</span>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-[18px] h-[18px] text-foam-blue"></i>
+                        <span class="font-sans text-[13px] text-text-secondary">A US bank account</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-[18px] h-[18px] text-foam-blue"></i>
+                        <span class="font-sans text-[13px] text-text-secondary">Your SSN for identity verification</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-[18px] h-[18px] text-foam-blue"></i>
+                        <span class="font-sans text-[13px] text-text-secondary">A government-issued photo ID</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payout Timing Row -->
+            <div class="bg-foam-subtle rounded-[12px] p-2 mb-6 flex items-center gap-2">
+                <i data-lucide="dollar-sign" class="w-4 h-4 text-foam-blue flex-shrink-0"></i>
+                <span class="font-sans text-[12px] text-text-secondary">Payouts hit your account within 2 business days.</span>
+            </div>
+
+            <!-- CTAs -->
+            <div class="space-y-3">
+                <button class="w-full h-[48px] bg-foam-blue text-white rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center gap-2 active:bg-foam-hover transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 1.315 0 2.088.632 2.246 1.564h1.992c-.169-1.652-1.133-2.951-3.046-3.39v-1.61h-2.222v1.61c-1.754.382-3.146 1.542-3.146 3.235 0 2.067 1.672 3.073 4.11 3.955 2.19.806 2.633 1.49 2.633 2.326 0 .679-.481 1.329-1.901 1.329-1.684 0-2.594-.803-2.734-1.964H7.461c.157 2.067 1.674 3.235 3.619 3.617v1.61h2.222v-1.61c1.754-.382 3.146-1.542 3.146-3.235-.001-2.442-2.156-3.424-4.472-4.223z"/>
+                    </svg>
+                    Connect with Stripe
+                </button>
+                
+                <button id="close-drawer-btn" class="w-full h-[48px] text-text-tertiary rounded-[8px] font-sans text-[14px] font-medium flex items-center justify-center active:bg-surface-elevated transition-colors">
+                    I'll do this later
+                </button>
+            </div>
+
+            <!-- Consequence Note -->
+            <p class="font-sans text-[11px] text-status-warning text-center mt-4">Payouts are paused until Stripe is connected.</p>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let currentPeriod = 'today';
+
+        const chartData = {
+            today: {
+                x: ['Terrence', 'Alicia', 'Dante'],
+                service: [90, 80, 100],
+                tip: [30, 20, 20],
+                label: 'Today'
+            },
+            week: {
+                x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                service: [150, 180, 120, 280, 0],
+                tip: [30, 40, 30, 60, 0],
+                label: 'This Week'
+            },
+            month: {
+                x: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                service: [680, 720, 640, 340],
+                tip: [140, 160, 130, 80],
+                label: 'This Month'
+            },
+            alltime: {
+                x: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                service: [2400, 2800, 2600, 3200, 340],
+                tip: [480, 560, 520, 640, 80],
+                label: 'All Time'
+            }
+        };
+
+        function renderChart(period) {
+            const data = chartData[period];
+            
+            const trace1 = {
+                type: 'bar',
+                x: data.x,
+                y: data.service,
+                name: 'Service',
+                marker: {
+                    color: '#339DC7',
+                    line: { width: 0 }
+                },
+                hovertemplate: '$%{y}<extra></extra>'
+            };
+
+            const trace2 = {
+                type: 'bar',
+                x: data.x,
+                y: data.tip,
+                name: 'Tip',
+                marker: {
+                    color: '#E1F0F7',
+                    line: { color: '#339DC7', width: 1 }
+                },
+                hovertemplate: '$%{y}<extra></extra>'
+            };
+
+            const layout = {
+                barmode: 'stack',
+                margin: { t: 10, r: 10, b: 30, l: 40 },
+                plot_bgcolor: 'transparent',
+                paper_bgcolor: 'transparent',
+                showlegend: false,
+                xaxis: {
+                    fixedrange: true,
+                    tickfont: {
+                        family: 'Inter, sans-serif',
+                        size: 11,
+                        color: '#A3A3A3'
+                    },
+                    showgrid: false,
+                    zeroline: false
+                },
+                yaxis: {
+                    fixedrange: true,
+                    tickfont: {
+                        family: 'Inter, sans-serif',
+                        size: 11,
+                        color: '#A3A3A3'
+                    },
+                    showgrid: true,
+                    gridcolor: '#E4E4E7',
+                    gridwidth: 1,
+                    zeroline: false,
+                    tickformat: '$'
+                },
+                bargap: 0.3
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false,
+                displaylogo: false
+            };
+
+            try {
+                Plotly.newPlot('chart-container', [trace1, trace2], layout, config);
+            } catch (e) {
+                console.error('Chart error:', e);
+            }
+        }
+
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.period-btn').forEach(b => {
+                    b.classList.remove('bg-foam-blue', 'text-white');
+                    b.classList.add('border', 'border-border-default', 'text-text-secondary');
+                });
+                
+                this.classList.remove('border', 'border-border-default', 'text-text-secondary');
+                this.classList.add('bg-foam-blue', 'text-white');
+                
+                const period = this.getAttribute('data-period');
+                currentPeriod = period;
+                
+                document.getElementById('chart-period-label').textContent = chartData[period].label;
+                renderChart(period);
+            });
+        });
+
+        window.addEventListener('load', function() {
+            renderChart('today');
+            
+            setTimeout(function() {
+                document.getElementById('drawer-backdrop').classList.add('active');
+                document.getElementById('stripe-drawer').classList.add('active');
+                lucide.createIcons();
+            }, 800);
+        });
+
+        setTimeout(function() {
+            renderChart('today');
+        }, 1200);
+
+        document.getElementById('close-drawer-btn').addEventListener('click', function() {
+            document.getElementById('drawer-backdrop').classList.remove('active');
+            document.getElementById('stripe-drawer').classList.remove('active');
+        });
+
+        document.getElementById('drawer-backdrop').addEventListener('click', function() {
+            document.getElementById('drawer-backdrop').classList.remove('active');
+            document.getElementById('stripe-drawer').classList.remove('active');
+        });
+
+        document.getElementById('business-tab-btn').addEventListener('click', function() {
+            document.getElementById('drawer-backdrop').classList.add('active');
+            document.getElementById('stripe-drawer').classList.add('active');
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

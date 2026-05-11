@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Active Job</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-surface-primary relative">
+
+    <!-- Header Section -->
+    <header id="header" class="px-4 pt-12 pb-4 bg-surface-elevated sticky top-0 z-10 border-b border-border-subtle">
+        <div class="flex justify-between items-center relative">
+            <button class="p-2 -ml-2 text-text-primary active:opacity-70 transition-opacity">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <h1 class="font-sans text-[17px] font-semibold absolute left-1/2 -translate-x-1/2">Active Job</h1>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto px-4 pb-44 space-y-4 pt-6">
+        
+        <!-- Status Pill -->
+        <div class="flex justify-center mb-2">
+            <div class="bg-foam-blue text-white px-5 py-1.5 rounded-full font-sans text-[12px] font-medium">
+                In Progress
+            </div>
+        </div>
+
+        <!-- Customer & Vehicle Card -->
+        <section id="customer-card" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-12 h-12 rounded-full bg-foam-blue flex items-center justify-center text-white font-sans font-semibold text-[17px] shrink-0">
+                    TW
+                </div>
+                <div class="flex-1">
+                    <h2 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Terrence W.</h2>
+                    <div class="flex items-center text-text-secondary space-x-1.5">
+                        <i data-lucide="car" class="w-3.5 h-3.5"></i>
+                        <span class="font-sans text-[13px]">2021 BMW X5 · Midnight Blue</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2">
+                <button class="h-[44px] bg-surface-primary border border-border-default rounded-[8px] flex justify-center items-center space-x-2 text-text-primary active:bg-gray-50 transition-colors">
+                    <i data-lucide="phone" class="w-4 h-4"></i>
+                    <span class="font-sans text-[14px] font-medium">Call</span>
+                </button>
+                <button class="h-[44px] bg-surface-primary border border-border-default rounded-[8px] flex justify-center items-center space-x-2 text-text-primary active:bg-gray-50 transition-colors">
+                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                    <span class="font-sans text-[14px] font-medium">Message</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Service Details Section -->
+        <section id="service-details" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <p class="font-sans text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-3">Service</p>
+            <div class="flex justify-between items-start mb-1">
+                <h3 class="font-sans text-[17px] font-semibold text-text-primary">Full Interior Detail</h3>
+                <p class="font-sans text-[20px] font-bold text-foam-blue">$220</p>
+            </div>
+            <p class="font-sans text-[13px] text-text-secondary mb-4">~2.5 hours</p>
+            
+            <div class="h-px bg-border-subtle mb-4"></div>
+            
+            <div class="space-y-3">
+                <div class="flex items-start space-x-2.5">
+                    <i data-lucide="circle-check" class="w-[18px] h-[18px] text-foam-blue shrink-0 mt-0.5"></i>
+                    <span class="font-sans text-[14px] text-text-secondary">Deep vacuum and steam clean</span>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <i data-lucide="circle-check" class="w-[18px] h-[18px] text-foam-blue shrink-0 mt-0.5"></i>
+                    <span class="font-sans text-[14px] text-text-secondary">Leather conditioning</span>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <i data-lucide="circle-check" class="w-[18px] h-[18px] text-foam-blue shrink-0 mt-0.5"></i>
+                    <span class="font-sans text-[14px] text-text-secondary">Odor removal treatment</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Location Card -->
+        <section id="location-card" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <p class="font-sans text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-3">Location</p>
+            
+            <!-- Map Thumbnail -->
+            <div class="w-full h-[120px] bg-gray-100 rounded-[12px] mb-3 relative overflow-hidden flex items-center justify-center">
+                <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Map view" class="absolute inset-0 w-full h-full object-cover opacity-50">
+                <div class="w-10 h-10 bg-foam-blue rounded-full flex items-center justify-center relative z-10 shadow-md border-2 border-white">
+                    <i data-lucide="map-pin" class="w-5 h-5 text-white"></i>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center">
+                <p class="font-sans text-[14px] text-text-primary font-normal">1847 Peachtree Rd NE, Atlanta, GA</p>
+                <button class="flex items-center space-x-1 text-foam-blue active:opacity-70 transition-opacity ml-3 shrink-0">
+                    <span class="font-sans text-[14px] font-semibold">Navigate</span>
+                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Notes Section -->
+        <section id="notes-section" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <p class="font-sans text-[11px] font-medium text-text-tertiary uppercase tracking-wider mb-3">Notes</p>
+            <p class="font-sans text-[14px] text-text-secondary leading-relaxed">
+                Customer requested extra attention on rear seats and pet hair removal.
+            </p>
+        </section>
+
+    </main>
+
+    <!-- Action Buttons Bottom Sheet -->
+    <div class="fixed bottom-[72px] left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle p-4 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div class="space-y-3">
+            <button class="w-full h-[48px] bg-foam-blue text-white rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center space-x-2 active:bg-foam-hover transition-colors shadow-sm">
+                <i data-lucide="camera" class="w-5 h-5"></i>
+                <span>Upload Before Photos</span>
+            </button>
+            
+            <button class="w-full h-[48px] bg-transparent border-2 border-foam-blue text-foam-blue rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center active:bg-foam-subtle transition-colors">
+                <span>Mark Job Complete</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle z-50">
+        <div class="grid grid-cols-5 h-[72px]">
+            <button class="flex flex-col items-center justify-center space-y-1 text-foam-blue active:bg-gray-50 transition-colors">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Today</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Bookings</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Customers</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Business</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

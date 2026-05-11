@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Operator: Build Your Service Menu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        elevated: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        foamBlue: '#339DC7',
+                        foamBlueHover: '#2B85A9',
+                        foamBlueSubtle: 'rgba(51,157,199,0.10)',
+                        accentSubtle: '#E1F0F7',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        error: '#DC2626',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level-2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'sheet': '0 -4px 20px -2px rgba(0, 0, 0, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #FAFAFA;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @media (max-width: 375px) {
+            .mobile-container {
+                max-width: 375px;
+                margin: 0 auto;
+                min-height: 840px;
+                background-color: #FAFAFA;
+                position: relative;
+            }
+        }
+
+        /* Toggle switch styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #339DC7;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #339DC7;
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+    </style>
+</head>
+<body class="text-textPrimary bg-primary selection:bg-foamBlue selection:text-white m-0 p-0">
+
+    <div id="app-container" class="w-full max-w-[375px] mx-auto min-h-[840px] bg-primary relative flex flex-col shadow-2xl md:shadow-none overflow-hidden">
+        
+        <!-- Progress Header -->
+        <header id="progress-header" class="w-full pt-12 pb-4 px-4 bg-primary z-20 flex flex-col gap-4">
+            <div class="flex items-center justify-between w-full">
+                <button type="button" class="w-10 h-10 flex items-center justify-center text-textPrimary -ml-2">
+                    <i class="fa-solid fa-arrow-left text-[20px]"></i>
+                </button>
+                <span class="font-sans text-[14px] font-semibold text-textPrimary">Step 3 of 4</span>
+                <div class="w-10 h-10"></div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full h-[4px] bg-secondary rounded-full overflow-hidden">
+                <div class="h-full bg-foamBlue w-[75%] rounded-full transition-all duration-500"></div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="flex-1 overflow-y-auto no-scrollbar flex flex-col px-4 pb-[120px] relative z-10">
+            
+            <!-- Header Section -->
+            <section id="header-section" class="mt-[16px] mb-[32px]">
+                <h1 class="font-serif text-[26px] font-bold text-textPrimary leading-tight mb-[8px]">
+                    What you offer.
+                </h1>
+                <p class="font-sans text-[15px] text-textSecondary leading-relaxed">
+                    Add your services and pricing. You can edit these anytime.
+                </p>
+            </section>
+
+            <!-- Services List Section -->
+            <section id="services-list" class="flex flex-col gap-[16px] mb-[24px]">
+                
+                <!-- Added Service Card -->
+                <div class="w-full bg-elevated rounded-[16px] p-[12px] border border-borderSubtle shadow-level-1 flex flex-col gap-[12px]">
+                    
+                    <!-- Top Row -->
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col gap-[4px]">
+                            <h3 class="font-sans text-[16px] font-semibold text-textPrimary">Full Interior Detail</h3>
+                            <span class="font-sans text-[13px] text-textSecondary">$220 · ~2.5 hours</span>
+                        </div>
+                        <button class="text-textTertiary hover:text-foamBlue transition-colors p-1">
+                            <i class="fa-solid fa-pencil text-[18px]"></i>
+                        </button>
+                    </div>
+
+                    <!-- Description -->
+                    <p class="font-sans text-[13px] text-textTertiary line-clamp-2 leading-relaxed">
+                        Deep vacuum and steam clean, leather conditioning, odor treatment
+                    </p>
+
+                    <!-- Bottom Row: Chips & Delete -->
+                    <div class="flex justify-between items-center mt-[4px]">
+                        <div class="flex flex-wrap gap-[8px]">
+                            <span class="px-[12px] py-[4px] rounded-full border border-borderSubtle bg-primary font-sans text-[12px] text-textSecondary">
+                                Sedan $220
+                            </span>
+                            <span class="px-[12px] py-[4px] rounded-full border border-borderSubtle bg-primary font-sans text-[12px] text-textSecondary">
+                                SUV +$30
+                            </span>
+                            <span class="px-[12px] py-[4px] rounded-full border border-borderSubtle bg-primary font-sans text-[12px] text-textSecondary">
+                                Truck +$40
+                            </span>
+                        </div>
+                        <button class="text-textTertiary hover:text-error transition-colors p-1 ml-2">
+                            <i class="fa-solid fa-trash text-[18px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Add Service Trigger Section -->
+            <section id="add-service-trigger" class="mb-[32px]">
+                <button type="button" class="w-full h-[48px] rounded-[12px] border border-dashed border-borderDefault bg-transparent flex items-center justify-center gap-[8px] hover:bg-foamBlueSubtle transition-colors">
+                    <i class="fa-solid fa-plus text-[20px] text-foamBlue"></i>
+                    <span class="font-sans text-[14px] font-semibold text-foamBlue">Add a Service</span>
+                </button>
+            </section>
+
+        </main>
+
+        <!-- Fixed Action Footer (Visible behind sheet) -->
+        <footer id="action-footer" class="fixed bottom-0 w-full max-w-[375px] bg-gradient-to-t from-primary via-primary to-transparent pt-12 pb-[24px] px-[16px] z-20 pointer-events-none">
+            <div class="flex flex-col gap-[8px] pointer-events-auto">
+                <button type="button" class="w-full h-[48px] bg-foamBlue hover:bg-foamBlueHover active:bg-foamBlueHover text-white font-sans text-[16px] font-semibold rounded-[12px] transition-colors duration-200 shadow-level-2 flex items-center justify-center">
+                    Continue
+                </button>
+                <p class="font-sans text-[12px] text-textTertiary text-center">
+                    You can add more services anytime from your profile.
+                </p>
+            </div>
+        </footer>
+
+        <!-- Backdrop Overlay -->
+        <div id="backdrop" class="absolute inset-0 bg-black/40 z-30 transition-opacity"></div>
+
+        <!-- Add Service Bottom Sheet (Open State) -->
+        <div id="add-service-sheet" class="absolute bottom-0 w-full max-w-[375px] bg-elevated rounded-t-[20px] shadow-sheet z-40 flex flex-col max-h-[85vh] transition-transform duration-300 transform translate-y-0">
+            
+            <!-- Sheet Drag Handle -->
+            <div class="w-full flex justify-center pt-[12px] pb-[16px]">
+                <div class="w-[40px] h-[4px] bg-borderDefault rounded-full"></div>
+            </div>
+
+            <!-- Sheet Header -->
+            <div class="px-[16px] pb-[16px] border-b border-borderSubtle">
+                <h2 class="font-sans text-[17px] font-semibold text-textPrimary text-center">New Service</h2>
+            </div>
+
+            <!-- Sheet Scrollable Content -->
+            <div class="flex-1 overflow-y-auto no-scrollbar p-[16px] flex flex-col gap-[24px] pb-[100px]">
+                
+                <!-- Service Name -->
+                <div class="flex flex-col gap-[8px]">
+                    <label class="font-sans text-[14px] font-medium text-textPrimary">Service name</label>
+                    <input type="text" placeholder="e.g., Exterior Wash, Full Detail" 
+                        class="w-full h-[48px] px-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all">
+                </div>
+
+                <!-- Base Price -->
+                <div class="flex flex-col gap-[8px]">
+                    <label class="font-sans text-[14px] font-medium text-textPrimary">Base price</label>
+                    <div class="relative flex items-center">
+                        <span class="absolute left-[16px] font-sans text-[16px] text-textSecondary">$</span>
+                        <input type="number" placeholder="0.00" 
+                            class="w-full h-[48px] pl-[32px] pr-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all">
+                    </div>
+                </div>
+
+                <!-- Duration -->
+                <div class="flex flex-col gap-[8px]">
+                    <label class="font-sans text-[14px] font-medium text-textPrimary">Estimated duration</label>
+                    <div class="flex gap-[12px]">
+                        <!-- Hours -->
+                        <div class="flex-1 relative">
+                            <select class="w-full h-[48px] px-[16px] appearance-none bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all">
+                                <option value="0">0 hours</option>
+                                <option value="1">1 hour</option>
+                                <option value="2" selected>2 hours</option>
+                                <option value="3">3 hours</option>
+                                <option value="4">4 hours</option>
+                                <option value="5">5 hours</option>
+                                <option value="6">6 hours</option>
+                                <option value="7">7 hours</option>
+                                <option value="8">8 hours</option>
+                                <option value="9">9 hours</option>
+                                <option value="10">10 hours</option>
+                                <option value="11">11 hours</option>
+                                <option value="12">12 hours</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-[16px] top-[16px] text-[14px] text-textTertiary pointer-events-none"></i>
+                        </div>
+                        <!-- Minutes -->
+                        <div class="flex-1 relative">
+                            <select class="w-full h-[48px] px-[16px] appearance-none bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all">
+                                <option value="0">0 min</option>
+                                <option value="15">15 min</option>
+                                <option value="30" selected>30 min</option>
+                                <option value="45">45 min</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-[16px] top-[16px] text-[14px] text-textTertiary pointer-events-none"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="flex flex-col gap-[8px]">
+                    <div class="flex justify-between items-center">
+                        <label class="font-sans text-[14px] font-medium text-textPrimary">Description</label>
+                        <span class="font-sans text-[12px] text-textTertiary">Optional</span>
+                    </div>
+                    <textarea placeholder="What's included in this service?" 
+                        class="w-full h-[80px] p-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all resize-none"></textarea>
+                </div>
+
+                <!-- Vehicle Pricing Toggle -->
+                <div class="flex flex-col gap-[16px] pt-[8px] border-t border-borderSubtle">
+                    <div class="flex justify-between items-center">
+                        <span class="font-sans text-[14px] font-medium text-textPrimary">Different pricing by vehicle size</span>
+                        
+                        <!-- Toggle Switch -->
+                        <div class="relative inline-block w-[44px] mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="vehicle-pricing-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-borderDefault appearance-none cursor-pointer transition-transform duration-200 ease-in-out z-10" checked/>
+                            <label for="vehicle-pricing-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-borderDefault cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Size Inputs (Revealed when toggled) -->
+                    <div id="vehicle-inputs" class="flex flex-col gap-[12px]">
+                        <!-- Sedan -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textSecondary w-[80px]">Sedan</span>
+                            <div class="relative w-[140px]">
+                                <span class="absolute left-[16px] top-[14px] font-sans text-[16px] text-textSecondary">$</span>
+                                <input type="number" placeholder="220" 
+                                    class="w-full h-[52px] pl-[32px] pr-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all text-right">
+                            </div>
+                        </div>
+                        <!-- SUV -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textSecondary w-[80px]">SUV</span>
+                            <div class="relative w-[140px]">
+                                <span class="absolute left-[16px] top-[14px] font-sans text-[16px] text-textSecondary">+$</span>
+                                <input type="number" placeholder="30" 
+                                    class="w-full h-[52px] pl-[40px] pr-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all text-right">
+                            </div>
+                        </div>
+                        <!-- Truck -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textSecondary w-[80px]">Truck</span>
+                            <div class="relative w-[140px]">
+                                <span class="absolute left-[16px] top-[14px] font-sans text-[16px] text-textSecondary">+$</span>
+                                <input type="number" placeholder="40" 
+                                    class="w-full h-[52px] pl-[40px] pr-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all text-right">
+                            </div>
+                        </div>
+                        <!-- Van -->
+                        <div class="flex items-center justify-between">
+                            <span class="font-sans text-[14px] text-textSecondary w-[80px]">Van</span>
+                            <div class="relative w-[140px]">
+                                <span class="absolute left-[16px] top-[14px] font-sans text-[16px] text-textSecondary">+$</span>
+                                <input type="number" placeholder="50" 
+                                    class="w-full h-[52px] pl-[40px] pr-[16px] bg-primary border border-borderDefault rounded-[12px] font-sans text-[16px] text-textPrimary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-all text-right">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Sheet Fixed Footer -->
+            <div class="absolute bottom-0 w-full bg-elevated px-[16px] py-[16px] border-t border-borderSubtle pb-[32px]">
+                <button type="button" class="w-full h-[48px] bg-foamBlue hover:bg-foamBlueHover active:bg-foamBlueHover text-white font-sans text-[16px] font-semibold rounded-[12px] transition-colors duration-200 shadow-level-2 flex items-center justify-center">
+                    Add Service
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Simple toggle logic for demonstration
+        document.getElementById('vehicle-pricing-toggle').addEventListener('change', function(e) {
+            const inputs = document.getElementById('vehicle-inputs');
+            if (e.target.checked) {
+                inputs.style.display = 'flex';
+            } else {
+                inputs.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Job Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            elevated: '#FFFFFF'
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8'
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4'
+                        },
+                        brand: {
+                            default: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.1)'
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                            successSubtle: 'rgba(22, 163, 74, 0.10)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                        'level-2': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)',
+                        'level-3': '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="font-sans text-text-primary antialiased flex justify-center w-full bg-background-primary m-0 p-0">
+    
+    <div class="w-full max-w-[375px] min-h-[840px] bg-background-primary relative flex flex-col overflow-hidden shadow-level-3">
+        
+        <!-- Header -->
+        <header id="header" class="w-full h-[60px] flex items-center justify-center px-4 bg-background-primary z-10 border-b border-border-subtle flex-shrink-0">
+            <h1 class="font-sans text-[17px] font-semibold text-text-primary">Rate Your Experience</h1>
+        </header>
+
+        <!-- Main Scrollable Area -->
+        <main class="flex-1 overflow-y-auto hide-scrollbar px-4 pt-6 pb-[140px] flex flex-col gap-8">
+            
+            <!-- Detailer Card -->
+            <section id="detailer_card" class="w-full bg-background-elevated rounded-[16px] p-4 shadow-level-1 flex flex-col items-center border border-border-subtle">
+                <div class="w-[56px] h-[56px] rounded-full bg-brand-default flex items-center justify-center mb-3">
+                    <span class="font-sans text-[18px] font-semibold text-white tracking-wide">MT</span>
+                </div>
+                <h2 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Marcus Thompson</h2>
+                <p class="font-sans text-[13px] text-text-secondary mb-0.5">2 vehicles · 3 services · Thursday, May 2</p>
+                <p class="font-sans text-[13px] text-text-tertiary">2021 Audi Q5 · 2020 BMW X5</p>
+            </section>
+
+            <!-- Star Rating Section -->
+            <section id="star_rating_section" class="w-full flex flex-col items-center">
+                <h3 class="font-sans text-[11px] font-medium uppercase tracking-wider text-text-tertiary mb-4">HOW WAS YOUR APPOINTMENT WITH MARCUS?</h3>
+                
+                <div class="flex items-center justify-center gap-2 mb-3">
+                    <i data-lucide="star" class="w-[40px] h-[40px] text-semantic-warning fill-semantic-warning stroke-1"></i>
+                    <i data-lucide="star" class="w-[40px] h-[40px] text-semantic-warning fill-semantic-warning stroke-1"></i>
+                    <i data-lucide="star" class="w-[40px] h-[40px] text-semantic-warning fill-semantic-warning stroke-1"></i>
+                    <i data-lucide="star" class="w-[40px] h-[40px] text-semantic-warning fill-semantic-warning stroke-1"></i>
+                    <i data-lucide="star" class="w-[40px] h-[40px] text-border-default fill-border-default stroke-1"></i>
+                </div>
+                
+                <span class="font-sans text-[15px] font-semibold text-brand-default">Great!</span>
+            </section>
+
+            <!-- Quick Feedback Chips -->
+            <section id="feedback_chips" class="w-full flex flex-wrap justify-center gap-2">
+                <button class="h-[36px] px-4 rounded-full bg-brand-default text-white font-sans text-[14px] font-medium transition-colors">On time</button>
+                <button class="h-[36px] px-4 rounded-full bg-brand-default text-white font-sans text-[14px] font-medium transition-colors">Great results</button>
+                <button class="h-[36px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary font-sans text-[14px] font-medium transition-colors">Professional</button>
+                <button class="h-[36px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary font-sans text-[14px] font-medium transition-colors">Easy to communicate</button>
+                <button class="h-[36px] px-4 rounded-full bg-brand-default text-white font-sans text-[14px] font-medium transition-colors">Will rebook</button>
+                <button class="h-[36px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary font-sans text-[14px] font-medium transition-colors">Handled multiple cars well</button>
+            </section>
+
+            <!-- Written Review Input -->
+            <section id="written_review" class="w-full">
+                <div class="relative w-full">
+                    <textarea 
+                        class="w-full h-[120px] rounded-[12px] border border-border-subtle bg-background-elevated p-4 font-sans text-[14px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand-default focus:ring-1 focus:ring-brand-default resize-none"
+                        placeholder="Tell Marcus and others about your experience (optional)"
+                    ></textarea>
+                    <div class="absolute bottom-3 right-4 font-sans text-[12px] text-text-tertiary">
+                        0 / 500
+                    </div>
+                </div>
+            </section>
+
+            <!-- Before/After Reveal Section -->
+            <section id="before_after_reveal" class="w-full bg-background-elevated rounded-[12px] p-4 border border-border-subtle shadow-level-1 flex flex-col items-center">
+                <h3 class="font-sans text-[11px] font-medium uppercase tracking-wider text-text-tertiary mb-3 w-full text-center">SEE THE RESULTS</h3>
+                
+                <!-- Vehicle Tabs -->
+                <div class="w-full flex gap-2 mb-4">
+                    <button id="tab-audi" class="flex-1 h-[36px] rounded-[8px] bg-brand-default text-white font-sans text-[13px] font-medium transition-colors">
+                        Audi Q5
+                    </button>
+                    <button id="tab-bmw" class="flex-1 h-[36px] rounded-[8px] bg-background-secondary text-text-secondary font-sans text-[13px] font-medium transition-colors">
+                        BMW X5
+                    </button>
+                </div>
+
+                <!-- Before/After Images Container -->
+                <div id="photos-container" class="w-full">
+                    <!-- Audi Q5 Photos (Default) -->
+                    <div id="photos-audi" class="w-full flex justify-between gap-3 relative">
+                        <div class="flex-1 flex flex-col gap-2">
+                            <div class="w-full aspect-[4/5] rounded-[12px] overflow-hidden bg-background-secondary relative">
+                                <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/aedee78692-6355b1e945d4ad1f910e.png" alt="Dirty car interior with dust and stains before detailing, neutral lighting" />
+                            </div>
+                            <span class="font-sans text-[13px] font-medium text-text-secondary text-center">Before</span>
+                        </div>
+                        
+                        <!-- Center Divider -->
+                        <div class="absolute left-1/2 top-0 bottom-6 w-[1px] bg-border-subtle -translate-x-1/2"></div>
+                        
+                        <div class="flex-1 flex flex-col gap-2">
+                            <div class="w-full aspect-[4/5] rounded-[12px] overflow-hidden bg-background-secondary relative">
+                                <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/4f20e0280a-d6aa5af7ce41a9b908ff.png" alt="Clean, spotless car interior after premium detailing, natural bright lighting" />
+                            </div>
+                            <span class="font-sans text-[13px] font-medium text-text-secondary text-center">After</span>
+                        </div>
+                    </div>
+
+                    <!-- BMW X5 Photos (Hidden by default) -->
+                    <div id="photos-bmw" class="w-full flex justify-between gap-3 relative hidden">
+                        <div class="flex-1 flex flex-col gap-2">
+                            <div class="w-full aspect-[4/5] rounded-[12px] overflow-hidden bg-background-secondary relative">
+                                <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/aedee78692-6355b1e945d4ad1f910e.png" alt="BMW interior before detailing with visible dirt and wear" />
+                            </div>
+                            <span class="font-sans text-[13px] font-medium text-text-secondary text-center">Before</span>
+                        </div>
+                        
+                        <!-- Center Divider -->
+                        <div class="absolute left-1/2 top-0 bottom-6 w-[1px] bg-border-subtle -translate-x-1/2"></div>
+                        
+                        <div class="flex-1 flex flex-col gap-2">
+                            <div class="w-full aspect-[4/5] rounded-[12px] overflow-hidden bg-background-secondary relative">
+                                <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/4f20e0280a-d6aa5af7ce41a9b908ff.png" alt="BMW interior after professional detailing, pristine and clean" />
+                            </div>
+                            <span class="font-sans text-[13px] font-medium text-text-secondary text-center">After</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View All Photos Link -->
+                <button class="mt-4 font-sans text-[14px] font-medium text-brand-default">
+                    View all job photos
+                </button>
+            </section>
+
+        </main>
+
+        <!-- Bottom Actions -->
+        <section id="bottom_actions" class="absolute bottom-0 w-full bg-background-primary px-4 pt-4 pb-8 z-50 flex flex-col gap-3 border-t border-border-subtle">
+            <button class="w-full h-[48px] bg-brand-default text-white rounded-[8px] font-sans text-[15px] font-medium shadow-sm hover:bg-brand-hover transition-colors flex items-center justify-center">
+                Submit Review
+            </button>
+            <button class="w-full h-[48px] bg-transparent text-text-tertiary rounded-[8px] font-sans text-[15px] font-medium hover:bg-background-secondary transition-colors flex items-center justify-center">
+                Skip for now
+            </button>
+        </section>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Vehicle tab switching functionality
+        const tabAudi = document.getElementById('tab-audi');
+        const tabBmw = document.getElementById('tab-bmw');
+        const photosAudi = document.getElementById('photos-audi');
+        const photosBmw = document.getElementById('photos-bmw');
+
+        tabAudi.addEventListener('click', function() {
+            tabAudi.classList.remove('bg-background-secondary', 'text-text-secondary');
+            tabAudi.classList.add('bg-brand-default', 'text-white');
+            tabBmw.classList.remove('bg-brand-default', 'text-white');
+            tabBmw.classList.add('bg-background-secondary', 'text-text-secondary');
+            
+            photosAudi.classList.remove('hidden');
+            photosBmw.classList.add('hidden');
+        });
+
+        tabBmw.addEventListener('click', function() {
+            tabBmw.classList.remove('bg-background-secondary', 'text-text-secondary');
+            tabBmw.classList.add('bg-brand-default', 'text-white');
+            tabAudi.classList.remove('bg-brand-default', 'text-white');
+            tabAudi.classList.add('bg-background-secondary', 'text-text-secondary');
+            
+            photosBmw.classList.remove('hidden');
+            photosAudi.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>

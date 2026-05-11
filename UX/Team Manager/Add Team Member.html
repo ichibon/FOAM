@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Add Team Member</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        successSubtle: 'rgba(22, 163, 74, 0.08)',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .tab-underline { position: relative; }
+        .tab-underline::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: #339DC7; }
+    </style>
+</head>
+<body class="text-textPrimary pb-32 relative min-h-screen">
+
+    <header id="header" class="px-5 py-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle">
+        <div class="flex items-center justify-between">
+            <button class="w-8 h-8 flex items-center justify-center active:opacity-70 transition-opacity">
+                <i class="fa-solid fa-chevron-left text-[18px] text-textPrimary"></i>
+            </button>
+            <h1 class="font-sans text-[17px] font-semibold text-textPrimary">Add Team Member</h1>
+            <div class="w-8"></div>
+        </div>
+    </header>
+
+    <main class="pb-40">
+        
+        <section id="invite-tabs" class="bg-surface border-b border-borderSubtle px-4">
+            <div class="flex items-center gap-8">
+                <button class="tab-underline py-3 font-sans text-[15px] font-semibold text-brandBlue">
+                    Send Invite
+                </button>
+                <button class="py-3 font-sans text-[15px] font-medium text-textTertiary active:text-textPrimary transition-colors">
+                    Share Code
+                </button>
+            </div>
+        </section>
+
+        <section id="invite-input-section" class="px-4 pt-6">
+            <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide mb-3">INVITE BY PHONE OR EMAIL</p>
+            
+            <div class="relative">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-textTertiary">
+                    <i class="fa-solid fa-envelope text-[16px]"></i>
+                </div>
+                <input 
+                    type="text" 
+                    placeholder="Phone number or email address" 
+                    class="w-full h-[52px] pl-12 pr-20 rounded-[12px] border border-borderSubtle bg-surface font-sans text-[14px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-brandBlue transition-colors"
+                    id="invite-input"
+                >
+                <button class="absolute right-4 top-1/2 -translate-y-1/2 font-sans text-[14px] font-medium text-brandBlue active:opacity-70 transition-opacity">
+                    Add +
+                </button>
+            </div>
+
+            <div id="added-contacts" class="mt-3 flex flex-wrap gap-2 hidden">
+                <div class="inline-flex items-center gap-2 px-3 py-2 bg-brandBlueSubtle rounded-full border border-brandBlue">
+                    <span class="font-sans text-[12px] text-brandBlue">Adding: jordan@example.com</span>
+                    <button class="text-brandBlue active:opacity-70 transition-opacity">
+                        <i class="fa-solid fa-xmark text-[12px]"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="role-section" class="px-4 pt-6">
+            <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide mb-3">ROLE</p>
+            
+            <div class="space-y-3">
+                <div class="bg-surface rounded-[16px] border-2 border-brandBlue p-4 shadow-level1 active:opacity-90 transition-opacity cursor-pointer relative" id="role-member">
+                    <div class="absolute top-4 right-4 w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center">
+                        <i class="fa-solid fa-check text-white text-[10px]"></i>
+                    </div>
+                    
+                    <h3 class="font-sans text-[16px] font-semibold text-textPrimary mb-1">Team Member</h3>
+                    <p class="font-sans text-[13px] text-textSecondary mb-3">Can view and complete assigned jobs</p>
+                    
+                    <div class="flex flex-wrap gap-2">
+                        <div class="px-2.5 py-1 rounded-full bg-brandBlueSubtle">
+                            <span class="font-sans text-[11px] font-medium text-brandBlue">Assigned jobs</span>
+                        </div>
+                        <div class="px-2.5 py-1 rounded-full bg-brandBlueSubtle">
+                            <span class="font-sans text-[11px] font-medium text-brandBlue">Before/after photos</span>
+                        </div>
+                        <div class="px-2.5 py-1 rounded-full bg-brandBlueSubtle">
+                            <span class="font-sans text-[11px] font-medium text-brandBlue">Earnings view</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 active:opacity-90 transition-opacity cursor-pointer" id="role-manager">
+                    <h3 class="font-sans text-[16px] font-semibold text-textPrimary mb-1">Team Manager</h3>
+                    <p class="font-sans text-[13px] text-textSecondary mb-3">Full access to team and business data</p>
+                    
+                    <div class="flex flex-wrap gap-2">
+                        <div class="px-2.5 py-1 rounded-full bg-secondary">
+                            <span class="font-sans text-[11px] font-medium text-textSecondary">All jobs</span>
+                        </div>
+                        <div class="px-2.5 py-1 rounded-full bg-secondary">
+                            <span class="font-sans text-[11px] font-medium text-textSecondary">Assign crew</span>
+                        </div>
+                        <div class="px-2.5 py-1 rounded-full bg-secondary">
+                            <span class="font-sans text-[11px] font-medium text-textSecondary">Business reports</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="commission-section" class="px-4 pt-6">
+            <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide mb-3">COMMISSION RATE</p>
+            
+            <div class="relative">
+                <input 
+                    type="number" 
+                    value="38" 
+                    class="w-full h-[52px] px-4 pr-12 rounded-[12px] border border-borderSubtle bg-surface font-sans text-[14px] font-semibold text-textPrimary focus:outline-none focus:border-brandBlue transition-colors"
+                    id="commission-input"
+                >
+                <span class="absolute right-4 top-1/2 -translate-y-1/2 font-sans text-[14px] font-semibold text-textSecondary">%</span>
+            </div>
+            
+            <p class="font-sans text-[11px] text-textTertiary mt-2">This is their share of each completed job's service fee.</p>
+        </section>
+
+    </main>
+
+    <div id="bottom-cta" class="fixed bottom-20 left-0 right-0 bg-surface border-t border-borderSubtle px-4 py-4 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button class="w-full h-[48px] rounded-lg bg-brandBlue font-sans text-[14px] font-semibold text-white active:bg-brandBlueHover transition-colors opacity-50 cursor-not-allowed" id="send-invite-btn" disabled>
+            Send Invite
+        </button>
+        <p class="font-sans text-[12px] text-textTertiary text-center mt-2">They'll receive a link to create their account.</p>
+    </div>
+
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+    <script>
+        const inviteInput = document.getElementById('invite-input');
+        const sendInviteBtn = document.getElementById('send-invite-btn');
+        const addedContacts = document.getElementById('added-contacts');
+        const roleMember = document.getElementById('role-member');
+        const roleManager = document.getElementById('role-manager');
+
+        inviteInput.addEventListener('input', function() {
+            if(this.value.trim().length > 0) {
+                sendInviteBtn.disabled = false;
+                sendInviteBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                sendInviteBtn.disabled = true;
+                sendInviteBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        });
+
+        inviteInput.addEventListener('input', function() {
+            const value = this.value.trim();
+            const icon = this.previousElementSibling.querySelector('i');
+            
+            if(value.includes('@')) {
+                icon.className = 'fa-solid fa-envelope text-[16px]';
+            } else if(value.match(/^\d/)) {
+                icon.className = 'fa-solid fa-phone text-[16px]';
+            } else {
+                icon.className = 'fa-solid fa-envelope text-[16px]';
+            }
+        });
+
+        roleMember.addEventListener('click', function() {
+            roleMember.classList.remove('border-borderSubtle');
+            roleMember.classList.add('border-2', 'border-brandBlue');
+            roleMember.querySelector('.absolute').classList.remove('hidden');
+            
+            roleManager.classList.remove('border-2', 'border-brandBlue');
+            roleManager.classList.add('border', 'border-borderSubtle');
+            if(roleManager.querySelector('.absolute')) {
+                roleManager.querySelector('.absolute').classList.add('hidden');
+            }
+            
+            roleMember.querySelectorAll('.px-2\\.5').forEach(el => {
+                el.classList.remove('bg-secondary');
+                el.classList.add('bg-brandBlueSubtle');
+                el.querySelector('span').classList.remove('text-textSecondary');
+                el.querySelector('span').classList.add('text-brandBlue');
+            });
+            
+            roleManager.querySelectorAll('.px-2\\.5').forEach(el => {
+                el.classList.remove('bg-brandBlueSubtle');
+                el.classList.add('bg-secondary');
+                el.querySelector('span').classList.remove('text-brandBlue');
+                el.querySelector('span').classList.add('text-textSecondary');
+            });
+        });
+
+        roleManager.addEventListener('click', function() {
+            roleManager.classList.remove('border-borderSubtle');
+            roleManager.classList.add('border-2', 'border-brandBlue');
+            
+            if(!roleManager.querySelector('.absolute')) {
+                const checkmark = document.createElement('div');
+                checkmark.className = 'absolute top-4 right-4 w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center';
+                checkmark.innerHTML = '<i class="fa-solid fa-check text-white text-[10px]"></i>';
+                roleManager.appendChild(checkmark);
+            } else {
+                roleManager.querySelector('.absolute').classList.remove('hidden');
+            }
+            
+            roleMember.classList.remove('border-2', 'border-brandBlue');
+            roleMember.classList.add('border', 'border-borderSubtle');
+            roleMember.querySelector('.absolute').classList.add('hidden');
+            
+            roleManager.querySelectorAll('.px-2\\.5').forEach(el => {
+                el.classList.remove('bg-secondary');
+                el.classList.add('bg-brandBlueSubtle');
+                el.querySelector('span').classList.remove('text-textSecondary');
+                el.querySelector('span').classList.add('text-brandBlue');
+            });
+            
+            roleMember.querySelectorAll('.px-2\\.5').forEach(el => {
+                el.classList.remove('bg-brandBlueSubtle');
+                el.classList.add('bg-secondary');
+                el.querySelector('span').classList.remove('text-brandBlue');
+                el.querySelector('span').classList.add('text-textSecondary');
+            });
+        });
+    </script>
+
+</body>
+</html>

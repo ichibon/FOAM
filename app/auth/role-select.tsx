@@ -46,31 +46,44 @@ const roles: {
 
 export default function RoleSelectScreen() {
   const [loading, setLoading] = useState(false);
+  const [writeError, setWriteError] = useState<string | null>(null);
 
   async function handleRoleSelect(role: UserRole) {
     setLoading(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    setWriteError(null);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    await supabase.from("users").update({ role }).eq("id", user.id);
+      const { error: roleError } = await supabase
+        .from("users")
+        .update({ role })
+        .eq("id", user.id);
+      if (roleError) throw roleError;
 
-    if (role === "customer") {
-      await supabase
-        .from("customer_profiles")
-        .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
-      router.replace("/onboarding/customer/vehicle");
-    } else if (role === "operator") {
-      await supabase
-        .from("detailer_profiles")
-        .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
-      router.replace("/onboarding/operator/type");
-    } else if (role === "team_member") {
-      router.replace("/onboarding/crew/invite");
+      if (role === "customer") {
+        const { error: profileError } = await supabase
+          .from("customer_profiles")
+          .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+        if (profileError) throw profileError;
+        router.replace("/onboarding/customer/vehicle");
+      } else if (role === "operator") {
+        const { error: profileError } = await supabase
+          .from("detailer_profiles")
+          .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+        if (profileError) throw profileError;
+        router.replace("/onboarding/operator/type");
+      } else if (role === "team_member") {
+        router.replace("/onboarding/crew/invite");
+      }
+    } catch (err) {
+      console.warn("[RoleSelect] write failed", err);
+      setWriteError("Something went wrong. Please try again.");
     }
     setLoading(false);
   }
@@ -117,6 +130,9 @@ export default function RoleSelectScreen() {
           ))}
         </View>
 
+        {writeError && (
+          <Text style={styles.writeError}>{writeError}</Text>
+        )}
         <Text style={styles.footnote}>Not sure? You can always change this later.</Text>
       </ScrollView>
 
@@ -219,6 +235,14 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.light.textSecondary,
     lineHeight: 18,
+  },
+  writeError: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+    textAlign: "center",
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
   footnote: {
     fontFamily: Typography.body,

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Modal,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -14,6 +13,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { DrawerModal } from "@/components/DrawerModal";
 import { EmptyState } from "@/components/EmptyState";
 import { LucideIcon } from "@/components/LucideIcon";
 
@@ -231,7 +231,7 @@ export default function BuildOperationScreen() {
         <Text style={styles.skipHint}>You can add more vehicles and locations later.</Text>
       </View>
 
-      <Modal visible={showVanDrawer} animationType="slide" transparent onRequestClose={() => setShowVanDrawer(false)}>
+      <DrawerModal visible={showVanDrawer} onRequestClose={() => setShowVanDrawer(false)}>
         <View style={styles.backdrop}>
           <TouchableOpacity style={styles.backdropTouchable} onPress={() => setShowVanDrawer(false)} />
           <View style={styles.drawer}>
@@ -284,9 +284,9 @@ export default function BuildOperationScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </DrawerModal>
 
-      <Modal visible={showLocDrawer} animationType="slide" transparent onRequestClose={() => setShowLocDrawer(false)}>
+      <DrawerModal visible={showLocDrawer} onRequestClose={() => setShowLocDrawer(false)}>
         <View style={styles.backdrop}>
           <TouchableOpacity style={styles.backdropTouchable} onPress={() => setShowLocDrawer(false)} />
           <View style={styles.drawer}>
@@ -333,7 +333,7 @@ export default function BuildOperationScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </DrawerModal>
     </SafeAreaView>
   );
 }

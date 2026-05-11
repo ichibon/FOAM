@@ -296,6 +296,32 @@ export default function StripeScreen() {
           </SafeAreaView>
         </Modal>
       )}
+
+      {Platform.OS === "web" && (
+        <Modal
+          visible={showOnboarding}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowOnboarding(false)}
+        >
+          <View style={styles.webFallbackBackdrop}>
+            <View style={styles.webFallbackCard}>
+              <LucideIcon name="Smartphone" size={44} color={Colors.foamBlue} />
+              <Text style={styles.webFallbackTitle}>Open on mobile to connect Stripe</Text>
+              <Text style={styles.webFallbackBody}>
+                Stripe account setup requires the FOAM mobile app. Download the app and continue from there, or skip for now and connect your bank later.
+              </Text>
+              <TouchableOpacity
+                style={styles.webFallbackSkip}
+                onPress={() => { setShowOnboarding(false); void markCompleteAndAdvance(); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.webFallbackSkipText}>Skip for now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -523,4 +549,45 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   webView: { flex: 1 },
+  webFallbackBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  webFallbackCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
+    padding: 28,
+    alignItems: "center",
+    gap: 16,
+  },
+  webFallbackTitle: {
+    fontFamily: Typography.display,
+    fontSize: 20,
+    color: Colors.light.textPrimary,
+    textAlign: "center",
+    lineHeight: 26,
+  },
+  webFallbackBody: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  webFallbackSkip: {
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  webFallbackSkipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+  },
 });

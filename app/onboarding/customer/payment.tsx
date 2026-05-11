@@ -4,11 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ScrollView,
   Platform,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,23 +14,19 @@ import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
+const NativeStripe =
+  Platform.OS !== "web" ? require("@stripe/stripe-react-native") : null;
+
+const CardField: React.ComponentType<{
+  postalCodeEnabled: boolean;
+  style: object;
+  cardStyle: object;
+  onCardChange: (card: { complete: boolean }) => void;
+}> | null = NativeStripe?.CardField ?? null;
+
 export default function PaymentScreen() {
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [zip, setZip] = useState("");
+  const [cardComplete, setCardComplete] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  function formatCardNumber(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 16);
-    return digits.replace(/(.{4})/g, "$1 ").trim();
-  }
-
-  function formatExpiry(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 4);
-    if (digits.length >= 2) return digits.slice(0, 2) + "/" + digits.slice(2);
-    return digits;
-  }
 
   async function handleContinue() {
     setLoading(true);
@@ -57,6 +51,8 @@ export default function PaymentScreen() {
     router.replace("/onboarding/customer/location");
   }
 
+  const canSubmit = Platform.OS === "web" ? true : cardComplete;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.progressHeader}>
@@ -76,73 +72,39 @@ export default function PaymentScreen() {
           <Text style={styles.subheadline}>Securely saved for checkout. Remove anytime.</Text>
         </View>
 
-        <View style={styles.cardForm}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Card number</Text>
-            <View style={styles.cardNumberRow}>
-              <TextInput
-                style={[styles.input, styles.cardNumberInput]}
-                value={cardNumber}
-                onChangeText={(t) => setCardNumber(formatCardNumber(t))}
-                placeholder="1234 5678 9012 3456"
-                placeholderTextColor={Colors.light.textTertiary}
-                keyboardType="number-pad"
-                maxLength={19}
-              />
-              <View style={styles.cardBrands}>
-                <Text style={[styles.cardBrand, styles.visa]}>VISA</Text>
-                <Text style={[styles.cardBrand, styles.mc]}>MC</Text>
-              </View>
+        <View style={styles.cardFormCard}>
+          <View style={styles.cardFormHeader}>
+            <LucideIcon name="CreditCard" size={18} color={Colors.foamBlue} />
+            <Text style={styles.cardFormLabel}>Card details</Text>
+            <View style={styles.stripeBadge}>
+              <Text style={styles.stripeBadgeText}>STRIPE</Text>
             </View>
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.flex1]}>
-              <Text style={styles.label}>Expiry</Text>
-              <TextInput
-                style={styles.input}
-                value={expiry}
-                onChangeText={(t) => setExpiry(formatExpiry(t))}
-                placeholder="MM/YY"
-                placeholderTextColor={Colors.light.textTertiary}
-                keyboardType="number-pad"
-                maxLength={5}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.flex1]}>
-              <Text style={styles.label}>CVC</Text>
-              <View style={styles.cvcRow}>
-                <TextInput
-                  style={[styles.input, styles.cvcInput]}
-                  value={cvc}
-                  onChangeText={setCvc}
-                  placeholder="123"
-                  placeholderTextColor={Colors.light.textTertiary}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  secureTextEntry
-                />
-                <View style={styles.lockIcon}>
-                  <LucideIcon name="Lock" size={14} color={Colors.light.textTertiary} />
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>ZIP code</Text>
-            <TextInput
-              style={styles.input}
-              value={zip}
-              onChangeText={setZip}
-              placeholder="30305"
-              placeholderTextColor={Colors.light.textTertiary}
-              keyboardType="number-pad"
-              maxLength={5}
+          {CardField ? (
+            <CardField
+              postalCodeEnabled
+              style={styles.cardField}
+              cardStyle={{
+                backgroundColor: Colors.light.bgPrimary,
+                textColor: Colors.light.textPrimary,
+                placeholderColor: Colors.light.textTertiary,
+                borderColor: Colors.light.borderSubtle,
+                borderRadius: Radius.md,
+                borderWidth: 1,
+                fontSize: 15,
+              }}
+              onCardChange={(card) => setCardComplete(card.complete)}
             />
-            <Text style={styles.inputHint}>Used for billing verification only.</Text>
-          </View>
+          ) : (
+            <View style={styles.webNotice}>
+              <LucideIcon name="Smartphone" size={24} color={Colors.foamBlue} />
+              <Text style={styles.webNoticeTitle}>Use the mobile app</Text>
+              <Text style={styles.webNoticeBody}>
+                Card entry is available in the FOAM mobile app. Continue to save your account — you can add a card when you book.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.trustRow}>
@@ -153,9 +115,9 @@ export default function PaymentScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.primaryButton, loading && styles.buttonDisabled]}
+          style={[styles.primaryButton, (loading || !canSubmit) && styles.buttonDisabled]}
           onPress={handleContinue}
-          disabled={loading}
+          disabled={loading || !canSubmit}
           activeOpacity={0.85}
         >
           {loading ? (
@@ -219,81 +181,67 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: Spacing.sm,
   },
-  cardForm: {
+  cardFormCard: {
     backgroundColor: Colors.light.surface,
     borderRadius: Radius.lg,
     padding: Spacing.md,
-    gap: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,
+    marginBottom: Spacing.md,
     ...Shadows.light.level1,
   },
-  inputGroup: { gap: 6 },
-  label: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
-  },
-  input: {
-    height: 52,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-  },
-  cardNumberRow: { position: "relative" },
-  cardNumberInput: { paddingRight: 80 },
-  cardBrands: {
-    position: "absolute",
-    right: 12,
-    top: 0,
-    bottom: 0,
+  cardFormHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  cardBrand: {
+  cardFormLabel: {
+    flex: 1,
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  stripeBadge: {
+    backgroundColor: Colors.foamBlue,
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  stripeBadgeText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  visa: {
-    backgroundColor: "#1434CB",
     color: Colors.white,
+    letterSpacing: 1,
   },
-  mc: {
-    backgroundColor: "#EB001B",
-    color: Colors.white,
+  cardField: {
+    width: "100%",
+    height: 52,
   },
-  row: { flexDirection: "row", gap: Spacing.sm },
-  flex1: { flex: 1 },
-  cvcRow: { position: "relative" },
-  cvcInput: { paddingRight: 40 },
-  lockIcon: {
-    position: "absolute",
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
+  webNotice: {
+    alignItems: "center",
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
   },
-  inputHint: {
+  webNoticeTitle: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  webNoticeBody: {
     fontFamily: Typography.body,
-    fontSize: Typography.size.label,
-    color: Colors.light.textTertiary,
-    marginTop: 2,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: 280,
   },
   trustRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     justifyContent: "center",
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
   },
   trustText: {
     fontFamily: Typography.body,
@@ -315,6 +263,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
+    ...Shadows.light.level2,
   },
   buttonDisabled: { opacity: 0.5 },
   primaryButtonText: {

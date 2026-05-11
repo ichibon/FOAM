@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Modal,
   Platform,
   ActivityIndicator,
   Switch,
@@ -15,6 +14,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { DrawerModal } from "@/components/DrawerModal";
 import { EmptyState } from "@/components/EmptyState";
 import { LucideIcon } from "@/components/LucideIcon";
 
@@ -216,10 +216,8 @@ export default function ServicesScreen() {
         <Text style={styles.footnote}>You can add more services anytime from your profile.</Text>
       </View>
 
-      <Modal
+      <DrawerModal
         visible={sheetOpen}
-        transparent
-        animationType="slide"
         onRequestClose={() => setSheetOpen(false)}
       >
         <View style={styles.backdrop}>
@@ -350,7 +348,7 @@ export default function ServicesScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </DrawerModal>
     </SafeAreaView>
   );
 }

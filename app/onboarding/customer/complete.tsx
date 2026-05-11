@@ -4,9 +4,11 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 export default function CustomerCompleteScreen() {
+  const { refreshAuth } = useAuth();
   const [saving, setSaving] = useState(true);
 
   useEffect(() => {
@@ -22,6 +24,7 @@ export default function CustomerCompleteScreen() {
           .update({ onboarding_complete: true })
           .eq("id", user.id);
       }
+      await refreshAuth();
     } catch (err) {
       console.warn("[CustomerComplete] onboarding_complete write failed", err);
     }

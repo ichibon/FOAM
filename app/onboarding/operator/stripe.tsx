@@ -165,7 +165,7 @@ export default function StripeScreen() {
 
   function handleWebViewNavigate(navState: { url: string }) {
     const url = navState.url ?? "";
-    if (url.includes("return") || url.includes("refresh") || url.includes("foam://")) {
+    if (url.startsWith("foam://")) {
       setShowOnboarding(false);
       void markCompleteAndAdvance();
     }

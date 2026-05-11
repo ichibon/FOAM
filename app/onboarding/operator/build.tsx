@@ -40,11 +40,13 @@ export default function BuildOperationScreen() {
   const [vanName, setVanName] = useState("");
   const [vanType, setVanType] = useState<AssetType>("van");
   const [vanSaving, setVanSaving] = useState(false);
+  const [vanError, setVanError] = useState<string | null>(null);
 
   const [showLocDrawer, setShowLocDrawer] = useState(false);
   const [locName, setLocName] = useState("");
   const [locAddress, setLocAddress] = useState("");
   const [locSaving, setLocSaving] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
 
   const assetTypes: { id: AssetType; label: string }[] = [
     { id: "van", label: "Van" },
@@ -65,43 +67,53 @@ export default function BuildOperationScreen() {
   async function handleAddVan() {
     if (!vanName.trim()) return;
     setVanSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    setVanError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No session");
       const detailerId = await getDetailerProfileId(user.id);
-      if (detailerId) {
-        const { data } = await supabase
-          .from("business_assets")
-          .insert({ detailer_id: detailerId, name: vanName.trim(), asset_type: vanType })
-          .select("id, name, asset_type")
-          .single();
-        if (data) setVans((prev) => [...prev, data as AddedVan]);
-      }
+      if (!detailerId) throw new Error("Profile not found");
+      const { data, error: insertError } = await supabase
+        .from("business_assets")
+        .insert({ detailer_id: detailerId, name: vanName.trim(), asset_type: vanType })
+        .select("id, name, asset_type")
+        .single();
+      if (insertError) throw insertError;
+      if (data) setVans((prev) => [...prev, data as AddedVan]);
+      setVanName("");
+      setVanType("van");
+      setShowVanDrawer(false);
+    } catch (err) {
+      console.warn("[Build] handleAddVan failed", err);
+      setVanError("Couldn't add vehicle. Please try again.");
     }
-    setVanName("");
-    setVanType("van");
     setVanSaving(false);
-    setShowVanDrawer(false);
   }
 
   async function handleAddLocation() {
     if (!locName.trim() || !locAddress.trim()) return;
     setLocSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    setLocError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No session");
       const detailerId = await getDetailerProfileId(user.id);
-      if (detailerId) {
-        const { data } = await supabase
-          .from("business_locations")
-          .insert({ detailer_id: detailerId, name: locName.trim(), address: locAddress.trim() })
-          .select("id, name, address")
-          .single();
-        if (data) setLocations((prev) => [...prev, data as AddedLocation]);
-      }
+      if (!detailerId) throw new Error("Profile not found");
+      const { data, error: insertError } = await supabase
+        .from("business_locations")
+        .insert({ detailer_id: detailerId, name: locName.trim(), address: locAddress.trim() })
+        .select("id, name, address")
+        .single();
+      if (insertError) throw insertError;
+      if (data) setLocations((prev) => [...prev, data as AddedLocation]);
+      setLocName("");
+      setLocAddress("");
+      setShowLocDrawer(false);
+    } catch (err) {
+      console.warn("[Build] handleAddLocation failed", err);
+      setLocError("Couldn't add location. Please try again.");
     }
-    setLocName("");
-    setLocAddress("");
     setLocSaving(false);
-    setShowLocDrawer(false);
   }
 
   async function handleContinue() {
@@ -270,6 +282,9 @@ export default function BuildOperationScreen() {
               </View>
             </View>
 
+            {vanError && (
+              <Text style={styles.drawerError}>{vanError}</Text>
+            )}
             <TouchableOpacity
               style={[styles.drawerButton, (!vanName.trim() || vanSaving) && styles.buttonDisabled]}
               onPress={handleAddVan}
@@ -319,6 +334,9 @@ export default function BuildOperationScreen() {
               </View>
             </View>
 
+            {locError && (
+              <Text style={styles.drawerError}>{locError}</Text>
+            )}
             <TouchableOpacity
               style={[styles.drawerButton, (!locName.trim() || !locAddress.trim() || locSaving) && styles.buttonDisabled]}
               onPress={handleAddLocation}
@@ -554,5 +572,12 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
+  },
+  drawerError: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.error,
+    textAlign: "center",
+    marginBottom: Spacing.xs,
   },
 });

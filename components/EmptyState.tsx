@@ -4,9 +4,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
 } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { Colors, EmptyStateTokens, Layout } from "@/constants/design";
 import { LucideIcon } from "./LucideIcon";
 
@@ -16,9 +15,9 @@ export interface EmptyStateProps {
   headline: string;
   body: string;
   ctaLabel: string;
-  ctaRoute: string;
+  ctaRoute: Href;
   ghostLabel?: string;
-  ghostRoute?: string;
+  ghostRoute?: Href;
   fullScreen?: boolean;
   iconColor?: string;
 }
@@ -40,16 +39,15 @@ export function EmptyState({
     ? EmptyStateTokens.firstRun
     : EmptyStateTokens.functional;
 
-  const resolvedIconColor =
-    iconColor ?? tokens.iconColor;
-
-  const containerStyle = [
-    styles.container,
-    fullScreen && styles.fullScreenContainer,
-  ];
+  const resolvedIconColor = iconColor ?? tokens.iconColor;
 
   return (
-    <View style={containerStyle}>
+    <View
+      style={[
+        styles.container,
+        fullScreen && styles.fullScreenContainer,
+      ]}
+    >
       {isFirstRun ? (
         <View style={styles.firstRunCircle}>
           <LucideIcon
@@ -78,12 +76,7 @@ export function EmptyState({
         {headline}
       </Text>
 
-      <Text
-        style={[
-          styles.body,
-          { marginTop: tokens.headlineToBody },
-        ]}
-      >
+      <Text style={[styles.body, { marginTop: tokens.headlineToBody }]}>
         {body}
       </Text>
 
@@ -91,7 +84,7 @@ export function EmptyState({
         {isFirstRun ? (
           <TouchableOpacity
             style={styles.ctaPill}
-            onPress={() => router.push(ctaRoute as any)}
+            onPress={() => router.push(ctaRoute)}
             activeOpacity={0.8}
           >
             <Text style={styles.ctaPillText}>{ctaLabel}</Text>
@@ -99,7 +92,7 @@ export function EmptyState({
         ) : (
           <TouchableOpacity
             style={styles.ctaStandard}
-            onPress={() => router.push(ctaRoute as any)}
+            onPress={() => router.push(ctaRoute)}
             activeOpacity={0.8}
           >
             <Text style={styles.ctaStandardText}>{ctaLabel}</Text>
@@ -109,7 +102,7 @@ export function EmptyState({
         {ghostLabel && ghostRoute && (
           <TouchableOpacity
             style={styles.ghostCta}
-            onPress={() => router.push(ghostRoute as any)}
+            onPress={() => router.push(ghostRoute)}
             activeOpacity={0.7}
           >
             <Text style={styles.ghostCtaText}>{ghostLabel}</Text>

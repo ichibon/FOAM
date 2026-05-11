@@ -69,7 +69,7 @@ export default function InviteCodeScreen() {
 
         <View style={styles.codeInputArea}>
           <TextInput
-            style={[styles.codeInput, error && styles.codeInputError]}
+            style={[styles.codeInput, !!error && styles.codeInputError]}
             value={code}
             onChangeText={(t) => {
               setCode(t.toUpperCase().slice(0, 6));

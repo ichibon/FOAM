@@ -27,20 +27,28 @@ export default function InviteCodeScreen() {
     setLoading(true);
     setError(null);
 
-    const { data } = await supabase
+    const { data: match } = await supabase
       .from("team_members")
       .select("id")
       .eq("invite_code", code.trim().toUpperCase())
       .single();
 
-    if (!data) {
+    if (!match) {
       setError("That code doesn't match any team. Double-check with your manager.");
       setLoading(false);
       return;
     }
 
-    router.push("/onboarding/crew/profile");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("team_members")
+        .update({ user_id: user.id })
+        .eq("id", match.id);
+    }
+
     setLoading(false);
+    router.push("/onboarding/crew/profile");
   }
 
   return (

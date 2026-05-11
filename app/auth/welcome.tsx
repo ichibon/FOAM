@@ -194,6 +194,11 @@ export default function WelcomeScreen() {
                     />
                   </TouchableOpacity>
                 </View>
+                {mode === "signup" && password.length > 0 && password.length < 8 && (
+                  <Text style={styles.passwordHint}>
+                    Password must be at least 8 characters ({8 - password.length} more needed)
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -356,6 +361,13 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
+  },
+  passwordHint: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.warningLight,
+    marginTop: 4,
+    marginLeft: 2,
   },
   terms: {
     fontFamily: Typography.body,

@@ -76,14 +76,14 @@ export default function CrewProfileScreen() {
         .update({ display_name: displayName.trim() })
         .eq("user_id", user.id);
 
-      const userUpdate: Record<string, any> = {};
-      if (phone.trim()) userUpdate.phone = phone.trim();
-      if (avatarUrl) userUpdate.avatar_url = avatarUrl;
+      const userFields: { phone?: string; avatar_url?: string } = {};
+      if (phone.trim()) userFields.phone = phone.trim();
+      if (avatarUrl) userFields.avatar_url = avatarUrl;
 
-      if (Object.keys(userUpdate).length > 0) {
+      if (Object.keys(userFields).length > 0) {
         await supabase
           .from("users")
-          .update(userUpdate)
+          .update(userFields)
           .eq("id", user.id);
       }
     }

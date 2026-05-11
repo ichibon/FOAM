@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: Drawer.backdropError,
+    backgroundColor: Drawer.backdropStandard,
     justifyContent: "flex-end",
   },
   backdropTouch: {

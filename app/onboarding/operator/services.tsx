@@ -41,6 +41,7 @@ export default function ServicesScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
@@ -85,15 +86,20 @@ export default function ServicesScreen() {
 
   async function handleContinue() {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && services.length > 0) {
-      const { data: profile } = await supabase
-        .from("detailer_profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
+    setSaveError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No session");
 
-      if (profile) {
+      if (services.length > 0) {
+        const { data: profile } = await supabase
+          .from("detailer_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!profile) throw new Error("Profile not found");
+
         const packages = services.map((s, idx) => ({
           detailer_id: profile.id,
           name: s.name,
@@ -103,10 +109,16 @@ export default function ServicesScreen() {
           is_active: true,
           display_order: idx,
         }));
-        await supabase.from("service_packages").insert(packages);
+
+        const { error: insertError } = await supabase.from("service_packages").insert(packages);
+        if (insertError) throw insertError;
       }
+
+      router.push("/onboarding/operator/stripe");
+    } catch (err) {
+      console.warn("[Services] handleContinue failed", err);
+      setSaveError("Couldn't save your services. Please try again.");
     }
-    router.push("/onboarding/operator/stripe");
     setSaving(false);
   }
 
@@ -201,6 +213,9 @@ export default function ServicesScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {saveError && (
+          <Text style={styles.saveError}>{saveError}</Text>
+        )}
         <TouchableOpacity
           style={[styles.primaryButton, (services.length === 0 || saving) && styles.buttonDisabled]}
           onPress={handleContinue}
@@ -493,6 +508,13 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.caption,
     color: Colors.light.textTertiary,
     textAlign: "center",
+  },
+  saveError: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.error,
+    textAlign: "center",
+    marginBottom: Spacing.xs,
   },
   backdrop: {
     flex: 1,

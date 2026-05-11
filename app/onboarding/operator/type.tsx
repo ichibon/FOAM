@@ -51,20 +51,29 @@ const types: {
 export default function OperatorTypeScreen() {
   const [selected, setSelected] = useState<OperationType | null>("mobile");
   const [loading, setLoading] = useState(false);
+  const [writeError, setWriteError] = useState<string | null>(null);
 
   async function handleContinue() {
     if (!selected) return;
     setLoading(true);
+    setWriteError(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No session");
+
+      const { error: updateError } = await supabase
         .from("detailer_profiles")
         .update({ operation_type: selected })
         .eq("user_id", user.id);
+      if (updateError) throw updateError;
+
+      router.push("/onboarding/operator/build");
+    } catch (err) {
+      console.warn("[OperatorType] write failed", err);
+      setWriteError("Couldn't save your selection. Please try again.");
     }
 
-    router.push("/onboarding/operator/build");
     setLoading(false);
   }
 
@@ -139,6 +148,9 @@ export default function OperatorTypeScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {writeError && (
+          <Text style={styles.writeError}>{writeError}</Text>
+        )}
         <TouchableOpacity
           style={[styles.primaryButton, (!selected || loading) && styles.buttonDisabled]}
           onPress={handleContinue}
@@ -334,5 +346,12 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.caption,
     color: Colors.light.textTertiary,
     textAlign: "center",
+  },
+  writeError: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.error,
+    textAlign: "center",
+    marginBottom: Spacing.xs,
   },
 });

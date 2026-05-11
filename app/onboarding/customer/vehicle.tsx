@@ -42,15 +42,26 @@ export default function VehicleScreen() {
       .eq("user_id", user.id)
       .single();
 
-    if (profile) {
-      await supabase.from("vehicles").insert({
-        customer_id: profile.id,
-        make: make.trim(),
-        model: model.trim(),
-        year: parseInt(year),
-        color: color.trim(),
-        is_default: true,
-      });
+    if (!profile) {
+      setError("Could not load your profile. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("vehicles").insert({
+      customer_id: profile.id,
+      make: make.trim(),
+      model: model.trim(),
+      year: parseInt(year),
+      color: color.trim(),
+      is_default: true,
+    });
+
+    if (insertError) {
+      console.warn("[Vehicle] insert failed", insertError);
+      setError("Couldn't save your vehicle. Please try again.");
+      setLoading(false);
+      return;
     }
 
     router.replace("/onboarding/customer/payment");

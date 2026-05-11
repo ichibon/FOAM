@@ -1,0 +1,285 @@
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { LucideIcon } from "@/components/LucideIcon";
+
+const requirements = [
+  "A US bank account for payouts",
+  "Your SSN (for identity verification)",
+  "A government-issued photo ID",
+];
+
+export default function StripeScreen() {
+  function handleConnect() {
+    router.replace("/onboarding/operator/pending");
+  }
+
+  function handleSkip() {
+    router.replace("/onboarding/operator/pending");
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.progressHeader}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+          <LucideIcon name="ChevronLeft" size={20} color={Colors.light.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.stepLabel}>Step 4 of 4</Text>
+        <View style={styles.spacer} />
+      </View>
+
+      <View style={styles.progressTrackWrap}>
+        <View style={styles.progressTrack}>
+          <View style={styles.progressFill} />
+        </View>
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.introBlock}>
+          <Text style={styles.headline}>Get paid.</Text>
+          <Text style={styles.subheadline}>Connect your bank account to receive payouts.</Text>
+        </View>
+
+        <View style={styles.stripeCard}>
+          <View style={styles.stripeCardHeader}>
+            <Text style={styles.poweredBy}>Powered by Stripe</Text>
+            <View style={styles.stripeBadge}>
+              <Text style={styles.stripeBadgeText}>STRIPE</Text>
+            </View>
+          </View>
+
+          <Text style={styles.stripeBody}>
+            Stripe handles all payment processing and payouts for FOAM operators. Your financial data is secured by Stripe — FOAM never sees your bank details.
+          </Text>
+
+          <View style={styles.requirementsSection}>
+            <Text style={styles.requirementsLabel}>YOU'LL NEED</Text>
+            <View style={styles.requirementsList}>
+              {requirements.map((req, i) => (
+                <View key={i} style={styles.requirementRow}>
+                  <View style={styles.checkCircle}>
+                    <LucideIcon name="Check" size={10} color={Colors.foamBlue} />
+                  </View>
+                  <Text style={styles.requirementText}>{req}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.payoutAlert}>
+          <View style={styles.payoutAlertIcon}>
+            <LucideIcon name="DollarSign" size={12} color={Colors.foamBlue} />
+          </View>
+          <Text style={styles.payoutAlertText}>
+            Payouts hit your account within 2 business days after each completed job.
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleConnect} activeOpacity={0.85}>
+          <LucideIcon name="Link" size={18} color={Colors.white} />
+          <Text style={styles.primaryButtonText}>Connect with Stripe</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
+          <Text style={styles.skipButtonText}>I'll do this later</Text>
+        </TouchableOpacity>
+        <Text style={styles.skipWarning}>
+          You won't be able to receive payments until your bank is connected.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: Colors.light.bgPrimary },
+  progressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.sm,
+    paddingTop: Spacing.xl2,
+    paddingBottom: Spacing.sm,
+  },
+  backButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  stepLabel: {
+    flex: 1,
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    textAlign: "center",
+  },
+  spacer: { width: 44 },
+  progressTrackWrap: { paddingHorizontal: Spacing.md, marginBottom: Spacing.sm },
+  progressTrack: {
+    height: 4,
+    backgroundColor: Colors.light.borderSubtle,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    width: "100%",
+    backgroundColor: Colors.foamBlue,
+    borderRadius: 2,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: 16,
+  },
+  introBlock: { marginBottom: 24 },
+  headline: {
+    fontFamily: Typography.display,
+    fontSize: 26,
+    color: Colors.light.textPrimary,
+    lineHeight: 32,
+    marginBottom: Spacing.xs,
+  },
+  subheadline: {
+    fontFamily: Typography.body,
+    fontSize: 15,
+    color: Colors.light.textSecondary,
+    lineHeight: 22,
+  },
+  stripeCard: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    marginBottom: 24,
+    ...Shadows.light.level1,
+  },
+  stripeCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  poweredBy: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+  },
+  stripeBadge: {
+    backgroundColor: Colors.foamBlue,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  stripeBadgeText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 10,
+    color: Colors.white,
+    letterSpacing: 1,
+  },
+  stripeBody: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.md,
+  },
+  requirementsSection: {},
+  requirementsLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
+  },
+  requirementsList: { gap: Spacing.sm },
+  requirementRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+  },
+  checkCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  requirementText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textSecondary,
+    flex: 1,
+  },
+  payoutAlert: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    backgroundColor: Colors.foamLightBlue,
+    borderRadius: Radius.md,
+    padding: 12,
+    alignItems: "flex-start",
+  },
+  payoutAlertIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(51,157,199,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  payoutAlertText: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+  },
+  footer: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === "web" ? 24 : 0,
+    paddingTop: Spacing.md,
+    alignItems: "center",
+    gap: 4,
+  },
+  primaryButton: {
+    width: "100%",
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    ...Shadows.light.level2,
+  },
+  primaryButtonText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyL,
+    color: Colors.white,
+  },
+  skipButton: {
+    height: 44,
+    paddingHorizontal: Spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  skipButtonText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+  },
+  skipWarning: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.label,
+    color: Colors.warningLight,
+    textAlign: "center",
+    maxWidth: 280,
+  },
+});

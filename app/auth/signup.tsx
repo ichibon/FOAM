@@ -12,9 +12,9 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { LucideIcon } from "@/components/LucideIcon";
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState("");
@@ -63,13 +63,21 @@ export default function SignupScreen() {
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.dark.textPrimary} />
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+            <LucideIcon name="ChevronLeft" size={20} color={Colors.light.textPrimary} />
           </TouchableOpacity>
 
-          <Text style={styles.heading}>Create account</Text>
-          <Text style={styles.subheading}>Join FOAM and take control.</Text>
+          <View style={styles.headerBlock}>
+            <Text style={styles.heading}>Create your account</Text>
+            <View style={styles.subRow}>
+              <Text style={styles.subheading}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.replace("/auth/login")} activeOpacity={0.7}>
+                <Text style={styles.subLink}>Log in</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {error && (
             <View style={styles.errorBox}>
@@ -79,25 +87,25 @@ export default function SignupScreen() {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>FULL NAME</Text>
+              <Text style={styles.label}>Full name</Text>
               <TextInput
                 style={styles.input}
                 value={fullName}
                 onChangeText={setFullName}
-                placeholder="Your name"
-                placeholderTextColor={Colors.dark.textTertiary}
+                placeholder="Marcus Thompson"
+                placeholderTextColor={Colors.light.textTertiary}
                 autoCapitalize="words"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>EMAIL</Text>
+              <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor={Colors.dark.textTertiary}
+                placeholder="marcus@example.com"
+                placeholderTextColor={Colors.light.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -105,52 +113,53 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>PASSWORD</Text>
+              <Text style={styles.label}>Password</Text>
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Min. 8 characters"
-                  placeholderTextColor={Colors.dark.textTertiary}
+                  placeholder="8+ characters"
+                  placeholderTextColor={Colors.light.textTertiary}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
+                  <LucideIcon
+                    name={showPassword ? "EyeOff" : "Eye"}
                     size={20}
-                    color={Colors.dark.textSecondary}
+                    color={Colors.light.textTertiary}
                   />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.inputHint}>At least 8 characters</Text>
             </View>
-
-            <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.buttonDisabled]}
-              onPress={handleSignup}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={styles.primaryButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.replace("/auth/login")}>
-              <Text style={styles.footerLink}>Log in</Text>
-            </TouchableOpacity>
+          <View style={styles.trustRow}>
+            <Text style={styles.trustText}>We'll never sell your data. Ever.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.primaryButton, loading && styles.buttonDisabled]}
+          onPress={handleSignup}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Create Account</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -158,97 +167,122 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.foamDarkTeal,
-    paddingTop: Platform.OS === "web" ? 67 : 0,
+    backgroundColor: Colors.light.bgPrimary,
   },
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl2,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xl2,
+    paddingBottom: 120,
   },
   backButton: {
+    width: 44,
+    height: 44,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    marginLeft: -6,
+    marginBottom: Spacing.md,
+  },
+  headerBlock: {
     marginBottom: Spacing.xl,
-    width: 40,
   },
   heading: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: Typography.size.h1,
-    color: Colors.dark.textPrimary,
-    marginBottom: Spacing.xs,
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 20,
+    color: Colors.light.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  subRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   subheading: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
-    color: Colors.dark.textSecondary,
-    marginBottom: Spacing.xl,
+    color: Colors.light.textSecondary,
+  },
+  subLink: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+    textDecorationLine: "underline",
   },
   errorBox: {
-    backgroundColor: "rgba(239,68,68,0.15)",
+    backgroundColor: "rgba(220,38,38,0.08)",
     borderRadius: Radius.sm,
     padding: Spacing.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(220,38,38,0.2)",
   },
   errorText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
-    color: Colors.error,
+    color: Colors.errorLight,
   },
   form: { gap: Spacing.md },
   inputGroup: { gap: Spacing.xs },
   label: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: Typography.size.label,
-    color: Colors.dark.textTertiary,
-    letterSpacing: Typography.tracking.label,
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+    marginLeft: 4,
   },
   input: {
-    backgroundColor: Colors.dark.surface,
+    height: 52,
+    backgroundColor: Colors.light.surface,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
-    color: Colors.dark.textPrimary,
+    color: Colors.light.textPrimary,
     borderWidth: 1,
-    borderColor: Colors.dark.borderSubtle,
+    borderColor: Colors.light.borderSubtle,
   },
   passwordRow: { position: "relative" },
   passwordInput: { paddingRight: 48 },
   eyeButton: {
     position: "absolute",
-    right: Spacing.md,
-    top: 0,
-    bottom: 0,
+    right: 4,
+    top: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
     justifyContent: "center",
   },
-  primaryButton: {
-    backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.md,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: Spacing.sm,
+  inputHint: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+    marginLeft: 4,
   },
-  buttonDisabled: { opacity: 0.6 },
-  primaryButtonText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: Typography.size.bodyL,
-    color: Colors.white,
+  trustRow: {
+    marginTop: Spacing.xl,
+    alignItems: "center",
+  },
+  trustText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
   },
   footer: {
-    flexDirection: "row",
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === "web" ? 24 : 0,
+    paddingTop: Spacing.md,
+    backgroundColor: Colors.light.bgPrimary,
+  },
+  primaryButton: {
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
+    alignItems: "center",
     justifyContent: "center",
-    marginTop: Spacing.xl,
   },
-  footerText: {
-    fontFamily: "Inter_400Regular",
+  buttonDisabled: { opacity: 0.55 },
+  primaryButtonText: {
+    fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
-    color: Colors.dark.textSecondary,
-  },
-  footerLink: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: Typography.size.bodyM,
-    color: Colors.foamBlue,
+    color: Colors.white,
   },
 });

@@ -165,3 +165,72 @@ export const Animation = {
   screen: 300,
   onboarding: 400,
 } as const;
+
+export const Layout = {
+  bottomNavHeight: 83,
+  ctaHeight: 48,
+  ctaRadius: 8,
+  ctaFontSize: 14,
+  screenPaddingH: 24,
+} as const;
+
+export const Drawer = {
+  borderRadius: 20,
+  dragHandleWidth: 32,
+  dragHandleHeight: 4,
+  dragHandleColor: "#D4D4D8",
+  dragHandleTopOffset: 8,
+  backdropStandard: "rgba(0,0,0,0.30)",
+  backdropError: "rgba(0,0,0,0.40)",
+  animationDuration: 280,
+  background: "#FFFFFF",
+} as const;
+
+export const EmptyStateTokens = {
+  firstRun: {
+    iconSize: 48,
+    circleSize: 80,
+    circleColor: "#E1F0F7",
+    iconColor: "#339DC7",
+    headlineFontSize: 24,
+    headlineFont: "PlayfairDisplay_700Bold",
+    iconToHeadline: 40,
+    headlineToBody: 16,
+    bodyToCta: 32,
+    ctaRadius: 9999,
+    ctaPaddingH: 24,
+  },
+  functional: {
+    iconSize: 48,
+    circleSize: 0,
+    iconColor: "#A3A3A3",
+    headlineFontSize: 20,
+    headlineFont: "Inter_600SemiBold",
+    iconToHeadline: 24,
+    headlineToBody: 12,
+    bodyToCta: 24,
+    ctaRadius: 8,
+  },
+  success: {
+    iconColor: "#16A34A",
+  },
+  bodyMaxWidth: 280,
+  background: "#FAFAFA",
+} as const;
+
+export const ErrorStateTokens = {
+  iconSize: 48,
+  iconCircleSize: 80,
+  warning: {
+    iconColor: "#D97706",
+    iconBg: "rgba(217,119,6,0.10)",
+  },
+  error: {
+    iconColor: "#DC2626",
+    iconBg: "rgba(220,38,38,0.10)",
+  },
+  blocking: {
+    iconColor: "#DC2626",
+    iconBg: "rgba(220,38,38,0.10)",
+  },
+} as const;

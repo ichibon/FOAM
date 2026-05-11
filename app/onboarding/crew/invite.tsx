@@ -29,7 +29,7 @@ export default function InviteCodeScreen() {
 
     const { data: match } = await supabase
       .from("team_members")
-      .select("id")
+      .select("id, user_id")
       .eq("invite_code", code.trim().toUpperCase())
       .single();
 
@@ -42,6 +42,12 @@ export default function InviteCodeScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setError("Session expired. Please sign in again.");
+      setLoading(false);
+      return;
+    }
+
+    if (match.user_id && match.user_id !== user.id) {
+      setError("This invite code has already been claimed. Ask your manager for a new one.");
       setLoading(false);
       return;
     }

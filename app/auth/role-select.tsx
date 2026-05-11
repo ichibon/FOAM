@@ -60,10 +60,14 @@ export default function RoleSelectScreen() {
     await supabase.from("users").update({ role }).eq("id", user.id);
 
     if (role === "customer") {
-      await supabase.from("customer_profiles").insert({ user_id: user.id });
+      await supabase
+        .from("customer_profiles")
+        .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
       router.replace("/onboarding/customer/vehicle");
     } else if (role === "operator") {
-      await supabase.from("detailer_profiles").insert({ user_id: user.id });
+      await supabase
+        .from("detailer_profiles")
+        .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
       router.replace("/onboarding/operator/type");
     } else if (role === "team_member") {
       router.replace("/onboarding/crew/invite");

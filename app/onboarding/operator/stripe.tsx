@@ -18,6 +18,77 @@ const WebView = Platform.OS !== "web"
   ? require("react-native-webview").WebView
   : null;
 
+const PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
+function buildAccountOnboardingHtml(clientSecret: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <script src="https://connect-js.stripe.com/v1.0/connect.js" async></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #FAFAFA; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 16px; min-height: 100vh; }
+    #account-onboarding { min-height: 100vh; }
+    .loading { display: flex; align-items: center; justify-content: center; min-height: 200px; color: #A3A3A3; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loading">Setting up Stripe...</div>
+  <div id="account-onboarding"></div>
+  <script>
+    function postMsg(data) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(data));
+      }
+    }
+
+    window.addEventListener('load', function() {
+      if (!window.StripeConnect) {
+        postMsg({ type: 'error', message: 'Stripe Connect JS failed to load' });
+        return;
+      }
+
+      try {
+        var instance = window.StripeConnect.initialize({
+          publishableKey: '${PK}',
+          clientSecret: '${clientSecret}',
+          appearance: {
+            overlays: 'dialog',
+            variables: {
+              colorPrimary: '#339DC7',
+              borderRadius: '8px',
+              fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+            }
+          }
+        });
+
+        var onboarding = instance.create('account-onboarding');
+        onboarding.setFullTermsOfServiceUrl('https://foam.app/terms');
+        onboarding.setPrivacyPolicyUrl('https://foam.app/privacy');
+        onboarding.setSkipTermsOfServiceCollection(false);
+
+        onboarding.setOnExit(function() {
+          postMsg({ type: 'exit' });
+        });
+
+        onboarding.setOnStepChange(function(stepChange) {
+          postMsg({ type: 'step', step: stepChange.step });
+        });
+
+        var container = document.getElementById('account-onboarding');
+        container.appendChild(onboarding);
+        document.getElementById('loading').style.display = 'none';
+        postMsg({ type: 'ready' });
+      } catch (e) {
+        postMsg({ type: 'error', message: e.message });
+      }
+    });
+  </script>
+</body>
+</html>`;
+}
+
 const requirements = [
   "A US bank account for payouts",
   "Your SSN (for identity verification)",
@@ -27,25 +98,45 @@ const requirements = [
 export default function StripeScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
+  const [onboardingHtml, setOnboardingHtml] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   async function handleConnect() {
     setLoading(true);
     setError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error: fnError } = await supabase.functions.invoke(
-          "stripe-create-connect-account",
-          { body: { user_id: user.id } }
-        );
-        if (fnError) {
-          setError("Could not start Stripe setup. Please try again.");
-        } else if (data?.url) {
-          setOnboardingUrl(data.url as string);
-        } else {
-          router.replace("/onboarding/operator/pending");
-        }
+      if (!user) {
+        setError("Please sign in again and retry.");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "stripe-create-connect-account",
+        { body: { user_id: user.id } }
+      );
+
+      if (fnError || !data) {
+        setError("Could not start Stripe setup. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (data.client_secret) {
+        const html = buildAccountOnboardingHtml(data.client_secret as string);
+        setOnboardingHtml(html);
+        setShowOnboarding(true);
+      } else if (data.url) {
+        const html = `<!DOCTYPE html><html><head>
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          </head><body style="margin:0">
+          <iframe src="${data.url as string}" style="width:100vw;height:100vh;border:0"></iframe>
+          </body></html>`;
+        setOnboardingHtml(html);
+        setShowOnboarding(true);
+      } else {
+        router.replace("/onboarding/operator/pending");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -53,9 +144,20 @@ export default function StripeScreen() {
     setLoading(false);
   }
 
-  function handleWebViewNavigate(url: string) {
-    if (url.includes("return") || url.includes("refresh")) {
-      setOnboardingUrl(null);
+  function handleWebViewMessage(event: { nativeEvent: { data: string } }) {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data) as { type: string };
+      if (msg.type === "exit") {
+        setShowOnboarding(false);
+        router.replace("/onboarding/operator/pending");
+      }
+    } catch {}
+  }
+
+  function handleWebViewNavigate(navState: { url: string }) {
+    const url = navState.url ?? "";
+    if (url.includes("return") || url.includes("refresh") || url.includes("foam://")) {
+      setShowOnboarding(false);
       router.replace("/onboarding/operator/pending");
     }
   }
@@ -155,19 +257,31 @@ export default function StripeScreen() {
         </Text>
       </View>
 
-      {WebView && onboardingUrl && (
-        <Modal visible animationType="slide" onRequestClose={() => setOnboardingUrl(null)}>
+      {WebView && (
+        <Modal
+          visible={showOnboarding}
+          animationType="slide"
+          onRequestClose={() => setShowOnboarding(false)}
+        >
           <SafeAreaView style={styles.webViewContainer}>
             <View style={styles.webViewHeader}>
-              <TouchableOpacity onPress={() => setOnboardingUrl(null)} activeOpacity={0.7} style={styles.webViewClose}>
+              <TouchableOpacity
+                onPress={() => setShowOnboarding(false)}
+                activeOpacity={0.7}
+                style={styles.webViewClose}
+              >
                 <LucideIcon name="X" size={20} color={Colors.light.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.webViewTitle}>Stripe Onboarding</Text>
               <View style={styles.spacer} />
             </View>
             <WebView
-              source={{ uri: onboardingUrl }}
-              onNavigationStateChange={(state: { url: string }) => handleWebViewNavigate(state.url)}
+              source={{ html: onboardingHtml ?? "" }}
+              originWhitelist={["*"]}
+              javaScriptEnabled
+              domStorageEnabled
+              onMessage={handleWebViewMessage}
+              onNavigationStateChange={handleWebViewNavigate}
               style={styles.webView}
             />
           </SafeAreaView>

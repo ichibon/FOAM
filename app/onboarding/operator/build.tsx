@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { EmptyState } from "@/components/EmptyState";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type AssetType = "van" | "trailer" | "truck" | "other";
@@ -29,15 +29,6 @@ interface AddedLocation {
   id: string;
   name: string;
   address: string;
-}
-
-async function getDetailerProfileId(client: SupabaseClient, userId: string): Promise<string | null> {
-  const { data } = await client
-    .from("detailer_profiles")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
-  return data?.id ?? null;
 }
 
 export default function BuildOperationScreen() {
@@ -62,12 +53,21 @@ export default function BuildOperationScreen() {
     { id: "other", label: "Other" },
   ];
 
+  async function getDetailerProfileId(userId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from("detailer_profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+    return data?.id ?? null;
+  }
+
   async function handleAddVan() {
     if (!vanName.trim()) return;
     setVanSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const detailerId = await getDetailerProfileId(supabase as unknown as SupabaseClient, user.id);
+      const detailerId = await getDetailerProfileId(user.id);
       if (detailerId) {
         const { data } = await supabase
           .from("business_assets")
@@ -88,7 +88,7 @@ export default function BuildOperationScreen() {
     setLocSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const detailerId = await getDetailerProfileId(supabase as unknown as SupabaseClient, user.id);
+      const detailerId = await getDetailerProfileId(user.id);
       if (detailerId) {
         const { data } = await supabase
           .from("business_locations")
@@ -146,11 +146,15 @@ export default function BuildOperationScreen() {
           </View>
 
           {vans.length === 0 ? (
-            <View style={styles.emptyState}>
-              <LucideIcon name="Truck" size={24} color={Colors.light.textTertiary} />
-              <Text style={styles.emptyStateTitle}>No vehicles yet</Text>
-              <Text style={styles.emptyStateBody}>Add your vans, trailers, or trucks.</Text>
-            </View>
+            <EmptyState
+              variant="functional"
+              icon="Truck"
+              headline="No vehicles yet"
+              body="Add your vans, trailers, or trucks."
+              ctaLabel="Add Vehicle"
+              ctaRoute="/onboarding/operator/build"
+              fullScreen={false}
+            />
           ) : (
             <View style={styles.itemList}>
               {vans.map((van) => (
@@ -183,11 +187,15 @@ export default function BuildOperationScreen() {
           </View>
 
           {locations.length === 0 ? (
-            <View style={styles.emptyState}>
-              <LucideIcon name="MapPin" size={24} color={Colors.light.textTertiary} />
-              <Text style={styles.emptyStateTitle}>No locations yet</Text>
-              <Text style={styles.emptyStateBody}>Add a shop, bay, or fixed service location.</Text>
-            </View>
+            <EmptyState
+              variant="functional"
+              icon="MapPin"
+              headline="No locations yet"
+              body="Add a shop, bay, or fixed service location."
+              ctaLabel="Add Location"
+              ctaRoute="/onboarding/operator/build"
+              fullScreen={false}
+            />
           ) : (
             <View style={styles.itemList}>
               {locations.map((loc) => (
@@ -405,28 +413,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.caption,
     color: Colors.foamBlue,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 32,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    borderStyle: "dashed",
-    gap: 6,
-  },
-  emptyStateTitle: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textSecondary,
-  },
-  emptyStateBody: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyS,
-    color: Colors.light.textTertiary,
-    textAlign: "center",
-    maxWidth: 200,
   },
   itemList: { gap: Spacing.sm },
   itemRow: {

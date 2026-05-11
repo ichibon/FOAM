@@ -1,12 +1,43 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
 export default function CustomerCompleteScreen() {
+  const [saving, setSaving] = useState(true);
+
+  useEffect(() => {
+    markOnboardingComplete();
+  }, []);
+
+  async function markOnboardingComplete() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("users")
+          .update({ onboarding_complete: true })
+          .eq("id", user.id);
+      }
+    } catch {}
+    setSaving(false);
+  }
+
   function handleContinue() {
     router.replace("/customer/discover");
+  }
+
+  if (saving) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.foamBlue} />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -72,6 +103,11 @@ export default function CustomerCompleteScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: Colors.light.bgPrimary },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   content: {
     flex: 1,
     paddingHorizontal: Spacing.md,

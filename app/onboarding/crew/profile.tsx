@@ -8,9 +8,11 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
@@ -18,7 +20,48 @@ import { LucideIcon } from "@/components/LucideIcon";
 export default function CrewProfileScreen() {
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  async function handlePickPhoto() {
+    if (Platform.OS !== "web") {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
+
+  async function uploadPhoto(userId: string): Promise<string | null> {
+    if (!photoUri) return null;
+    try {
+      const ext = photoUri.split(".").pop() ?? "jpg";
+      const path = `crew/${userId}/avatar.${ext}`;
+      const response = await fetch(photoUri);
+      const blob = await response.blob();
+      const { error } = await supabase.storage
+        .from("avatars")
+        .upload(path, blob, { upsert: true, contentType: `image/${ext}` });
+      if (error) {
+        console.warn("Avatar upload error:", error.message);
+        return null;
+      }
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e) {
+      console.warn("Avatar upload failed:", e);
+      return null;
+    }
+  }
 
   async function handleContinue() {
     if (!displayName.trim()) return;
@@ -26,17 +69,21 @@ export default function CrewProfileScreen() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const avatarUrl = await uploadPhoto(user.id);
+
       await supabase
         .from("team_members")
-        .update({
-          display_name: displayName.trim(),
-        })
+        .update({ display_name: displayName.trim() })
         .eq("user_id", user.id);
 
-      if (phone.trim()) {
+      const userUpdate: Record<string, any> = {};
+      if (phone.trim()) userUpdate.phone = phone.trim();
+      if (avatarUrl) userUpdate.avatar_url = avatarUrl;
+
+      if (Object.keys(userUpdate).length > 0) {
         await supabase
           .from("users")
-          .update({ phone: phone.trim() })
+          .update(userUpdate)
           .eq("id", user.id);
       }
     }
@@ -69,11 +116,15 @@ export default function CrewProfileScreen() {
         </View>
 
         <View style={styles.photoSection}>
-          <TouchableOpacity style={styles.photoButton} activeOpacity={0.8}>
-            <LucideIcon name="Camera" size={28} color={Colors.foamBlue} />
+          <TouchableOpacity style={styles.photoButton} onPress={handlePickPhoto} activeOpacity={0.8}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            ) : (
+              <LucideIcon name="Camera" size={28} color={Colors.foamBlue} />
+            )}
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.addPhotoText}>Add photo</Text>
+          <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.7}>
+            <Text style={styles.addPhotoText}>{photoUri ? "Change photo" : "Add photo"}</Text>
           </TouchableOpacity>
           <Text style={styles.optional}>Optional</Text>
         </View>
@@ -188,7 +239,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
     ...Shadows.light.level1,
+  },
+  photoPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
   },
   addPhotoText: {
     fontFamily: Typography.bodyMedium,

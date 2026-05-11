@@ -25,20 +25,20 @@ const roles: {
 }[] = [
   {
     role: "customer",
-    title: "I need my car detailed",
+    title: "Book a detail",
     description: "Find detailers, book, and pay.",
     icon: "Car",
   },
   {
     role: "operator",
-    title: "I run a detailing business",
+    title: "Grow my business",
     description: "Manage bookings, crew, and payments.",
     icon: "Briefcase",
     featured: true,
   },
   {
     role: "team_member",
-    title: "I'm part of a crew",
+    title: "Join a crew",
     description: "See your jobs and track your earnings.",
     icon: "Users",
   },

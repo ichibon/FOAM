@@ -22,7 +22,9 @@ export default function CustomerCompleteScreen() {
           .update({ onboarding_complete: true })
           .eq("id", user.id);
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[CustomerComplete] onboarding_complete write failed", err);
+    }
     setSaving(false);
   }
 

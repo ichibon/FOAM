@@ -35,15 +35,6 @@ function onboardingEntryFor(role: UserRole): string {
   }
 }
 
-function pendingScreenFor(role: UserRole): string {
-  switch (role) {
-    case "operator":
-    case "manager": return "/onboarding/operator/pending";
-    case "team_member": return "/onboarding/crew/pending";
-    default: return "/onboarding/operator/pending";
-  }
-}
-
 function mainTabFor(role: UserRole): string {
   switch (role) {
     case "customer": return "/customer/discover";
@@ -55,7 +46,7 @@ function mainTabFor(role: UserRole): string {
 }
 
 function RootLayoutNav() {
-  const { session, role, onboardingComplete, pendingApproval, loading } = useAuth();
+  const { session, role, onboardingComplete, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;
@@ -76,15 +67,9 @@ function RootLayoutNav() {
       return;
     }
 
-    if (pendingApproval) {
-      const pending = pendingScreenFor(role);
-      router.replace(pending as Parameters<typeof router.replace>[0]);
-      return;
-    }
-
     const tab = mainTabFor(role);
     router.replace(tab as Parameters<typeof router.replace>[0]);
-  }, [session, role, onboardingComplete, pendingApproval, loading]);
+  }, [session, role, onboardingComplete, loading]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

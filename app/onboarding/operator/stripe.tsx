@@ -136,26 +136,40 @@ export default function StripeScreen() {
     setLoading(false);
   }
 
+  async function markCompleteAndAdvance() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("users").update({ onboarding_complete: true }).eq("id", user.id);
+      }
+    } catch (err) {
+      console.warn("[StripeOnboarding] onboarding_complete write failed", err);
+    }
+    router.replace("/operator/today");
+  }
+
   function handleWebViewMessage(event: { nativeEvent: { data: string } }) {
     try {
       const msg = JSON.parse(event.nativeEvent.data) as { type: string };
       if (msg.type === "exit") {
         setShowOnboarding(false);
-        router.replace("/onboarding/operator/pending");
+        void markCompleteAndAdvance();
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[StripeOnboarding] WebView message parse failed", err);
+    }
   }
 
   function handleWebViewNavigate(navState: { url: string }) {
     const url = navState.url ?? "";
     if (url.includes("return") || url.includes("refresh") || url.includes("foam://")) {
       setShowOnboarding(false);
-      router.replace("/onboarding/operator/pending");
+      void markCompleteAndAdvance();
     }
   }
 
   function handleSkip() {
-    router.replace("/onboarding/operator/pending");
+    void markCompleteAndAdvance();
   }
 
   return (

@@ -21,7 +21,9 @@ export default function LocationScreen() {
       if (Platform.OS !== "web") {
         await Location.requestForegroundPermissionsAsync();
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[Location] permission request failed", err);
+    }
     setLoading(false);
     router.replace("/onboarding/customer/complete");
   }

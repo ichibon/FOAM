@@ -67,28 +67,34 @@ export default function CrewProfileScreen() {
     if (!displayName.trim()) return;
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const avatarUrl = await uploadPhoto(user.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const avatarUrl = await uploadPhoto(user.id);
 
-      await supabase
-        .from("team_members")
-        .update({ display_name: displayName.trim() })
-        .eq("user_id", user.id);
+        await supabase
+          .from("team_members")
+          .update({ display_name: displayName.trim() })
+          .eq("user_id", user.id);
 
-      const userFields: { phone?: string; avatar_url?: string } = {};
-      if (phone.trim()) userFields.phone = phone.trim();
-      if (avatarUrl) userFields.avatar_url = avatarUrl;
+        const userFields: { phone?: string; avatar_url?: string } = {};
+        if (phone.trim()) userFields.phone = phone.trim();
+        if (avatarUrl) userFields.avatar_url = avatarUrl;
 
-      if (Object.keys(userFields).length > 0) {
+        if (Object.keys(userFields).length > 0) {
+          await supabase.from("users").update(userFields).eq("id", user.id);
+        }
+
         await supabase
           .from("users")
-          .update(userFields)
+          .update({ onboarding_complete: true })
           .eq("id", user.id);
       }
+    } catch (err) {
+      console.warn("[CrewProfile] continue failed", err);
     }
 
-    router.replace("/onboarding/crew/pending");
+    router.replace("/team_member/jobs");
     setLoading(false);
   }
 

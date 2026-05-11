@@ -115,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (_event: string, s: Session | null) => {
         setSession(s);
         if (s) {
+          setLoading(true);
           fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
         } else {
           setRole(null);

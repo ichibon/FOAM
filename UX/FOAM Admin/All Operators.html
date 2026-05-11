@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Operators</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            DEFAULT: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                        },
+                        surface: '#FFFFFF',
+                        border: {
+                            subtle: '#E4E4E7',
+                            DEFAULT: '#D4D4D8',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4',
+                        },
+                        accent: {
+                            DEFAULT: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51,157,199,0.10)',
+                        },
+                        success: {
+                            DEFAULT: '#16A34A',
+                            bg: 'rgba(22,163,74,0.10)',
+                        },
+                        warning: {
+                            DEFAULT: '#D97706',
+                            bg: 'rgba(217,119,6,0.10)',
+                        },
+                        error: {
+                            DEFAULT: '#DC2626',
+                            bg: 'rgba(220,38,38,0.10)',
+                        },
+                        info: {
+                            DEFAULT: '#2563EB',
+                            bg: 'rgba(37,99,235,0.10)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; color: #0A0A0A; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #339DC7; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        *:focus-visible {
+            outline: 2px solid #339DC7;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex font-sans antialiased text-text-primary bg-background selection:bg-accent-subtle selection:text-accent">
+
+    <aside id="sidebar" class="w-[220px] flex-shrink-0 border-r border-border bg-background-secondary flex flex-col h-full hidden md:flex z-20">
+        <div class="p-6 border-b border-border">
+            <h1 class="font-serif text-2xl font-bold tracking-tight text-text-primary flex items-center gap-2.5">
+                <i class="fa-solid fa-water text-accent"></i> FOAM
+            </h1>
+            <p class="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.5px] mt-1 ml-9">Ops Console</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto py-6 px-4 space-y-7">
+            <div>
+                <p class="px-3 text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-2.5">Queue</p>
+                <nav class="space-y-0.5">
+                    <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary transition-colors group">
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-user-clock text-text-tertiary w-4 text-center"></i>
+                            <span class="text-sm font-medium">Operator Review</span>
+                        </div>
+                        <span class="bg-background text-text-tertiary text-[10px] font-semibold px-2 py-0.5 rounded-full">14</span>
+                    </a>
+                    <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary transition-colors group">
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-flag text-warning group-hover:text-warning w-4 text-center transition-colors"></i>
+                            <span class="text-sm font-medium">Flagged Accounts</span>
+                        </div>
+                        <span class="bg-background text-text-tertiary text-[10px] font-semibold px-2 py-0.5 rounded-full">3</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary transition-colors">
+                        <i class="fa-solid fa-scale-balanced text-text-tertiary w-4 text-center"></i>
+                        <span class="text-sm font-medium">Disputes</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div>
+                <p class="px-3 text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-2.5">Platform</p>
+                <nav class="space-y-0.5">
+                    <a href="#" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary transition-colors">
+                        <i class="fa-solid fa-chart-line text-text-tertiary w-4 text-center"></i>
+                        <span class="text-sm font-medium">Analytics</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-accent-subtle text-text-primary transition-colors relative border-l-2 border-accent">
+                        <i class="fa-solid fa-users text-accent w-4 text-center"></i>
+                        <span class="text-sm font-medium">All Operators</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary transition-colors">
+                        <i class="fa-solid fa-money-bill-transfer text-text-tertiary w-4 text-center"></i>
+                        <span class="text-sm font-medium">Payouts</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div>
+                <p class="px-3 text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-2.5">System</p>
+                <nav class="space-y-0.5">
+                    <a href="#" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary transition-colors">
+                        <i class="fa-solid fa-gear text-text-tertiary w-4 text-center"></i>
+                        <span class="text-sm font-medium">Settings</span>
+                    </a>
+                </nav>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-border">
+            <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface cursor-pointer transition-colors">
+                <div class="relative">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Admin Avatar" class="w-9 h-9 rounded-full object-cover border border-border">
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success border-2 border-background-secondary rounded-full"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-text-primary truncate">Marcus T.</p>
+                    <p class="text-xs text-text-tertiary truncate">Superadmin</p>
+                </div>
+                <i class="fa-solid fa-chevron-up text-text-tertiary text-xs"></i>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col md:flex-row h-full min-w-0">
+        
+        <section id="operator-list-panel" class="w-full md:w-[380px] lg:w-[420px] flex-shrink-0 border-r border-border bg-background flex flex-col h-full z-10">
+            <div class="p-5 border-b border-border bg-surface backdrop-blur z-10 shrink-0">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="text-lg font-semibold text-text-primary">All Operators</h2>
+                    <button class="text-text-tertiary hover:text-text-primary transition-colors" aria-label="Refresh operators">
+                        <i class="fa-solid fa-arrow-rotate-right"></i>
+                    </button>
+                </div>
+
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary text-sm"></i>
+                    <input type="text" placeholder="Search by name, business, email..." class="w-full bg-surface border border-border rounded-lg py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all" aria-label="Search operators">
+                </div>
+
+                <div class="flex space-x-1 p-1 bg-background-secondary rounded-lg overflow-x-auto no-scrollbar mb-4" role="tablist">
+                    <button role="tab" aria-selected="true" class="px-3 py-1.5 text-xs font-medium rounded-md bg-surface text-text-primary shadow-sm whitespace-nowrap border-b-2 border-accent">All (247)</button>
+                    <button role="tab" aria-selected="false" class="px-3 py-1.5 text-xs font-medium rounded-md text-text-secondary hover:text-text-primary hover:bg-surface/50 transition-colors whitespace-nowrap">Active (239)</button>
+                    <button role="tab" aria-selected="false" class="px-3 py-1.5 text-xs font-medium rounded-md text-text-secondary hover:text-text-primary hover:bg-surface/50 transition-colors whitespace-nowrap">Suspended (8)</button>
+                    <button role="tab" aria-selected="false" class="px-3 py-1.5 text-xs font-medium rounded-md text-text-secondary hover:text-text-primary hover:bg-surface/50 transition-colors whitespace-nowrap">Flagged (3)</button>
+                </div>
+
+                <div class="flex gap-2">
+                    <select class="flex-1 bg-surface border border-border rounded-lg py-2 px-3 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
+                        <option>All Tiers</option>
+                        <option>Starter</option>
+                        <option>Pro</option>
+                        <option>Premium</option>
+                    </select>
+                    <select class="flex-1 bg-surface border border-border rounded-lg py-2 px-3 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
+                        <option>All Types</option>
+                        <option>Mobile Only</option>
+                        <option>Shop Only</option>
+                        <option>Shop & Mobile</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 space-y-2">
+                
+                <div class="bg-surface border-2 border-accent rounded-xl p-4 cursor-pointer relative overflow-hidden shadow-lg shadow-accent/10" role="button" tabindex="0">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-accent"></div>
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-success-bg flex items-center justify-center text-sm font-bold text-success border border-success/20" aria-label="Shop Only operator">
+                                EW
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-text-primary">Elite Auto Works</h3>
+                                <p class="text-xs text-text-secondary mt-0.5">Michael Chang • Shop Only</p>
+                            </div>
+                        </div>
+                        <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs border-t border-border-subtle pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-star text-[10px]"></i>
+                                <span class="font-medium">Pro</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-triangle-exclamation text-warning text-[10px]"></i>
+                                <span>2 strikes</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 text-text-tertiary">
+                            <i class="fa-solid fa-dollar-sign text-[10px]"></i>
+                            <span>Fee override</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-accent/40 hover:shadow-md transition-all group" role="button" tabindex="0">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-info-bg flex items-center justify-center text-sm font-bold text-info border border-info/20 group-hover:border-info/40 transition-colors">
+                                SP
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-text-primary">Sparkle Pro Wash</h3>
+                                <p class="text-xs text-text-tertiary mt-0.5">Sarah Palmer • Shop & Mobile</p>
+                            </div>
+                        </div>
+                        <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs border-t border-border-subtle pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-star text-[10px]"></i>
+                                <span class="font-medium">Premium</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-circle-check text-success text-[10px]"></i>
+                                <span>Clean</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-accent/40 hover:shadow-md transition-all group" role="button" tabindex="0">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-accent-subtle flex items-center justify-center text-sm font-bold text-accent border border-accent/20 group-hover:border-accent/40 transition-colors">
+                                CD
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-text-primary">Crystal Detail Co</h3>
+                                <p class="text-xs text-text-tertiary mt-0.5">Amanda Lee • Mobile Only</p>
+                            </div>
+                        </div>
+                        <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs border-t border-border-subtle pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-star text-[10px]"></i>
+                                <span class="font-medium">Starter</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-triangle-exclamation text-warning text-[10px]"></i>
+                                <span>1 strike</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-accent/40 hover:shadow-md transition-all group" role="button" tabindex="0">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-warning-bg flex items-center justify-center text-sm font-bold text-warning border border-warning/20 group-hover:border-warning/40 transition-colors">
+                                PD
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-text-primary">Premier Detailers</h3>
+                                <p class="text-xs text-text-tertiary mt-0.5">Robert Martinez • Shop & Mobile</p>
+                            </div>
+                        </div>
+                        <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs border-t border-border-subtle pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-star text-[10px]"></i>
+                                <span class="font-medium">Pro</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-circle-check text-success text-[10px]"></i>
+                                <span>Clean</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-error-bg border border-error/30 rounded-xl p-4 cursor-pointer hover:border-error/50 hover:shadow-md transition-all group" role="button" tabindex="0">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-error-bg flex items-center justify-center text-sm font-bold text-error border border-error/30">
+                                JD
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-text-primary">James Detailing LLC</h3>
+                                <p class="text-xs text-text-tertiary mt-0.5">James Wilson • Mobile Only</p>
+                            </div>
+                        </div>
+                        <span class="bg-error text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Suspended
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs border-t border-error/20 pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-star text-[10px]"></i>
+                                <span class="font-medium">Pro</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-error">
+                                <i class="fa-solid fa-ban text-[10px]"></i>
+                                <span>3 strikes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-accent/40 hover:shadow-md transition-all group" role="button" tabindex="0">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-success-bg flex items-center justify-center text-sm font-bold text-success border border-success/20 group-hover:border-success/40 transition-colors">
+                                AD
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-text-primary">Apex Detailing</h3>
+                                <p class="text-xs text-text-tertiary mt-0.5">David Kim • Shop Only</p>
+                            </div>
+                        </div>
+                        <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Active
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs border-t border-border-subtle pt-3 mt-1">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-star text-[10px]"></i>
+                                <span class="font-medium">Starter</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-text-tertiary">
+                                <i class="fa-solid fa-circle-check text-success text-[10px]"></i>
+                                <span>Clean</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="account-detail-panel" class="flex-1 bg-background-secondary flex flex-col h-full min-w-0 relative">
+            
+            <div class="p-6 border-b border-border bg-surface shrink-0">
+                <div class="flex items-start justify-between mb-5">
+                    <div class="flex items-start gap-5">
+                        <div class="w-16 h-16 rounded-xl bg-success-bg flex items-center justify-center text-2xl font-bold text-success border-2 border-success/20 shadow-sm relative">
+                            EW
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mb-1">
+                                <h2 class="font-serif text-2xl font-bold text-text-primary">Elite Auto Works</h2>
+                                <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">Active</span>
+                            </div>
+                            <p class="text-sm text-text-secondary mb-3">Owned by Michael Chang • Member since March 2024</p>
+                            <div class="flex gap-2">
+                                <span class="px-2.5 py-1 rounded-md bg-background-secondary border border-border text-xs text-text-secondary flex items-center gap-1.5">
+                                    <i class="fa-solid fa-building text-text-tertiary"></i> Shop Only
+                                </span>
+                                <span class="px-2.5 py-1 rounded-md bg-background-secondary border border-border text-xs text-text-secondary flex items-center gap-1.5">
+                                    <i class="fa-solid fa-star text-text-tertiary"></i> Pro Tier
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="px-5 py-2.5 rounded-lg border border-border text-text-primary hover:bg-background-secondary text-sm font-medium transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:ring-offset-2 min-w-[44px] min-h-[44px]">
+                            Add Note
+                        </button>
+                        <button class="px-6 py-2.5 rounded-lg bg-error text-white hover:bg-error/90 text-sm font-medium transition-all shadow-sm shadow-error/20 focus:outline-none focus:ring-2 focus:ring-error/40 focus:ring-offset-2 min-w-[44px] min-h-[44px]">
+                            Suspend Account
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-background border border-border rounded-lg p-4">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1">Total Bookings</p>
+                        <p class="text-2xl font-bold text-text-primary">1,247</p>
+                    </div>
+                    <div class="bg-background border border-border rounded-lg p-4">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1">Completion Rate</p>
+                        <p class="text-2xl font-bold text-success">98.5%</p>
+                    </div>
+                    <div class="bg-background border border-border rounded-lg p-4">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1">Cancellation Rate</p>
+                        <p class="text-2xl font-bold text-warning">1.2%</p>
+                    </div>
+                    <div class="bg-background border border-border rounded-lg p-4">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1">Average Rating</p>
+                        <p class="text-2xl font-bold text-success">4.9</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+                <div class="max-w-5xl mx-auto space-y-8">
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <div id="subscription-section" class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+                            <div class="px-5 py-4 border-b border-border bg-background-secondary flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-text-primary">Subscription & Tier</h3>
+                                <button class="text-xs text-accent font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-accent/20 rounded px-2 py-1">
+                                    Change Tier
+                                </button>
+                            </div>
+                            <div class="p-5 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1.5">Current Tier</p>
+                                        <p class="text-sm text-text-primary font-semibold">Pro</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1.5">Monthly Fee</p>
+                                        <p class="text-sm text-text-primary font-semibold">$49.00</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1.5">Commission Rate</p>
+                                        <p class="text-sm text-text-primary font-semibold">12%</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] font-medium uppercase tracking-[0.5px] text-text-tertiary mb-1.5">Next Billing</p>
+                                        <p class="text-sm text-text-primary font-semibold">Feb 15, 2026</p>
+                                    </div>
+                                </div>
+                                <div class="pt-3 border-t border-border">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-xs text-text-secondary">Billing Status</p>
+                                        <span class="bg-success-bg text-success border border-success/20 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                            Current
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fee-override-section" class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+                            <div class="px-5 py-4 border-b border-border bg-background-secondary flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-text-primary">Fee Overrides</h3>
+                                <button class="text-xs text-accent font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-accent/20 rounded px-2 py-1">
+                                    Set Override
+                                </button>
+                            </div>
+                            <div class="p-5">
+                                <div class="bg-warning-bg border border-warning/30 rounded-lg p-4 mb-4">
+                                    <div class="flex items-start gap-3">
+                                        <i class="fa-solid fa-dollar-sign text-warning mt-0.5"></i>
+                                        <div class="flex-1">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <p class="text-sm font-semibold text-text-primary">Commission Override</p>
+                                                <button class="text-xs text-text-tertiary hover:text-text-primary">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                                <div>
+                                                    <p class="text-text-tertiary mb-0.5">Override Rate</p>
+                                                    <p class="text-text-primary font-semibold">8%</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-text-tertiary mb-0.5">Expires</p>
+                                                    <p class="text-text-primary font-semibold">March 31, 2026</p>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-text-tertiary mt-2 leading-relaxed">Reason: High-volume operator incentive</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-text-tertiary text-center">No monthly fee overrides active</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div id="strikes-section" class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+                        <div class="px-5 py-4 border-b border-border bg-background-secondary flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-text-primary">Strike Record</h3>
+                            <button class="text-xs text-accent font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-accent/20 rounded px-2 py-1">
+                                Clear Strikes
+                            </button>
+                        </div>
+                        <div class="p-5">
+                            <div class="space-y-3">
+                                <div class="flex items-start gap-4 p-4 bg-warning-bg border border-warning/20 rounded-lg">
+                                    <div class="w-8 h-8 rounded-full bg-warning flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-clock text-white text-sm"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div>
+                                                <p class="text-sm font-semibold text-text-primary">Late Arrival</p>
+                                                <p class="text-xs text-text-tertiary mt-0.5">Jan 8, 2026 • 3:42 PM</p>
+                                            </div>
+                                            <span class="bg-warning text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase">Strike 2</span>
+                                        </div>
+                                        <p class="text-xs text-text-secondary leading-relaxed mb-2">Operator arrived 45 minutes late to appointment without notification. Customer filed complaint.</p>
+                                        <a href="#" class="text-xs text-accent font-medium hover:underline">View Booking #BK-8821</a>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-4 p-4 bg-warning-bg border border-warning/20 rounded-lg">
+                                    <div class="w-8 h-8 rounded-full bg-warning flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-ban text-white text-sm"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div>
+                                                <p class="text-sm font-semibold text-text-primary">No-Show</p>
+                                                <p class="text-xs text-text-tertiary mt-0.5">Dec 22, 2025 • 10:15 AM</p>
+                                            </div>
+                                            <span class="bg-warning text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase">Strike 1</span>
+                                        </div>
+                                        <p class="text-xs text-text-secondary leading-relaxed mb-2">Operator did not arrive to scheduled appointment and did not respond to customer contact attempts.</p>
+                                        <a href="#" class="text-xs text-accent font-medium hover:underline">View Booking #BK-7654</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="suspension-section" class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+                        <div class="px-5 py-4 border-b border-border bg-background-secondary">
+                            <h3 class="text-sm font-semibold text-text-primary">Suspension Management</h3>
+                        </div>
+                        <div class="p-5">
+                            <div class="bg-background border border-border rounded-lg p-5 text-center">
+                                <i class="fa-solid fa-circle-check text-success text-3xl mb-3"></i>
+                                <p class="text-sm font-medium text-text-primary mb-1">Account in Good Standing</p>
+                                <p class="text-xs text-text-tertiary">No active suspensions or restrictions</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="internal-notes-section" class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+                        <div class="px-5 py-4 border-b border-border bg-background-secondary flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-text-primary">Internal Ops Notes</h3>
+                            <span class="text-xs text-text-tertiary">Private • Not visible to operator</span>
+                        </div>
+                        <div class="p-5 space-y-4">
+                            <div class="flex gap-3">
+                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Admin" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+                                <div class="flex-1">
+                                    <textarea placeholder="Add an internal note..." rows="3" class="w-full bg-background border border-border rounded-lg py-2.5 px-3 text-sm text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all resize-none"></textarea>
+                                    <div class="flex justify-end mt-2">
+                                        <button class="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover text-xs font-medium transition-all shadow-sm">
+                                            Add Note
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-border pt-4 space-y-4">
+                                <div class="flex gap-3">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Admin" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <p class="text-sm font-semibold text-text-primary">Jessica L.</p>
+                                            <span class="text-xs text-text-tertiary">• Jan 10, 2026 at 2:15 PM</span>
+                                        </div>
+                                        <p class="text-sm text-text-secondary leading-relaxed">Spoke with Michael about recent late arrival. He was apologetic and explained vehicle breakdown. Monitoring closely but no immediate action needed.</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Admin" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <p class="text-sm font-semibold text-text-primary">Marcus T.</p>
+                                            <span class="text-xs text-text-tertiary">• Dec 28, 2025 at 11:30 AM</span>
+                                        </div>
+                                        <p class="text-sm text-text-secondary leading-relaxed">Applied commission override (8%) through Q1 2026 as part of high-volume operator retention program. Performance has been strong overall.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="audit-trail-section" class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+                        <div class="px-5 py-4 border-b border-border bg-background-secondary">
+                            <h3 class="text-sm font-semibold text-text-primary">Audit Trail</h3>
+                        </div>
+                        <div class="p-5">
+                            <div class="relative border-l-2 border-border ml-2 space-y-6 pb-2">
+                                
+                                <div class="relative pl-6">
+                                    <div class="absolute -left-2 top-1 w-4 h-4 rounded-full bg-warning ring-4 ring-surface"></div>
+                                    <p class="text-[11px] font-medium text-text-tertiary mb-0.5 tracking-[0.2px]">Jan 10, 2026 • 2:18 PM</p>
+                                    <p class="text-sm text-text-primary font-medium">Strike Added</p>
+                                    <p class="text-xs text-text-secondary mt-1 leading-relaxed">Late arrival strike issued for booking #BK-8821 • By Jessica L.</p>
+                                </div>
+
+                                <div class="relative pl-6">
+                                    <div class="absolute -left-2 top-1 w-4 h-4 rounded-full bg-info ring-4 ring-surface"></div>
+                                    <p class="text-[11px] font-medium text-text-tertiary mb-0.5 tracking-[0.2px]">Dec 28, 2025 • 11:32 AM</p>
+                                    <p class="text-sm text-text-primary font-medium">Fee Override Set</p>
+                                    <p class="text-xs text-text-secondary mt-1 leading-relaxed">Commission rate override to 8% through March 31, 2026 • By Marcus T.</p>
+                                </div>
+
+                                <div class="relative pl-6">
+                                    <div class="absolute -left-2 top-1 w-4 h-4 rounded-full bg-warning ring-4 ring-surface"></div>
+                                    <p class="text-[11px] font-medium text-text-tertiary mb-0.5 tracking-[0.2px]">Dec 22, 2025 • 11:45 AM</p>
+                                    <p class="text-sm text-text-primary font-medium">Strike Added</p>
+                                    <p class="text-xs text-text-secondary mt-1 leading-relaxed">No-show strike issued for booking #BK-7654 • By Marcus T.</p>
+                                </div>
+
+                                <div class="relative pl-6">
+                                    <div class="absolute -left-2 top-1 w-4 h-4 rounded-full bg-accent ring-4 ring-surface"></div>
+                                    <p class="text-[11px] font-medium text-text-tertiary mb-0.5 tracking-[0.2px]">Aug 12, 2025 • 9:20 AM</p>
+                                    <p class="text-sm text-text-primary font-medium">Tier Changed</p>
+                                    <p class="text-xs text-text-secondary mt-1 leading-relaxed">Upgraded from Starter to Pro tier • By Jessica L.</p>
+                                </div>
+
+                                <div class="relative pl-6">
+                                    <div class="absolute -left-2 top-1 w-4 h-4 rounded-full bg-success ring-4 ring-surface"></div>
+                                    <p class="text-[11px] font-medium text-text-tertiary mb-0.5 tracking-[0.2px]">March 18, 2024 • 3:45 PM</p>
+                                    <p class="text-sm text-text-primary font-medium">Account Approved</p>
+                                    <p class="text-xs text-text-secondary mt-1 leading-relaxed">Operator application approved and account activated • By Marcus T.</p>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>

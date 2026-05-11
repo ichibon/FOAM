@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Invite Message</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        iosBlue: '#007AFF',
+                        iosGreen: '#34C759',
+                        iosGray: '#8E8E93',
+                        iosLightGray: '#C7C7CC',
+                        iosBackground: '#000000',
+                        messageBackground: '#1C1C1E',
+                        bubbleReceived: '#3A3A3C',
+                        bubbleSent: '#007AFF',
+                        foamBlue: '#339DC7',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #000000;
+            -webkit-font-smoothing: antialiased;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+        }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .message-bubble {
+            border-radius: 18px;
+            padding: 10px 14px;
+            max-width: 260px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        .link-text {
+            text-decoration: underline;
+            text-decoration-color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .status-bar-text {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        
+        .time-text {
+            font-size: 13px;
+            letter-spacing: -0.1px;
+        }
+    </style>
+</head>
+<body class="bg-iosBackground">
+
+    <div id="iphone-mockup" class="w-full h-screen bg-iosBackground flex flex-col">
+        
+        <div id="status-bar" class="pt-3 px-6 pb-2">
+            <div class="flex items-center justify-between">
+                <span class="status-bar-text text-white">9:41</span>
+                <div class="flex items-center gap-1">
+                    <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                        <rect x="0.5" y="0.5" width="15" height="11" rx="2" stroke="white" stroke-opacity="0.35"/>
+                        <path opacity="0.4" d="M17 4V8C17.8 7.66667 18.1667 7 18.1667 6C18.1667 5 17.8 4.33333 17 4Z" fill="white"/>
+                        <rect x="2" y="2" width="12" height="8" rx="1" fill="white"/>
+                    </svg>
+                    <svg width="17" height="12" viewBox="0 0 17 12" fill="white">
+                        <path d="M0 3C0 1.34315 1.34315 0 3 0H14C15.6569 0 17 1.34315 17 3V9C17 10.6569 15.6569 12 14 12H3C1.34315 12 0 10.6569 0 9V3Z"/>
+                        <path d="M2 3C2 2.44772 2.44772 2 3 2H14C14.5523 2 15 2.44772 15 3V9C15 9.55228 14.5523 10 14 10H3C2.44772 10 2 9.55228 2 9V3Z" fill="#007AFF"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="messages-header" class="bg-messageBackground border-b border-[#2C2C2E] px-4 py-3">
+            <div class="flex items-center gap-3">
+                <button class="text-iosBlue text-[17px] font-normal">
+                    <svg width="13" height="21" viewBox="0 0 13 21" fill="none">
+                        <path d="M10.5 2L2 10.5L10.5 19" stroke="#007AFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <div class="flex-1 text-center -ml-4">
+                    <h1 class="text-white text-[17px] font-semibold tracking-tight">FOAM</h1>
+                </div>
+            </div>
+        </div>
+
+        <div id="messages-content" class="flex-1 bg-iosBackground px-4 pt-6 overflow-y-auto">
+            
+            <div class="flex justify-center mb-6">
+                <span class="text-iosGray text-[13px] font-normal">Today 9:14 AM</span>
+            </div>
+
+            <div class="flex items-start gap-2 mb-8">
+                <div class="w-8 h-8 rounded-full bg-foamBlue flex items-center justify-center flex-shrink-0">
+                    <span class="text-white text-[14px] font-semibold">F</span>
+                </div>
+                
+                <div class="flex flex-col gap-1">
+                    <div class="message-bubble bg-bubbleReceived text-white text-[15px]">
+                        <p class="mb-2"><span class="font-semibold">Marcus T.</span> invited you to join their crew on FOAM.</p>
+                        <p class="mb-2">Tap to accept and set up your account:</p>
+                        <p class="link-text text-iosBlue font-normal">foamauto.com/join/AB12CD</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 px-1">
+                        <span class="text-iosGray time-text">Delivered</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="message-input-bar" class="bg-messageBackground border-t border-[#2C2C2E] px-2 py-2 pb-8">
+            <div class="flex items-center gap-2">
+                <button class="w-8 h-8 flex items-center justify-center text-iosGray">
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                        <circle cx="13" cy="13" r="12" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 13H18M13 8V18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                
+                <div class="flex-1 bg-[#2C2C2E] rounded-[18px] px-4 py-2 min-h-[36px] flex items-center">
+                    <span class="text-white text-opacity-30 text-[16px]">iMessage</span>
+                </div>
+                
+                <button class="w-8 h-8 flex items-center justify-center">
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                        <circle cx="13" cy="13" r="12.5" fill="#007AFF"/>
+                        <path d="M18 13L10 8.5V17.5L18 13Z" fill="white"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="home-indicator" class="h-[34px] flex items-center justify-center">
+            <div class="w-[134px] h-[5px] bg-white rounded-full opacity-60"></div>
+        </div>
+
+    </div>
+
+</body>
+</html>

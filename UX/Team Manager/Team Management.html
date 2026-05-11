@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Team</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        successSubtle: 'rgba(22, 163, 74, 0.08)',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24 relative min-h-screen">
+
+    <header id="header" class="px-5 pt-6 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle">
+        <div class="flex items-center justify-between mb-1">
+            <h1 class="font-sans text-[22px] font-semibold text-textPrimary">Team</h1>
+            <button class="flex items-center gap-1.5 text-brandBlue active:opacity-70 transition-opacity">
+                <i class="fa-solid fa-plus text-[14px]"></i>
+                <span class="font-sans text-[14px] font-medium">Add Member</span>
+            </button>
+        </div>
+        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide">THURSDAY, MAY 2</p>
+    </header>
+
+    <main class="px-4 py-4 flex flex-col gap-3 pb-32">
+        
+        <section id="member-card-jordan" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4 active:opacity-90 transition-opacity cursor-pointer">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-[44px]">
+                        <div class="w-11 h-11 rounded-full bg-brandBlue flex items-center justify-center">
+                            <span class="font-sans text-[16px] font-semibold text-white">JK</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="font-sans text-[16px] font-semibold text-textPrimary">Jordan K.</p>
+                            <div class="px-2.5 py-1 rounded-full bg-successSubtle">
+                                <span class="font-sans text-[11px] font-medium text-success">On Job</span>
+                            </div>
+                        </div>
+                        
+                        <p class="font-sans text-[13px] text-textSecondary mb-3">Interior & Exterior · 4.9 ★</p>
+                        
+                        <div class="mb-3">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
+                                    <div class="h-full bg-brandBlue rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <p class="font-sans text-[12px] text-textTertiary">2 of 4 jobs done today</p>
+                        </div>
+                        
+                        <div class="pt-3 border-t border-borderSubtle">
+                            <p class="font-sans text-[12px] text-textTertiary">4 jobs today · $680 this week · 14 reviews</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="member-card-kayla" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4 active:opacity-90 transition-opacity cursor-pointer">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-[44px]">
+                        <div class="w-11 h-11 rounded-full bg-brandBlue flex items-center justify-center">
+                            <span class="font-sans text-[16px] font-semibold text-white">KM</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="font-sans text-[16px] font-semibold text-textPrimary">Kayla M.</p>
+                            <div class="px-2.5 py-1 rounded-full bg-successSubtle">
+                                <span class="font-sans text-[11px] font-medium text-success">On Job</span>
+                            </div>
+                        </div>
+                        
+                        <p class="font-sans text-[13px] text-textSecondary mb-3">Exterior · Wax · Clay Bar · 4.8 ★</p>
+                        
+                        <div class="mb-3">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
+                                    <div class="h-full bg-brandBlue rounded-full" style="width: 33%"></div>
+                                </div>
+                            </div>
+                            <p class="font-sans text-[12px] text-textTertiary">1 of 3 jobs done today</p>
+                        </div>
+                        
+                        <div class="pt-3 border-t border-borderSubtle">
+                            <p class="font-sans text-[12px] text-textTertiary">3 jobs today · $490 this week · 8 reviews</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="member-card-devon" class="w-full">
+            <div class="bg-surface rounded-[16px] border-l-[3px] border-l-warning border-r border-t border-b border-borderSubtle shadow-level1 p-4 active:opacity-90 transition-opacity cursor-pointer">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-[44px]">
+                        <div class="w-11 h-11 rounded-full bg-brandBlue flex items-center justify-center">
+                            <span class="font-sans text-[16px] font-semibold text-white">DR</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="font-sans text-[16px] font-semibold text-textPrimary">Devon R.</p>
+                            <div class="px-2.5 py-1 rounded-full bg-warningSubtle">
+                                <span class="font-sans text-[11px] font-medium text-warning">Flagged</span>
+                            </div>
+                        </div>
+                        
+                        <p class="font-sans text-[13px] text-textSecondary mb-3">Interior · Paint Correction · 4.7 ★</p>
+                        
+                        <div class="flex items-center gap-2 mb-3 p-2.5 bg-warningSubtle rounded-lg">
+                            <i class="fa-solid fa-triangle-exclamation text-warning text-[14px]"></i>
+                            <p class="font-sans text-[13px] text-warning flex-1">Issue flagged on Christina L. job · 11:30 AM</p>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button class="px-4 h-8 border border-error text-error rounded-lg font-sans text-[13px] font-medium active:bg-errorSubtle transition-colors">
+                                View Issue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="member-card-trey" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4 active:opacity-90 transition-opacity cursor-pointer">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-[44px]">
+                        <div class="w-11 h-11 rounded-full bg-brandBlue flex items-center justify-center">
+                            <span class="font-sans text-[16px] font-semibold text-white">TS</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="font-sans text-[16px] font-semibold text-textPrimary">Trey S.</p>
+                            <div class="px-2.5 py-1 rounded-full bg-secondary">
+                                <span class="font-sans text-[11px] font-medium text-textSecondary">Available</span>
+                            </div>
+                        </div>
+                        
+                        <p class="font-sans text-[13px] text-textSecondary mb-3">Exterior · Full Detail · 4.6 ★</p>
+                        
+                        <p class="font-sans text-[13px] text-textTertiary italic mb-3">No jobs assigned today</p>
+                        
+                        <div class="flex justify-end">
+                            <button class="px-4 h-8 border border-brandBlue text-brandBlue rounded-lg font-sans text-[13px] font-medium active:bg-brandBlueSubtle transition-colors">
+                                Assign Job
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="member-card-simone" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4 opacity-60 active:opacity-50 transition-opacity cursor-pointer">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-[44px]">
+                        <div class="w-11 h-11 rounded-full bg-borderDefault flex items-center justify-center">
+                            <span class="font-sans text-[16px] font-semibold text-textTertiary">SP</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="font-sans text-[16px] font-semibold text-textTertiary">Simone P.</p>
+                            <div class="px-2.5 py-1 rounded-full bg-secondary">
+                                <span class="font-sans text-[11px] font-medium text-textTertiary">Off Today</span>
+                            </div>
+                        </div>
+                        
+                        <p class="font-sans text-[13px] text-textTertiary mb-3">Interior · 4.9 ★</p>
+                        
+                        <p class="font-sans text-[13px] text-textTertiary">Back tomorrow · 3 jobs scheduled</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="add-member-card" class="w-full">
+            <div class="bg-surface rounded-[16px] border-2 border-dashed border-borderDefault p-4 active:bg-secondary transition-colors cursor-pointer">
+                <div class="flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus text-brandBlue text-[16px]"></i>
+                    <p class="font-sans text-[14px] font-medium text-brandBlue">Invite a team member</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+</body>
+</html>

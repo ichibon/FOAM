@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Job Submitted</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                    },
+                    animation: {
+                        'scale-in': 'scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        scaleIn: {
+                            '0%': { transform: 'scale(0)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-surface-primary relative m-0 p-0">
+
+    <main class="flex-1 overflow-y-auto px-4 pb-32 flex flex-col items-center justify-center relative">
+        
+        <section id="success-header" class="w-full flex flex-col items-center text-center space-y-6 pt-10">
+            <div class="w-[72px] h-[72px] rounded-full bg-foam-blue flex items-center justify-center shadow-md animate-scale-in">
+                <i data-lucide="check" class="w-8 h-8 text-white stroke-[3]"></i>
+            </div>
+            
+            <div class="space-y-6 px-2">
+                <h1 class="font-serif text-[28px] font-bold text-text-primary leading-tight">Job submitted.</h1>
+                <p class="font-sans text-[15px] text-text-secondary leading-[1.5] max-w-[280px] mx-auto">
+                    Your manager has been notified. Great work today.
+                </p>
+            </div>
+        </section>
+
+        <section id="daily-stats" class="w-full mt-12 mb-8">
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 py-4 px-2 flex justify-between items-center">
+                
+                <div class="flex-1 flex flex-col items-center text-center px-2">
+                    <span class="font-sans text-[12px] text-text-tertiary mb-1">Jobs Today</span>
+                    <span class="font-sans text-[15px] font-semibold text-text-primary">1 of 4 done</span>
+                </div>
+                
+                <div class="w-[1px] h-10 bg-border-subtle"></div>
+                
+                <div class="flex-1 flex flex-col items-center text-center px-2">
+                    <span class="font-sans text-[12px] text-text-tertiary mb-1">This Week</span>
+                    <span class="font-sans text-[15px] font-semibold text-text-primary">3 jobs</span>
+                </div>
+                
+                <div class="w-[1px] h-10 bg-border-subtle"></div>
+                
+                <div class="flex-1 flex flex-col items-center text-center px-2">
+                    <span class="font-sans text-[12px] text-text-tertiary mb-1">Next Job</span>
+                    <span class="font-sans text-[15px] font-semibold text-text-primary">12:30 PM</span>
+                </div>
+                
+            </div>
+        </section>
+
+        <div class="flex-1"></div>
+
+        <section id="actions" class="w-full space-y-8 mt-auto mb-10">
+            <button class="w-full h-[48px] bg-foam-blue text-white rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center active:bg-foam-hover transition-colors shadow-sm">
+                View Next Job
+            </button>
+            <button class="w-full h-[48px] bg-transparent text-foam-blue rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center active:bg-foam-subtle transition-colors">
+                Go to My Jobs
+            </button>
+        </section>
+
+    </main>
+
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface-elevated border-t border-border-subtle z-50">
+        <div class="grid grid-cols-3 h-[64px]">
+            <button class="flex flex-col items-center justify-center space-y-1 text-foam-blue active:bg-gray-50 transition-colors">
+                <i data-lucide="briefcase" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">My Jobs</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Earnings</span>
+            </button>
+            <button class="flex flex-col items-center justify-center space-y-1 text-text-tertiary active:bg-gray-50 transition-colors">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="font-sans text-[11px] font-medium">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

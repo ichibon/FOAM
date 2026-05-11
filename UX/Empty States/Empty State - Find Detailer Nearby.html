@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            elevated: '#FFFFFF'
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8'
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4'
+                        },
+                        brand: {
+                            default: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.1)'
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                            successSubtle: 'rgba(22, 163, 74, 0.10)',
+                            warningSubtle: 'rgba(217, 119, 6, 0.10)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                        'level-2': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="font-sans text-text-primary antialiased flex justify-center w-full">
+    <div class="w-full max-w-[375px] min-h-[840px] bg-background-primary relative pb-20 overflow-x-hidden flex flex-col">
+        
+        <main id="empty-state-main" class="flex-1 overflow-y-auto px-6 flex flex-col items-center justify-center">
+            
+            <section id="empty-state-content" class="w-full flex flex-col items-center text-center">
+                <div class="w-[80px] h-[80px] rounded-full bg-brand-subtle flex items-center justify-center mb-6">
+                    <i data-lucide="map-pin" class="w-[36px] h-[36px] text-brand-default"></i>
+                </div>
+                
+                <h2 class="font-sans text-[24px] font-semibold text-text-primary mb-3 leading-tight">
+                    Let's find you a detailer.
+                </h2>
+                
+                <p class="font-sans text-[15px] text-text-secondary mb-8 leading-relaxed max-w-[300px]">
+                    Top-rated mobile detailers and shops near you, all in one place.
+                </p>
+                
+                <button class="w-full h-[48px] bg-brand-default text-white rounded-[12px] font-sans text-[15px] font-semibold active:bg-brand-hover transition-colors shadow-sm mb-6">
+                    Search Near Me
+                </button>
+
+                <div id="trust-row" class="flex flex-col items-center gap-6 mt-6">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-semantic-success"></i>
+                        <span class="font-sans text-[13px] text-text-secondary">Verified detailers only</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="star" class="w-4 h-4 text-semantic-warning fill-current"></i>
+                        <span class="font-sans text-[13px] text-text-secondary">Rated by real customers</span>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <nav id="bottom-nav" class="fixed bottom-0 w-full max-w-[375px] bg-background-elevated border-t border-border-subtle pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[80px]">
+            <a href="#" class="flex flex-col items-center gap-1 text-brand-default">
+                <i data-lucide="map-pin" class="w-[20px] h-[20px]"></i>
+                <span class="text-[10px] font-medium">Discover</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors">
+                <i data-lucide="calendar" class="w-[20px] h-[20px]"></i>
+                <span class="text-[10px] font-medium">Bookings</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors">
+                <i data-lucide="user" class="w-[20px] h-[20px]"></i>
+                <span class="text-[10px] font-medium">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

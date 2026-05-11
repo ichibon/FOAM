@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Push Notification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                    },
+                    colors: {
+                        iosGray: '#8E8E93',
+                        iosDivider: 'rgba(60, 60, 67, 0.36)',
+                        notifBg: 'rgba(242, 242, 247, 0.78)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        @supports (backdrop-filter: blur(20px)) {
+            .notif-blur {
+                backdrop-filter: blur(20px) saturate(180%);
+            }
+        }
+    </style>
+</head>
+<body class="relative w-full h-screen overflow-hidden" style="background: linear-gradient(180deg, #1C1C1E 0%, #2C2C2E 100%);">
+
+    <div id="ios-wallpaper" class="absolute inset-0 w-full h-full">
+        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/1b0261e6cb-eb77eb0e021960ff0d83.png" alt="abstract dark iOS wallpaper with blue and purple gradient waves, modern minimalist design" />
+    </div>
+
+    <div id="status-bar" class="absolute top-0 left-0 right-0 z-50 px-6 pt-3 pb-2">
+        <div class="flex items-center justify-between">
+            <span class="font-sans text-[15px] font-semibold text-white tracking-tight">9:41</span>
+            <div class="flex items-center gap-1">
+                <i class="fa-solid fa-signal text-white text-[14px]"></i>
+                <i class="fa-solid fa-wifi text-white text-[14px]"></i>
+                <i class="fa-solid fa-battery-full text-white text-[16px]"></i>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="absolute top-16 left-4 right-4 z-50">
+        <div id="foam-notification" class="notif-blur rounded-[20px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.3)]" style="background: rgba(242, 242, 247, 0.85);">
+            
+            <div class="px-4 pt-3 pb-4">
+                <div class="flex items-start gap-3">
+                    
+                    <div class="flex-shrink-0 w-10 h-10 rounded-[10px] bg-gradient-to-br from-[#339DC7] to-[#2B85A9] shadow-md flex items-center justify-center">
+                        <i class="fa-solid fa-spray-can text-white text-[18px]"></i>
+                    </div>
+
+                    <div class="flex-1 min-w-0 pt-0.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="font-sans text-[14px] font-semibold text-black tracking-tight">FOAM</p>
+                            <span class="font-sans text-[12px] font-normal text-iosGray">now</span>
+                        </div>
+                        
+                        <p class="font-sans text-[15px] font-normal text-black leading-[1.35] tracking-tight">
+                            Jordan K. wants to join your crew. Tap to review and approve.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-px bg-iosDivider mx-4"></div>
+
+            <div class="px-4 py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-gradient-to-br from-[#339DC7] to-[#2B85A9] flex items-center justify-center">
+                        <i class="fa-solid fa-spray-can text-white text-[10px]"></i>
+                    </div>
+                    <span class="font-sans text-[13px] font-medium text-iosGray">FOAM</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-iosGray text-[11px]"></i>
+            </div>
+        </div>
+    </div>
+
+    <div id="lock-screen-elements" class="absolute inset-0 flex flex-col items-center justify-end pb-24 pointer-events-none">
+        <div class="text-center mb-8">
+            <p class="font-sans text-[72px] font-light text-white tracking-tight">9:41</p>
+            <p class="font-sans text-[18px] font-medium text-white tracking-tight">Thursday, May 2</p>
+        </div>
+    </div>
+
+    <div id="home-indicator" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-60"></div>
+
+    <script>
+        window.addEventListener('load', function() {
+            const notification = document.getElementById('foam-notification');
+            
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateY(-20px)';
+            notification.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            
+            setTimeout(function() {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 300);
+
+            notification.addEventListener('click', function() {
+                notification.style.transform = 'scale(0.98)';
+                setTimeout(function() {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateY(-30px) scale(0.95)';
+                }, 100);
+            });
+        });
+    </script>
+
+</body>
+</html>

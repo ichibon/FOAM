@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Customer: Add Payment Method</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        elevated: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        foamBlue: '#339DC7',
+                        foamBlueHover: '#2B85A9',
+                        foamBlueSubtle: 'rgba(51,157,199,0.10)',
+                        accentSubtle: '#E1F0F7',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        error: '#DC2626',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level-2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #FAFAFA;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 375px) {
+            .mobile-container {
+                max-width: 375px;
+                margin: 0 auto;
+                min-height: 840px;
+                background-color: #FAFAFA;
+                position: relative;
+            }
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #339DC7;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #339DC7;
+        }
+        .toggle-checkbox {
+            right: 0;
+            z-index: 1;
+            border-color: #e2e8f0;
+            transition: all 0.3s;
+        }
+        .toggle-label {
+            width: 50px;
+            height: 28px;
+            background-color: #D4D4D8;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .toggle-label::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background-color: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .toggle-checkbox:checked + .toggle-label::after {
+            transform: translateX(22px);
+        }
+    </style>
+</head>
+<body class="text-textPrimary bg-primary selection:bg-foamBlue selection:text-white m-0 p-0">
+
+    <div id="app-container" class="w-full max-w-[375px] mx-auto min-h-[840px] bg-primary relative flex flex-col shadow-2xl md:shadow-none overflow-hidden">
+        
+        <!-- Progress Header Section -->
+        <header id="progress-header" class="pt-4 px-4 pb-2 z-10 bg-primary/95 backdrop-blur-sm sticky top-0">
+            <div class="flex flex-col items-center justify-center w-full">
+                <span class="text-[12px] text-textTertiary font-medium mb-3 font-sans">Step 2 of 3</span>
+                
+                <!-- Progress Bar Container -->
+                <div class="w-full h-1 bg-[#E4E4E7] rounded-full overflow-hidden">
+                    <!-- Progress Bar Fill -->
+                    <div class="h-full bg-foamBlue rounded-full transition-all duration-300 ease-out" style="width: 66%;"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area - Scrollable -->
+        <main id="main-content" class="flex-1 overflow-y-auto no-scrollbar pb-40">
+            
+            <!-- Header Section -->
+            <section id="header-section" class="px-4 mt-5 mb-6">
+                <h1 class="font-serif text-[26px] font-bold text-textPrimary leading-tight mb-2">
+                    How do you want to pay?
+                </h1>
+                <p class="font-sans text-[15px] text-textSecondary leading-relaxed mt-[8px]">
+                    Securely saved for checkout. Remove anytime.
+                </p>
+            </section>
+
+            <!-- Payment Card Form Section -->
+            <section id="payment-form" class="px-4 mb-6">
+                <div class="bg-elevated rounded-[16px] p-4 border border-borderSubtle shadow-level-1">
+                    <form class="flex flex-col gap-4">
+                        
+                        <!-- Card Number Input -->
+                        <div class="flex flex-col gap-1.5 relative">
+                            <label for="cardNumber" class="font-sans text-[12px] font-medium text-textTertiary">Card number</label>
+                            <div class="relative">
+                                <input type="text" id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" 
+                                    class="h-[52px] w-full bg-elevated border border-borderSubtle rounded-[12px] pl-4 pr-[100px] font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-colors duration-200">
+                                
+                                <!-- Brand Icons Row -->
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 h-[20px]">
+                                    <i class="fa-brands fa-cc-visa text-[24px] text-[#1434CB]"></i>
+                                    <i class="fa-brands fa-cc-mastercard text-[24px] text-[#EB001B]"></i>
+                                    <i class="fa-brands fa-cc-amex text-[24px] text-[#2E77BC]"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expiry & CVC Row -->
+                        <div class="flex gap-2 w-full">
+                            <!-- Expiry Input -->
+                            <div class="flex flex-col gap-1.5 flex-1">
+                                <label for="expiry" class="font-sans text-[12px] font-medium text-textTertiary">Expiry</label>
+                                <input type="text" id="expiry" name="expiry" placeholder="MM/YY" 
+                                    class="h-[52px] w-full bg-elevated border border-borderSubtle rounded-[12px] px-4 font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-colors duration-200">
+                            </div>
+                            
+                            <!-- CVC Input -->
+                            <div class="flex flex-col gap-1.5 flex-1 relative">
+                                <label for="cvc" class="font-sans text-[12px] font-medium text-textTertiary">CVC</label>
+                                <div class="relative">
+                                    <input type="text" id="cvc" name="cvc" placeholder="123" 
+                                        class="h-[52px] w-full bg-elevated border border-borderSubtle rounded-[12px] pl-4 pr-10 font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-colors duration-200">
+                                    <i class="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-textTertiary text-[14px]"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ZIP Code Input -->
+                        <div class="flex flex-col gap-1.5">
+                            <label for="zip" class="font-sans text-[12px] font-medium text-textTertiary">ZIP code</label>
+                            <input type="text" id="zip" name="zip" placeholder="30305" 
+                                class="h-[52px] w-full bg-elevated border border-borderSubtle rounded-[12px] px-4 font-sans text-[16px] text-textPrimary placeholder:text-textTertiary focus:outline-none focus:border-foamBlue focus:ring-1 focus:ring-foamBlue transition-colors duration-200">
+                            <p class="font-sans text-[11px] text-textTertiary mt-0.5">Used for billing verification only.</p>
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- Trust Row -->
+                <div class="flex items-center justify-center gap-2 mt-[16px]">
+                    <i class="fa-solid fa-lock text-foamBlue text-[16px]"></i>
+                    <span class="font-sans text-[12px] text-textSecondary">Secured by Stripe. We never store your card details.</span>
+                </div>
+            </section>
+
+            <!-- Divider -->
+            <div class="px-4 mb-6">
+                <div class="h-[1px] w-full bg-borderSubtle"></div>
+            </div>
+
+            <!-- Apple Pay Section -->
+            <section id="apple-pay-section" class="px-4 mb-8">
+                <div class="bg-elevated rounded-[12px] p-[12px] border border-borderSubtle shadow-sm flex flex-col gap-2">
+                    <div class="flex items-center justify-between w-full">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-brands fa-apple text-[20px] text-black"></i>
+                            <span class="font-sans text-[14px] font-medium text-textPrimary">Pay with Apple Pay</span>
+                        </div>
+                        
+                        <!-- Toggle Switch -->
+                        <div class="relative inline-block w-12 mr-2 align-middle select-none">
+                            <input type="checkbox" name="toggle" id="applePayToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer opacity-0"/>
+                            <label for="applePayToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                    <p class="font-sans text-[12px] text-textTertiary">Use Apple Pay for all FOAM purchases.</p>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Fixed Action Footer Section -->
+        <footer id="action-footer" class="fixed bottom-0 w-full max-w-[375px] bg-gradient-to-t from-primary via-primary to-transparent pt-6 pb-[24px] px-[16px] z-20">
+            <div class="flex flex-col gap-[8px]">
+                <button type="button" class="w-full h-[48px] bg-foamBlue hover:bg-foamBlueHover active:bg-foamBlueHover text-white font-sans text-[16px] font-semibold rounded-[12px] transition-colors duration-200 shadow-level-1 flex items-center justify-center">
+                    Add Card
+                </button>
+                
+                <div class="flex flex-col items-center mt-2">
+                    <button type="button" class="h-[44px] px-4 font-sans text-[14px] font-medium text-foamBlue hover:text-foamBlueHover active:text-foamBlueHover transition-colors duration-200 bg-transparent border-none outline-none">
+                        I'll do this later
+                    </button>
+                    <p class="font-sans text-[11px] text-textTertiary mt-1 text-center">
+                        You'll need to add payment before booking.
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Input formatting for Card Number
+            const cardInput = document.getElementById('cardNumber');
+            if(cardInput) {
+                cardInput.addEventListener('input', function (e) {
+                    let target = e.target;
+                    let position = target.selectionEnd;
+                    let length = target.value.length;
+                    
+                    target.value = target.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim();
+                    target.selectionEnd = position += ((target.value.charAt(position - 1) === ' ' && target.value.charAt(length - 1) === ' ' && length !== target.value.length) ? 1 : 0);
+                });
+            }
+
+            // Input formatting for Expiry
+            const expiryInput = document.getElementById('expiry');
+            if(expiryInput) {
+                expiryInput.addEventListener('input', function (e) {
+                    let target = e.target;
+                    let val = target.value.replace(/[^\d]/g, '');
+                    if (val.length > 2) {
+                        target.value = val.substring(0, 2) + '/' + val.substring(2, 4);
+                    } else {
+                        target.value = val;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

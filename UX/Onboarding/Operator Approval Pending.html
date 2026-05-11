@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FOAM - Operator Pending Approval</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            surface: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4',
+                        },
+                        brand: {
+                            primary: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51,157,199,0.10)',
+                            card2: '#6BB8D4',
+                            card3: '#E1F0F7',
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif'],
+                    },
+                    spacing: {
+                        'screen-w': '375px',
+                        'screen-h': '840px',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 400ms ease-out forwards',
+                        'fade-in': 'fadeIn 300ms ease-out forwards',
+                        'pulse-slow': 'pulseSlow 3s infinite',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        pulseSlow: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '.7' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { margin: 0; padding: 0; background-color: #FAFAFA; overscroll-behavior-y: none; }
+    </style>
+</head>
+<body class="bg-background-primary flex items-center justify-center min-h-[100dvh] antialiased m-0 p-0">
+
+    <!-- Mobile Container Wrapper -->
+    <main id="main-container" class="w-full max-w-[375px] h-[840px] max-h-[100dvh] bg-background-primary relative flex flex-col overflow-hidden mx-auto shadow-[0_0_40px_rgba(0,0,0,0.05)] sm:rounded-[40px] sm:my-8 sm:h-[840px] sm:border-[8px] sm:border-gray-900">
+        
+        <!-- Main Content Area -->
+        <section id="pending_status_content" class="w-full px-[24px] flex flex-col items-center justify-center flex-grow overflow-y-auto pb-[40px] pt-[60px]">
+            
+            <!-- Icon Header -->
+            <div id="status_header" class="flex flex-col items-center w-full animate-fade-in text-center">
+                <div class="w-[96px] h-[96px] rounded-full bg-brand-subtle flex items-center justify-center mb-[24px] relative">
+                    <div class="absolute inset-0 rounded-full border-[2px] border-brand-primary opacity-20 animate-pulse-slow"></div>
+                    <i data-lucide="clock" class="w-[48px] h-[48px] text-brand-primary"></i>
+                </div>
+                
+                <h1 class="font-playfair text-[28px] font-[700] text-text-primary leading-[1.2] tracking-tight mb-[16px]">
+                    You're in the queue.
+                </h1>
+                
+                <p class="font-inter text-[15px] font-[400] text-text-secondary leading-[1.5] max-w-[300px]">
+                    We review every detailer before they go live. Usually takes less than 24 hours.
+                </p>
+            </div>
+
+            <!-- Status Checklist Card -->
+            <div id="completion_checklist" class="w-full bg-background-surface border border-border-subtle rounded-[16px] p-[20px] mt-[32px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] animate-slide-up" style="animation-delay: 100ms;">
+                
+                <div class="flex flex-col gap-[16px]">
+                    <!-- Item 1: Done -->
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-white"></i>
+                        </div>
+                        <span class="font-inter text-[14px] font-[500] text-text-primary">Profile created</span>
+                    </div>
+                    
+                    <!-- Item 2: Done -->
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-white"></i>
+                        </div>
+                        <span class="font-inter text-[14px] font-[500] text-text-primary">Service menu added</span>
+                    </div>
+                    
+                    <!-- Item 3: Done -->
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-[14px] h-[14px] text-white"></i>
+                        </div>
+                        <span class="font-inter text-[14px] font-[500] text-text-primary">Stripe account connected</span>
+                    </div>
+                    
+                    <!-- Item 4: Pending -->
+                    <div class="flex items-center gap-[12px]">
+                        <div class="w-[24px] h-[24px] rounded-full border-[2px] border-border-default flex items-center justify-center flex-shrink-0 bg-background-primary">
+                            <i data-lucide="clock" class="w-[12px] h-[12px] text-text-tertiary"></i>
+                        </div>
+                        <span class="font-inter text-[14px] font-[500] text-text-tertiary">FOAM review</span>
+                    </div>
+                </div>
+
+                <div class="w-full h-[1px] bg-border-subtle my-[20px]"></div>
+
+                <!-- Next Steps Info -->
+                <div id="next_steps_info" class="flex flex-col gap-[12px]">
+                    <h3 class="font-inter text-[14px] font-[600] text-text-primary">What happens next?</h3>
+                    <ul class="flex flex-col gap-[8px]">
+                        <li class="flex items-start gap-[8px]">
+                            <span class="text-text-tertiary font-bold mt-[-2px]">·</span>
+                            <span class="font-inter text-[13px] text-text-secondary leading-[1.4]">We'll review your profile and services</span>
+                        </li>
+                        <li class="flex items-start gap-[8px]">
+                            <span class="text-text-tertiary font-bold mt-[-2px]">·</span>
+                            <span class="font-inter text-[13px] text-text-secondary leading-[1.4]">You'll get a push notification when you're approved</span>
+                        </li>
+                        <li class="flex items-start gap-[8px]">
+                            <span class="text-text-tertiary font-bold mt-[-2px]">·</span>
+                            <span class="font-inter text-[13px] text-text-secondary leading-[1.4]">Then you'll appear in customer search results</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- Actions -->
+            <div id="action_footer" class="w-full mt-[32px] flex flex-col gap-[16px] animate-slide-up" style="animation-delay: 200ms;">
+                <button class="w-full h-[48px] bg-brand-primary text-background-surface font-inter text-[14px] font-[600] rounded-[8px] flex items-center justify-center transition-transform active:scale-[0.98] hover:bg-brand-hover shadow-[0_4px_12px_rgba(51,157,199,0.2)]">
+                    Explore the App
+                </button>
+                
+                <button class="w-full py-[8px] text-brand-primary font-inter text-[14px] font-[500] hover:text-brand-hover transition-colors">
+                    Have questions? Contact us
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

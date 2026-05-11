@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Today</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24 relative min-h-screen">
+
+    <!-- Header Section -->
+    <header id="main-header" class="px-5 pt-12 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+            <h1 class="font-sans text-[24px] font-semibold text-textPrimary">Today</h1>
+            <button class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center relative">
+                <i class="fa-solid fa-bell text-textPrimary text-[16px]"></i>
+                <div class="absolute -top-1 -right-1 w-5 h-5 bg-error rounded-full flex items-center justify-center">
+                    <span class="font-sans text-[10px] font-bold text-white">1</span>
+                </div>
+            </button>
+        </div>
+        <p class="font-sans text-[14px] text-textSecondary">4 jobs in progress &middot; All assigned &middot; <span class="text-error font-semibold">1 alert</span></p>
+    </header>
+
+    <!-- Alert Strip -->
+    <button id="alert-strip" class="w-full bg-errorSubtle px-5 py-3 flex items-center justify-between border-b border-error/20 active:bg-error/10 transition-colors">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-error text-[14px]"></i>
+            <span class="font-sans text-[13px] font-medium text-error">James K. flagged a damage report on the 3:00 PM job</span>
+        </div>
+        <div class="font-sans text-[13px] font-semibold text-error flex items-center gap-1">
+            View <i class="fa-solid fa-arrow-right text-[12px]"></i>
+        </div>
+    </button>
+
+    <main class="px-5 py-4 flex flex-col gap-6 max-w-lg mx-auto" id="main-content">
+        
+        <!-- Team Status Scroll -->
+        <section id="team-status" class="flex flex-col gap-3">
+            <h2 class="font-sans text-[15px] font-semibold text-textPrimary">Team Status</h2>
+            <div class="flex overflow-x-auto hide-scrollbar gap-3 pb-2">
+                <!-- Jordan -->
+                <div class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">JO</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Jordan</span>
+                    <div class="w-2 h-2 rounded-full bg-success"></div>
+                </div>
+                <!-- Kayla -->
+                <div class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">KA</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Kayla</span>
+                    <div class="w-2 h-2 rounded-full bg-success"></div>
+                </div>
+                <!-- Devon (Flagged) -->
+                <div class="flex items-center gap-2 bg-surface border border-warning rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">DE</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Devon</span>
+                    <div class="w-2 h-2 rounded-full bg-warning"></div>
+                </div>
+                <!-- Trey -->
+                <div class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">TR</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Trey</span>
+                    <div class="w-2 h-2 rounded-full bg-brandBlue"></div>
+                </div>
+                <!-- Simone -->
+                <div class="flex items-center gap-2 bg-surface border border-borderSubtle rounded-full pl-1 pr-3 py-1 whitespace-nowrap shadow-sm opacity-60">
+                    <div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-textPrimary">SI</div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Simone</span>
+                    <div class="w-2 h-2 rounded-full bg-textTertiary"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Metrics (Now Tappable) -->
+        <section id="summary-metrics" class="grid grid-cols-3 gap-3">
+            <button class="bg-surface rounded-[12px] p-3 border border-borderSubtle shadow-sm flex flex-col items-center justify-center text-center active:bg-secondary transition-colors">
+                <span class="font-sans text-[20px] font-semibold text-textPrimary">4</span>
+                <span class="font-sans text-[11px] text-textSecondary mt-1">In Progress</span>
+            </button>
+            <button class="bg-surface rounded-[12px] p-3 border border-borderSubtle shadow-sm flex flex-col items-center justify-center text-center active:bg-secondary transition-colors">
+                <span class="font-sans text-[20px] font-semibold text-success">2</span>
+                <span class="font-sans text-[11px] text-textSecondary mt-1">Completed</span>
+            </button>
+            <button class="bg-surface rounded-[12px] p-3 border border-borderSubtle shadow-sm flex flex-col items-center justify-center text-center opacity-70 active:bg-secondary transition-colors relative">
+                <span class="font-sans text-[20px] font-semibold text-textTertiary">0</span>
+                <span class="font-sans text-[11px] text-textTertiary mt-1">Unassigned</span>
+                <i class="fa-solid fa-chevron-right text-textTertiary text-[12px] absolute bottom-2 right-2"></i>
+            </button>
+        </section>
+
+        <!-- Job List -->
+        <section id="job-list" class="flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-sans text-[15px] font-semibold text-textPrimary">Live Jobs</h2>
+                <a href="#" class="font-sans text-[13px] text-brandBlue font-medium">View All</a>
+            </div>
+
+            <!-- View All Unassigned Link -->
+            <a href="#" class="font-sans text-[13px] text-brandBlue font-medium text-center py-2 flex items-center justify-center gap-1 active:opacity-70 transition-opacity">
+                View all unassigned jobs <i class="fa-solid fa-arrow-right text-[12px]"></i>
+            </a>
+
+            <!-- Devon - Flagged -->
+            <div class="bg-surface rounded-[16px] border border-borderSubtle border-l-[4px] border-l-warning p-4 shadow-level1 flex flex-col gap-3">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[12px] font-semibold text-textPrimary">DE</div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Devon</span>
+                            <span class="font-sans text-[12px] text-textSecondary">11:30 AM &middot; Christina L.</span>
+                        </div>
+                    </div>
+                    <div class="bg-errorSubtle text-error px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                        Issue Flagged
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <span class="font-sans text-[13px] text-textSecondary">Interior Detail</span>
+                    <button class="h-[32px] px-4 bg-surface border border-error text-error rounded-[8px] font-sans text-[12px] font-semibold hover:bg-errorSubtle transition-colors">
+                        View Issue
+                    </button>
+                </div>
+            </div>
+
+            <!-- Jordan - In Progress -->
+            <div class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 flex flex-col gap-3">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[12px] font-semibold text-textPrimary">JO</div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Jordan</span>
+                            <span class="font-sans text-[12px] text-textSecondary">1:00 PM &middot; Marcus T.</span>
+                        </div>
+                    </div>
+                    <div class="bg-secondary text-textSecondary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                        In Progress
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <span class="font-sans text-[13px] text-textSecondary">Full Detail + Ceramic</span>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Est. 3:30 PM</span>
+                </div>
+            </div>
+
+            <!-- Kayla - In Progress -->
+            <div class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 flex flex-col gap-3">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[12px] font-semibold text-textPrimary">KA</div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-textPrimary">Kayla</span>
+                            <span class="font-sans text-[12px] text-textSecondary">2:00 PM &middot; Alicia M.</span>
+                        </div>
+                    </div>
+                    <div class="bg-secondary text-textSecondary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                        In Progress
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <span class="font-sans text-[13px] text-textSecondary">Standard Wash</span>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">Est. 3:15 PM</span>
+                </div>
+            </div>
+
+            <!-- Completed (Collapsed) -->
+            <div class="bg-surface rounded-[12px] border border-borderSubtle p-3 shadow-sm flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center">
+                        <i class="fa-solid fa-check text-success text-[12px]"></i>
+                    </div>
+                    <span class="font-sans text-[13px] font-medium text-textPrimary">2 Jobs Completed Today</span>
+                </div>
+                <i class="fa-solid fa-chevron-down text-textTertiary text-[12px]"></i>
+            </div>
+
+        </section>
+
+        <!-- Recent Activity -->
+        <section id="recent-activity" class="flex flex-col gap-4 mt-2">
+            <h2 class="font-sans text-[15px] font-semibold text-textPrimary">Recent Activity</h2>
+            <div class="bg-surface rounded-[16px] border border-borderSubtle p-4 shadow-level1 flex flex-col">
+                
+                <div class="flex items-start gap-3 py-3 border-b border-borderSubtle">
+                    <div class="w-6 flex justify-center pt-0.5">
+                        <i class="fa-solid fa-triangle-exclamation text-error text-[14px]"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <p class="font-sans text-[14px] text-textPrimary leading-snug">James K. flagged damage on Dante R.'s job</p>
+                        <span class="font-sans text-[12px] text-textTertiary mt-0.5">Just now</span>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 py-3">
+                    <div class="w-6 flex justify-center pt-0.5">
+                        <i class="fa-solid fa-arrow-right text-textTertiary text-[14px]"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <p class="font-sans text-[14px] text-textPrimary leading-snug">Trey en route to Christina L. &middot; 6 min away</p>
+                        <span class="font-sans text-[12px] text-textTertiary mt-0.5">12 mins ago</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-primary relative m-0 p-0">
+
+    <header id="header" class="w-full bg-surface border-b border-borderSubtle sticky top-0 z-40">
+        <div class="px-4 pt-5 pb-4">
+            <h1 class="font-sans text-[22px] font-semibold text-textPrimary">Services</h1>
+        </div>
+    </header>
+
+    <main id="empty-state-main" class="flex-1 overflow-y-auto px-6 pb-8 flex flex-col items-center justify-center">
+        
+        <section id="empty-state-content" class="w-full flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full bg-brandBlueSubtle flex items-center justify-center mb-6">
+                <i class="fa-solid fa-wrench text-[36px] text-brandBlue"></i>
+            </div>
+            
+            <h2 class="font-sans text-[24px] font-semibold text-textPrimary mb-3 leading-tight">
+                No services yet.
+            </h2>
+            
+            <p class="font-sans text-[15px] text-textSecondary mb-8 leading-relaxed max-w-[280px]">
+                Add your first service and start taking bookings.
+            </p>
+            
+            <div class="w-full flex flex-col gap-3 mb-4">
+                <button class="w-full h-[48px] bg-brandBlue text-white rounded-[12px] font-sans text-[15px] font-semibold active:bg-brandBlueHover transition-colors shadow-sm">
+                    Add a Service
+                </button>
+            </div>
+
+            <div id="tip-card" class="w-full bg-surface rounded-[12px] border border-borderSubtle p-3 mt-4 mx-4">
+                <div class="flex gap-3 items-start">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-lightbulb text-[16px] text-brandBlue"></i>
+                    </div>
+                    <p class="font-sans text-[13px] text-textSecondary leading-relaxed text-left">
+                        Start with your most popular service. You can always add more.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

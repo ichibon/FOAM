@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Today</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                        'level-2': '0 2px 6px rgba(0,0,0,0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden">
+
+    <!-- Header Section (Full Bleed) -->
+    <header id="header" class="px-4 pt-12 pb-5 bg-surface-primary">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="font-serif text-[28px] font-bold leading-tight text-text-primary">Good morning, Marcus</h1>
+                <p class="font-sans text-[14px] text-text-secondary mt-0.5">Thursday, May 2</p>
+            </div>
+            
+            <!-- Availability Toggle -->
+            <button class="flex items-center space-x-2 bg-foam-subtle px-3 py-1.5 rounded-full border border-foam-blue/20 transition-colors">
+                <div class="w-2 h-2 rounded-full bg-foam-blue relative">
+                    <div class="absolute inset-0 rounded-full bg-foam-blue animate-ping opacity-75"></div>
+                </div>
+                <span class="font-sans text-sm font-medium text-foam-blue">Available</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto px-4 pb-24 space-y-5">
+        
+        <!-- Earnings Summary Card -->
+        <section id="earnings-summary" class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+            <div class="flex flex-row justify-between items-center divide-x divide-border-subtle">
+                <div class="flex-1 pr-3">
+                    <p class="font-sans text-[11px] uppercase text-text-tertiary mb-1 font-medium tracking-wider">TODAY</p>
+                    <p class="font-sans text-[20px] font-semibold text-text-primary">$340</p>
+                </div>
+                <div class="flex-1 px-3">
+                    <p class="font-sans text-[11px] uppercase text-text-tertiary mb-1 font-medium tracking-wider">THIS WEEK</p>
+                    <p class="font-sans text-[20px] font-semibold text-text-primary">$1,820</p>
+                </div>
+                <div class="flex-1 pl-3 text-right">
+                    <p class="font-sans text-[11px] uppercase text-text-tertiary mb-1 font-medium tracking-wider">PENDING</p>
+                    <p class="font-sans text-[20px] font-semibold text-status-warning">$120</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Jobs List Section -->
+        <section id="jobs-list" class="space-y-4">
+            <h2 class="font-sans text-[12px] font-medium text-text-tertiary uppercase tracking-wider ml-4">TODAY'S JOBS — 4 BOOKED</h2>
+            
+            <div class="space-y-4 pb-8">
+                <!-- Job 1: Next Up -->
+                <div class="bg-surface-elevated rounded-[16px] p-4 border-l-[3px] border-l-foam-blue border-y border-r border-y-border-subtle border-r-border-subtle shadow-level-2">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">9:00 AM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~2.5 hrs</span>
+                        </div>
+                        <div class="bg-foam-subtle text-foam-blue px-2.5 py-1 rounded-full flex items-center space-x-1.5">
+                            <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+                            <span class="font-sans text-xs font-medium">14 min away</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Terrence W.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2021 BMW X5 · Midnight Blue</p>
+                        <p class="font-sans text-[13px] text-text-tertiary">Full Interior Detail</p>
+                    </div>
+                    
+                    <button class="w-full h-[44px] bg-foam-blue text-white rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center space-x-2 active:bg-foam-hover transition-colors">
+                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                        <span>Navigate</span>
+                    </button>
+                </div>
+
+                <!-- Job 2 -->
+                <div class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">12:30 PM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~1.5 hrs</span>
+                        </div>
+                        <div class="bg-foam-subtle text-foam-blue px-2.5 py-1 rounded-full flex items-center space-x-1.5">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                            <span class="font-sans text-xs font-medium">8 min away</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Alicia M.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2019 Honda Accord · White</p>
+                        <p class="font-sans text-[13px] text-text-tertiary">Exterior Wash + Clay Bar</p>
+                    </div>
+                </div>
+
+                <!-- Job 3 -->
+                <div class="bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-sans text-[13px] font-medium text-text-secondary">3:00 PM</span>
+                            <span class="w-1 h-1 rounded-full bg-text-tertiary"></span>
+                            <span class="font-sans text-[13px] text-text-secondary">~4 hrs</span>
+                        </div>
+                        <div class="bg-surface-primary border border-border-default text-text-tertiary px-2.5 py-1 rounded-full">
+                            <span class="font-sans text-xs font-medium">Upcoming</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-sans text-[17px] font-semibold text-text-primary mb-1">Dante R.</h3>
+                        <p class="font-sans text-[13px] text-text-secondary mb-0.5">2023 Tesla Model 3 · Black</p>
+                        <p class="font-sans text-[13px] text-text-tertiary">Paint Correction + Ceramic Coat</p>
+                    </div>
+                </div>
+                
+                <!-- Tomorrow Section Label -->
+                <div class="pt-2 ml-4">
+                    <h3 class="font-sans text-[13px] text-text-tertiary">Tomorrow</h3>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface-elevated border-t border-border-subtle pb-safe pt-2 px-6 pb-6 z-50">
+        <div class="flex justify-between items-center">
+            <!-- Active Tab: Today -->
+            <button class="flex flex-col items-center space-y-1 text-foam-blue w-16">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="font-sans text-[10px] font-medium">Today</span>
+            </button>
+            
+            <button class="flex flex-col items-center space-y-1 text-text-tertiary w-16">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                <span class="font-sans text-[10px] font-medium">Bookings</span>
+            </button>
+            
+            <button class="flex flex-col items-center space-y-1 text-text-tertiary w-16">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="font-sans text-[10px] font-medium">Customers</span>
+            </button>
+            
+            <button class="flex flex-col items-center space-y-1 text-text-tertiary w-16">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                <span class="font-sans text-[10px] font-medium">Business</span>
+            </button>
+            
+            <button class="flex flex-col items-center space-y-1 text-text-tertiary w-16">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="font-sans text-[10px] font-medium">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

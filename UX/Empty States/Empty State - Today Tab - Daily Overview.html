@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Today</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                        'level-2': '0 2px 6px rgba(0,0,0,0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-text-primary min-h-screen flex flex-col overflow-x-hidden">
+
+    <main class="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        
+        <section id="empty-state" class="flex flex-col items-center text-center max-w-sm">
+            <div class="w-20 h-20 rounded-full bg-foam-subtle flex items-center justify-center mb-6">
+                <i data-lucide="calendar-days" class="w-10 h-10 text-foam-blue"></i>
+            </div>
+            
+            <h1 class="font-serif text-[28px] font-bold text-text-primary mb-3 leading-tight">Wide open today.</h1>
+            
+            <p class="font-sans text-[15px] text-text-secondary mb-8 leading-relaxed">Share your booking link and put someone on the calendar.</p>
+            
+            <div class="w-full space-y-3 mb-8">
+                <button class="w-full h-[48px] bg-foam-blue text-white rounded-full font-sans text-[15px] font-semibold flex items-center justify-center space-x-2 active:bg-foam-hover transition-colors shadow-level-1">
+                    <i data-lucide="share-2" class="w-4 h-4"></i>
+                    <span>Share My Link</span>
+                </button>
+                
+                <button class="w-full h-[48px] bg-transparent text-foam-blue rounded-full font-sans text-[15px] font-semibold flex items-center justify-center space-x-2 active:bg-foam-subtle transition-colors">
+                    <i data-lucide="compass" class="w-4 h-4"></i>
+                    <span>Explore the app</span>
+                </button>
+            </div>
+            
+            <div class="w-full bg-surface-elevated rounded-[16px] p-4 border border-border-subtle shadow-level-1">
+                <div class="flex flex-row justify-between items-center divide-x divide-border-subtle">
+                    <div class="flex-1 pr-3">
+                        <p class="font-sans text-[11px] uppercase text-text-tertiary mb-1 font-medium tracking-wider">TODAY</p>
+                        <p class="font-sans text-[20px] font-semibold text-text-tertiary">$0</p>
+                    </div>
+                    <div class="flex-1 px-3">
+                        <p class="font-sans text-[11px] uppercase text-text-tertiary mb-1 font-medium tracking-wider">THIS WEEK</p>
+                        <p class="font-sans text-[20px] font-semibold text-text-tertiary">$0</p>
+                    </div>
+                    <div class="flex-1 pl-3 text-right">
+                        <p class="font-sans text-[11px] uppercase text-text-tertiary mb-1 font-medium tracking-wider">PENDING</p>
+                        <p class="font-sans text-[20px] font-semibold text-text-tertiary">$0</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

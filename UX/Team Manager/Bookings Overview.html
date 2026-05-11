@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bookings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-primary relative m-0 p-0">
+
+    <header id="header" class="w-full bg-surface border-b border-borderSubtle sticky top-0 z-40">
+        <div class="px-4 pt-5 pb-3">
+            <h1 class="font-sans text-[22px] font-semibold text-textPrimary">Bookings</h1>
+        </div>
+        
+        <div class="px-4 pb-3 flex items-center gap-2">
+            <button class="view-toggle flex-1 h-[36px] rounded-[8px] bg-brandBlue text-white font-sans text-[13px] font-medium transition-all shadow-sm">
+                List
+            </button>
+            <button class="view-toggle flex-1 h-[36px] rounded-[8px] text-textSecondary font-sans text-[13px] font-medium transition-all">
+                Calendar
+            </button>
+        </div>
+
+        <div class="px-4 pb-3 flex items-center justify-center gap-2 bg-secondary rounded-[8px] p-1 mx-4">
+            <button class="segment-tab flex-1 h-[36px] rounded-[6px] bg-surface font-sans text-[13px] font-medium text-textPrimary shadow-sm transition-all">
+                Upcoming
+            </button>
+            <button class="segment-tab flex-1 h-[36px] rounded-[6px] font-sans text-[13px] font-medium text-textSecondary transition-all">
+                Past
+            </button>
+        </div>
+
+        <div class="px-4 pb-3 overflow-x-auto hide-scrollbar">
+            <div class="flex gap-2 min-w-max">
+                <button class="crew-filter flex items-center gap-1.5 px-3 h-[32px] rounded-full bg-brandBlue text-white font-sans text-[13px] font-medium transition-all">
+                    All
+                </button>
+                <button class="crew-filter flex items-center gap-1.5 px-3 h-[32px] rounded-full border border-borderSubtle text-textSecondary font-sans text-[13px] font-medium transition-all">
+                    <div class="w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center text-white text-[10px] font-semibold">
+                        JK
+                    </div>
+                    Jordan
+                </button>
+                <button class="crew-filter flex items-center gap-1.5 px-3 h-[32px] rounded-full border border-borderSubtle text-textSecondary font-sans text-[13px] font-medium transition-all">
+                    <div class="w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center text-white text-[10px] font-semibold">
+                        KM
+                    </div>
+                    Kayla
+                </button>
+                <button class="crew-filter flex items-center gap-1.5 px-3 h-[32px] rounded-full border border-borderSubtle text-textSecondary font-sans text-[13px] font-medium transition-all">
+                    <div class="w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center text-white text-[10px] font-semibold">
+                        DR
+                    </div>
+                    Devon
+                </button>
+                <button class="crew-filter flex items-center gap-1.5 px-3 h-[32px] rounded-full border border-borderSubtle text-textSecondary font-sans text-[13px] font-medium transition-all">
+                    <div class="w-5 h-5 rounded-full bg-brandBlue flex items-center justify-center text-white text-[10px] font-semibold">
+                        TW
+                    </div>
+                    Trey
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-4 pb-32 flex flex-col space-y-3 pt-4">
+        
+        <section id="booking-card-1" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-sans text-[15px] font-semibold text-textPrimary">9:00 AM</span>
+                            <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-brandBlueSubtle">
+                                <span class="font-sans text-[11px] font-medium text-brandBlue">In Progress</span>
+                            </div>
+                        </div>
+                        <p class="font-sans text-[14px] text-textPrimary font-medium mb-0.5">Terrence W.</p>
+                        <p class="font-sans text-[13px] text-textSecondary">BMW X5</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Full Interior Detail</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-borderSubtle">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brandBlueSubtle">
+                        <div class="w-4 h-4 rounded-full bg-brandBlue flex items-center justify-center text-white text-[8px] font-semibold">
+                            JK
+                        </div>
+                        <span class="font-sans text-[12px] font-medium text-brandBlue">Jordan</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="booking-card-2" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-sans text-[15px] font-semibold text-textPrimary">11:30 AM</span>
+                        </div>
+                        <p class="font-sans text-[14px] text-textPrimary font-medium mb-0.5">Christina L.</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Mercedes GLE</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Full Interior Detail</p>
+                    </div>
+                    <button class="h-[32px] px-4 border border-brandBlue text-brandBlue rounded-[8px] font-sans text-[13px] font-semibold active:bg-brandBlueSubtle transition-colors flex-shrink-0">
+                        Assign
+                    </button>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-borderSubtle">
+                    <div class="inline-flex items-center px-2.5 py-1 rounded-full bg-warningSubtle">
+                        <span class="font-sans text-[12px] font-medium text-warning">Unassigned</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="booking-card-3" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-sans text-[15px] font-semibold text-textPrimary">2:00 PM</span>
+                            <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-brandBlueSubtle">
+                                <span class="font-sans text-[11px] font-medium text-brandBlue">Upcoming</span>
+                            </div>
+                        </div>
+                        <p class="font-sans text-[14px] text-textPrimary font-medium mb-0.5">David M.</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Tesla Model 3</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Exterior Wash + Wax</p>
+                    </div>
+                    <button class="h-[32px] px-3 text-brandBlue font-sans text-[13px] font-semibold active:opacity-70 transition-opacity flex-shrink-0">
+                        Reassign
+                    </button>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-borderSubtle">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brandBlueSubtle">
+                        <div class="w-4 h-4 rounded-full bg-brandBlue flex items-center justify-center text-white text-[8px] font-semibold">
+                            DR
+                        </div>
+                        <span class="font-sans text-[12px] font-medium text-brandBlue">Devon</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="booking-card-4" class="w-full">
+            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-sans text-[13px] text-textTertiary">Completed 8:45 AM</span>
+                            <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-success/10">
+                                <span class="font-sans text-[11px] font-medium text-success">Paid</span>
+                            </div>
+                        </div>
+                        <p class="font-sans text-[14px] text-textPrimary font-medium mb-0.5">Marcus R.</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Ford F-150</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Exterior Wash</p>
+                    </div>
+                    <button class="h-[32px] px-3 text-textSecondary font-sans text-[13px] font-semibold active:opacity-70 transition-opacity flex-shrink-0">
+                        View
+                    </button>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-borderSubtle">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brandBlueSubtle">
+                        <div class="w-4 h-4 rounded-full bg-brandBlue flex items-center justify-center text-white text-[8px] font-semibold">
+                            JK
+                        </div>
+                        <span class="font-sans text-[12px] font-medium text-brandBlue">Jordan</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface border-t border-borderSubtle flex justify-between items-center px-6 pb-safe pt-3 z-50">
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue relative">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+            <div class="absolute -top-1 -right-2 w-4 h-4 bg-error rounded-full flex items-center justify-center">
+                <span class="font-sans text-[9px] font-semibold text-white">1</span>
+            </div>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+
+        const viewToggles = document.querySelectorAll('.view-toggle');
+        viewToggles.forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                viewToggles.forEach(t => {
+                    t.classList.remove('bg-brandBlue', 'text-white', 'shadow-sm');
+                    t.classList.add('text-textSecondary');
+                });
+                this.classList.add('bg-brandBlue', 'text-white', 'shadow-sm');
+                this.classList.remove('text-textSecondary');
+            });
+        });
+
+        const segmentTabs = document.querySelectorAll('.segment-tab');
+        segmentTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                segmentTabs.forEach(t => {
+                    t.classList.remove('bg-surface', 'text-textPrimary', 'shadow-sm');
+                    t.classList.add('text-textSecondary');
+                });
+                this.classList.add('bg-surface', 'text-textPrimary', 'shadow-sm');
+                this.classList.remove('text-textSecondary');
+            });
+        });
+
+        const crewFilters = document.querySelectorAll('.crew-filter');
+        crewFilters.forEach(filter => {
+            filter.addEventListener('click', function() {
+                crewFilters.forEach(f => {
+                    f.classList.remove('bg-brandBlue', 'text-white');
+                    f.classList.add('border', 'border-borderSubtle', 'text-textSecondary');
+                });
+                this.classList.add('bg-brandBlue', 'text-white');
+                this.classList.remove('border', 'border-borderSubtle', 'text-textSecondary');
+            });
+        });
+    </script>
+</body>
+</html>

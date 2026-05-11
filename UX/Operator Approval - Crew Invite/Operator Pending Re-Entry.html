@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="en"><head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Today</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24">
+
+    <!-- Header Section -->
+    <header id="main-header" class="px-5 pt-12 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <h1 class="font-serif text-[26px] font-bold text-textPrimary leading-tight">Good morning, Marcus.</h1>
+                <p class="font-sans text-[14px] text-textSecondary mt-1">
+                    Thursday, May 2 · <span class="text-warning font-semibold">Under review</span>
+                </p>
+            </div>
+            <button class="relative min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
+                <i class="fa-regular fa-bell text-textPrimary text-[20px]"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Pending Status Banner -->
+    <div id="pending-banner" class="mx-4 mt-4 mb-4 bg-warningSubtle rounded-[12px] p-3 flex items-start justify-between gap-3">
+        <div class="flex items-start gap-2.5 flex-1 min-w-0">
+            <i class="fa-regular fa-clock text-warning text-[20px] flex-shrink-0 mt-0.5"></i>
+            <p class="font-sans text-[14px] font-semibold text-warning leading-snug">Your account is under review. Usually approved within 24 hours.</p>
+        </div>
+        <a href="#" class="font-sans text-[14px] text-brandBlue font-semibold whitespace-nowrap flex-shrink-0">View status →</a>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <main class="px-5 py-2 flex flex-col gap-6 max-w-lg mx-auto">
+
+        <!-- Approval Checklist Card -->
+        <section id="approval-checklist">
+            <div class="bg-surface rounded-[16px] p-4 border border-borderSubtle shadow-level1">
+                <h2 class="font-sans text-[11px] font-medium text-textTertiary uppercase tracking-wider mb-4">YOUR APPLICATION</h2>
+                
+                <div class="flex flex-col gap-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-brandBlue text-[20px] flex-shrink-0"></i>
+                        <span class="font-sans text-[14px] text-textPrimary">Profile created</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-brandBlue text-[20px] flex-shrink-0"></i>
+                        <span class="font-sans text-[14px] text-textPrimary">Stripe account connected</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <i class="fa-regular fa-clock text-textTertiary text-[20px] flex-shrink-0"></i>
+                        <span class="font-sans text-[14px] text-textTertiary">FOAM review in progress</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-borderSubtle text-center">
+                    <button id="expand-info" class="font-sans text-[13px] text-brandBlue font-semibold hover:text-brandBlueHover transition-colors">What can I do while I wait?</button>
+                    <div id="expanded-content" class="hidden mt-3">
+                        <p class="font-sans text-[13px] text-textSecondary leading-relaxed">You can explore the app, set up your services, and update your profile. You'll get a notification the moment you're approved.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Empty State Section -->
+        <section id="empty-state">
+            <div class="bg-surface rounded-[16px] p-8 border border-borderSubtle shadow-level1 text-center">
+                <div class="w-16 h-16 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
+                    <i class="fa-regular fa-calendar text-textTertiary text-[28px]"></i>
+                </div>
+                <h3 class="font-sans text-[16px] font-semibold text-textPrimary mb-2">Nothing on the board yet.</h3>
+                <p class="font-sans text-[13px] text-textSecondary leading-relaxed">Once you're approved, you'll start receiving booking requests here.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-regular fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary active:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-briefcase text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Services</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary active:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Earnings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary active:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-star text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Reviews</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary active:text-textSecondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+    <script>
+        document.getElementById('expand-info').addEventListener('click', function() {
+            const content = document.getElementById('expanded-content');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                this.textContent = 'Hide details';
+            } else {
+                content.classList.add('hidden');
+                this.textContent = 'What can I do while I wait?';
+            }
+        });
+    </script>
+
+</body></html>

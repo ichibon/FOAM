@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discovery Feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            elevated: '#FFFFFF'
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8'
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4'
+                        },
+                        brand: {
+                            default: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.1)'
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                            successSubtle: 'rgba(22, 163, 74, 0.10)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                        'level-2': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)',
+                        'level-3': '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="font-sans text-text-primary antialiased flex justify-center w-full">
+    <div class="w-full max-w-[375px] min-h-[840px] bg-background-primary relative pb-20 overflow-x-hidden">
+        
+        <!-- Header Section -->
+        <header id="header" class="w-full bg-background-elevated px-4 pt-12 pb-4 z-50">
+            <!-- Location Row -->
+            <div class="flex items-center gap-1 mb-4 cursor-pointer">
+                <i data-lucide="map-pin" class="w-4 h-4 text-brand-default"></i>
+                <span class="text-[15px] font-medium text-text-primary">Buckhead, Atlanta</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-text-tertiary"></i>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="relative w-full h-[52px] flex items-center bg-background-elevated border border-border-subtle rounded-[12px] px-4 shadow-sm">
+                <i data-lucide="search" class="w-5 h-5 text-text-tertiary mr-2"></i>
+                <input type="text" placeholder="Search detailers or services" class="w-full h-full bg-transparent border-none outline-none text-[14px] text-text-primary placeholder:text-text-tertiary font-sans">
+            </div>
+        </header>
+
+        <!-- Filter Chips Section -->
+        <section id="filter-chips" class="w-full pl-4 py-3 overflow-x-auto hide-scrollbar bg-background-primary sticky top-[120px] z-40">
+            <div class="flex gap-2 w-max pr-4">
+                <button class="h-[32px] px-4 rounded-full bg-brand-default text-white text-[13px] font-medium whitespace-nowrap transition-colors">All</button>
+                <button class="h-[32px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary text-[13px] font-medium whitespace-nowrap hover:bg-background-secondary transition-colors">Come to me</button>
+                <button class="h-[32px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary text-[13px] font-medium whitespace-nowrap hover:bg-background-secondary transition-colors">I'll go there</button>
+                <button class="h-[32px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary text-[13px] font-medium whitespace-nowrap hover:bg-background-secondary transition-colors">Top Rated</button>
+                <button class="h-[32px] px-4 rounded-full bg-transparent border border-border-default text-text-secondary text-[13px] font-medium whitespace-nowrap hover:bg-background-secondary transition-colors">Available Now</button>
+            </div>
+        </section>
+
+        <!-- Map View Section -->
+        <section id="map-view" class="px-4 py-2">
+            <div class="w-full h-[180px] rounded-[12px] overflow-hidden relative shadow-sm" style="background-image: url('https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'); background-size: cover; background-position: center;">
+                <!-- Map Pins -->
+                <div class="absolute top-[30%] left-[40%] w-6 h-6 bg-brand-default rounded-full border-2 border-white shadow-md flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <div class="absolute top-[60%] left-[70%] w-6 h-6 bg-brand-default rounded-full border-2 border-white shadow-md flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <div class="absolute top-[20%] left-[80%] w-6 h-6 bg-brand-default rounded-full border-2 border-white shadow-md flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <div class="absolute top-[70%] left-[20%] w-6 h-6 bg-brand-default rounded-full border-2 border-white shadow-md flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+
+                <!-- List View Toggle -->
+                <button class="absolute bottom-3 right-3 bg-background-elevated border border-border-subtle rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="list" class="w-3.5 h-3.5 text-text-secondary"></i>
+                    <span class="text-[12px] font-medium text-text-secondary">List view</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Operator Feed Section -->
+        <section id="operator-feed" class="px-4 pt-4 pb-6">
+            <h2 class="text-[11px] font-medium uppercase text-text-tertiary tracking-wider ml-4 mb-3">WHO'S WORKING NEAR YOU</h2>
+            
+            <div class="flex flex-col gap-3">
+                <!-- Card 1: Mobile Detailer - Marcus T. -->
+                <div id="card-1" class="w-full bg-background-elevated border border-border-subtle rounded-[16px] p-4 shadow-level-1">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-[44px] h-[44px] rounded-full bg-brand-default flex items-center justify-center text-white font-semibold text-[16px]">
+                                MT
+                            </div>
+                            <div>
+                                <h3 class="text-[16px] font-semibold text-text-primary">Marcus T.</h3>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-subtle">
+                                        <span class="text-[12px] text-brand-default font-medium">Mobile Detailer</span>
+                                    </div>
+                                    <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-subtle">
+                                        <span class="text-[12px] text-brand-default font-medium">Multi-car friendly</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[13px] font-medium text-text-secondary">4.9</span>
+                            <i data-lucide="star" class="w-3.5 h-3.5 text-semantic-warning fill-current"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[13px] text-text-tertiary">2.3 miles away</span>
+                        <span class="text-text-tertiary text-[10px]">•</span>
+                        <span class="text-[12px] text-text-tertiary">142 reviews</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="clock" class="w-3 h-3 text-text-tertiary"></i>
+                        <span class="text-[12px] text-text-tertiary">Usually responds in 5 min</span>
+                    </div>
+
+                    <p class="text-[13px] text-text-secondary mb-3 truncate">Exterior Wash · Interior Detail · Paint Correction...</p>
+                    
+                    <div class="mb-3">
+                        <span class="text-[14px] font-semibold text-text-primary">From $65</span>
+                    </div>
+
+                    <div class="flex gap-1 mb-4">
+                        <div class="w-[60px] h-[60px] rounded-[8px] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Before" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-[60px] h-[60px] rounded-[8px] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="During" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-[60px] h-[60px] rounded-[8px] overflow-hidden relative">
+                            <img src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="After" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <span class="text-white text-[12px] font-medium">+4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full h-[44px] bg-brand-default text-white rounded-[8px] text-[15px] font-medium hover:bg-brand-hover transition-colors">
+                        View Services
+                    </button>
+                </div>
+
+                <!-- Card 2: Fixed Location -->
+                <div id="card-2" class="w-full bg-background-elevated border border-border-subtle rounded-[16px] p-4 shadow-level-1">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-[44px] h-[44px] rounded-full overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1552930294-6b595f4c2974?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" alt="Shop Logo" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <h3 class="text-[16px] font-semibold text-text-primary">Elite Auto Spa</h3>
+                                <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-semantic-successSubtle mt-1">
+                                    <span class="text-[12px] text-semantic-success font-medium">Fixed Location</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[13px] font-medium text-text-secondary">4.8</span>
+                            <i data-lucide="star" class="w-3.5 h-3.5 text-semantic-warning fill-current"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-[13px] text-text-tertiary">0.8 miles away</span>
+                        <span class="text-text-tertiary text-[10px]">•</span>
+                        <span class="text-[12px] text-semantic-success font-medium">Open now · Closes 6PM</span>
+                    </div>
+
+                    <p class="text-[13px] text-text-secondary mb-3 truncate">Ceramic Coating · Hand Wash · Detailing...</p>
+                    
+                    <div class="mb-3">
+                        <span class="text-[14px] font-semibold text-text-primary">From $45</span>
+                    </div>
+
+                    <div class="w-full h-[80px] rounded-[12px] overflow-hidden mb-4">
+                        <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Shop Exterior" class="w-full h-full object-cover">
+                    </div>
+
+                    <button class="w-full h-[44px] bg-transparent border-2 border-brand-default text-brand-default rounded-[8px] text-[15px] font-medium hover:bg-brand-subtle transition-colors">
+                        Book Drop-Off
+                    </button>
+                </div>
+
+                <!-- Card 3: Mobile Detailer (Partially visible) -->
+                <div id="card-3" class="w-full bg-background-elevated border border-border-subtle rounded-[16px] p-4 shadow-level-1 opacity-80">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-[44px] h-[44px] rounded-full bg-brand-default flex items-center justify-center text-white font-semibold text-[16px]">
+                                SJ
+                            </div>
+                            <div>
+                                <h3 class="text-[16px] font-semibold text-text-primary">Sarah J.</h3>
+                                <div class="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-subtle mt-1">
+                                    <span class="text-[12px] text-brand-default font-medium">Mobile Detailer</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[13px] font-medium text-text-secondary">5.0</span>
+                            <i data-lucide="star" class="w-3.5 h-3.5 text-semantic-warning fill-current"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom Navigation -->
+        <nav id="bottom-nav" class="fixed bottom-0 w-full max-w-[375px] bg-background-elevated border-t border-border-subtle pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[80px]">
+            <a href="#" class="flex flex-col items-center gap-1 text-brand-default">
+                <i data-lucide="map-pin" class="w-[20px] h-[20px]"></i>
+                <span class="text-[10px] font-medium">Discover</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors">
+                <i data-lucide="calendar" class="w-[20px] h-[20px]"></i>
+                <span class="text-[10px] font-medium">Bookings</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors">
+                <i data-lucide="user" class="w-[20px] h-[20px]"></i>
+                <span class="text-[10px] font-medium">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

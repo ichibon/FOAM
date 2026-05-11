@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Job Alerts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        primary: '#FAFAFA',
+                        secondary: '#F4F4F5',
+                        surface: '#FFFFFF',
+                        borderSubtle: '#E4E4E7',
+                        borderDefault: '#D4D4D8',
+                        textPrimary: '#0A0A0A',
+                        textSecondary: '#525252',
+                        textTertiary: '#A3A3A3',
+                        textDisabled: '#D4D4D4',
+                        brandBlue: '#339DC7',
+                        brandBlueHover: '#2B85A9',
+                        brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
+                        success: '#16A34A',
+                        warning: '#D97706',
+                        warningSubtle: 'rgba(217, 119, 6, 0.08)',
+                        error: '#DC2626',
+                        errorSubtle: 'rgba(220, 38, 38, 0.08)',
+                        info: '#2563EB',
+                    },
+                    boxShadow: {
+                        'level1': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                        'level2': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-textPrimary pb-24 relative min-h-screen">
+
+    <!-- Header Section -->
+    <header id="main-header" class="px-5 pt-12 pb-4 bg-surface sticky top-0 z-40 border-b border-borderSubtle flex items-center justify-between">
+        <a href="#" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary transition-colors">
+            <i class="fa-solid fa-chevron-left text-textPrimary text-[16px]"></i>
+        </a>
+        <div class="flex items-center gap-2">
+            <h1 class="font-sans text-[17px] font-semibold text-textPrimary">Live Alerts</h1>
+            <div class="w-5 h-5 rounded-full bg-warning flex items-center justify-center">
+                <span class="font-sans text-[11px] font-bold text-white">3</span>
+            </div>
+        </div>
+        <div class="w-8 h-8"></div>
+    </header>
+
+    <!-- Segment Control -->
+    <div class="px-5 py-4 bg-surface border-b border-borderSubtle sticky top-[72px] z-30">
+        <div class="w-full bg-secondary p-1 rounded-full flex items-center">
+            <button class="flex-1 py-2 rounded-full bg-brandBlue text-white font-sans text-[14px] font-medium shadow-sm transition-all">
+                Needs Action
+            </button>
+            <button class="flex-1 py-2 rounded-full text-textSecondary font-sans text-[14px] font-medium hover:text-textPrimary transition-all">
+                All Activity
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content: Needs Action Feed -->
+    <main class="px-5 py-4 flex flex-col gap-4 max-w-lg mx-auto" id="needs-action-feed">
+        
+        <div class="flex items-center gap-2 mb-1">
+            <span class="font-sans text-[11px] font-medium text-textTertiary uppercase tracking-wider">REQUIRES YOUR ATTENTION</span>
+        </div>
+
+        <!-- Alert Card 1: Issue Flagged (High Priority) -->
+        <div class="bg-surface rounded-[16px] border-l-[4px] border-l-error p-4 shadow-level2 flex flex-col gap-3">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-triangle-exclamation text-error text-[18px]"></i>
+                    <span class="font-sans text-[13px] font-semibold text-error">Issue Flagged</span>
+                </div>
+                <span class="font-sans text-[13px] text-textTertiary">2 min ago</span>
+            </div>
+            
+            <div class="flex flex-col gap-1">
+                <h3 class="font-sans text-[15px] font-semibold text-textPrimary leading-tight">James K. flagged a damage report on Dante R.'s BMW X5</h3>
+                <span class="font-sans text-[13px] text-textSecondary">Paint Correction &middot; 3:00 PM job</span>
+            </div>
+
+            <div class="bg-secondary rounded-[8px] p-2.5 mt-1">
+                <p class="font-sans text-[13px] text-textSecondary italic leading-snug">
+                    "James says: Pre-existing scratch found on rear bumper. Attaching photo."
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2 mt-2">
+                <button class="flex-1 h-[44px] bg-surface border border-brandBlue text-brandBlue rounded-[12px] font-sans text-[14px] font-semibold hover:bg-brandBlueSubtle transition-colors">
+                    View Photos
+                </button>
+                <button class="flex-1 h-[44px] bg-brandBlue text-white rounded-[12px] font-sans text-[14px] font-semibold hover:bg-brandBlueHover transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-phone text-[14px]"></i>
+                    Call James
+                </button>
+            </div>
+        </div>
+
+        <!-- Alert Card 2: No-Show Grace Period (Medium Priority) -->
+        <div class="bg-surface rounded-[16px] border-l-[4px] border-l-warning p-4 shadow-level2 flex flex-col gap-3">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-xmark text-warning text-[18px]"></i>
+                    <span class="font-sans text-[13px] font-semibold text-warning">No-Show Reported</span>
+                </div>
+                <span class="font-sans text-[13px] text-textTertiary">5 min ago</span>
+            </div>
+            
+            <div class="flex flex-col gap-1">
+                <h3 class="font-sans text-[15px] font-semibold text-textPrimary leading-tight">Devon reported Christina L. as no-show &middot; 11:30 AM job</h3>
+                <span class="font-sans text-[13px] text-textSecondary">Location: 1847 Peachtree Rd NE</span>
+            </div>
+
+            <div class="flex flex-col gap-2 mt-1">
+                <div class="flex justify-between items-center">
+                    <span class="font-sans text-[13px] font-medium text-warning">Grace period: 5:43 remaining</span>
+                </div>
+                <div class="w-full h-1 bg-borderSubtle rounded-full overflow-hidden">
+                    <div class="h-full bg-warning rounded-full w-[40%]"></div>
+                </div>
+                <p class="font-sans text-[13px] text-textSecondary italic mt-1">Devon is waiting. No customer contact yet.</p>
+            </div>
+
+            <button class="w-full h-[44px] bg-warning text-white rounded-[12px] font-sans text-[14px] font-semibold hover:opacity-90 transition-opacity mt-1">
+                Contact Customer
+            </button>
+        </div>
+
+        <!-- Alert Card 3: Modification Pending (Lower Priority) -->
+        <div class="bg-surface rounded-[16px] border-l-[3px] border-l-brandBlue p-4 shadow-level2 flex flex-col gap-3 mb-6">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-plus text-brandBlue text-[18px]"></i>
+                    <span class="font-sans text-[13px] font-semibold text-brandBlue">Service Change Requested</span>
+                </div>
+                <span class="font-sans text-[13px] text-textTertiary">3 min ago</span>
+            </div>
+            
+            <div class="flex flex-col gap-1">
+                <h3 class="font-sans text-[15px] font-semibold text-textPrimary leading-tight">Kayla wants to add Headlight Restoration (+$95) to Alicia M.'s job</h3>
+                <span class="font-sans text-[13px] text-textTertiary">Auto-approves in 2:14</span>
+            </div>
+
+            <div class="flex items-center gap-2 mt-2">
+                <button class="flex-1 h-[44px] bg-surface border border-error text-error rounded-[12px] font-sans text-[14px] font-semibold hover:bg-errorSubtle transition-colors">
+                    Reject
+                </button>
+                <button class="flex-1 h-[44px] bg-brandBlue text-white rounded-[12px] font-sans text-[14px] font-semibold hover:bg-brandBlueHover transition-colors">
+                    Approve Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Hidden All Activity Feed (For reference) -->
+        <div class="hidden flex-col" id="all-activity-feed">
+             <div class="flex items-start gap-3 py-4 border-b border-borderSubtle min-h-[48px]">
+                <div class="w-6 flex justify-center pt-0.5">
+                    <i class="fa-solid fa-check text-success text-[14px]"></i>
+                </div>
+                <div class="flex flex-col">
+                    <p class="font-sans text-[14px] text-textPrimary leading-snug">Jordan completed Terrence W.'s job &middot; 8:45 AM</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start gap-3 py-4 border-b border-borderSubtle min-h-[48px]">
+                <div class="w-6 flex justify-center pt-0.5">
+                    <i class="fa-solid fa-star text-brandBlue text-[14px]"></i>
+                </div>
+                <div class="flex flex-col">
+                    <p class="font-sans text-[14px] text-textPrimary leading-snug">Jordan received 5-star review from Terrence W.</p>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3 py-4 border-b border-borderSubtle min-h-[48px]">
+                <div class="w-6 flex justify-center pt-0.5">
+                    <i class="fa-solid fa-arrow-right text-textTertiary text-[14px]"></i>
+                </div>
+                <div class="flex flex-col">
+                    <p class="font-sans text-[14px] text-textPrimary leading-snug">Devon en route to Dante R. &middot; Est. arrival 8 min</p>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3 py-4 border-b border-borderSubtle min-h-[48px]">
+                <div class="w-6 flex justify-center pt-0.5">
+                    <i class="fa-solid fa-plus text-brandBlue text-[14px]"></i>
+                </div>
+                <div class="flex flex-col">
+                    <p class="font-sans text-[14px] text-textPrimary leading-snug">New booking: Christina L. &middot; Fri, May 3 &middot; 10:00 AM</p>
+                    <span class="font-sans text-[12px] text-warning mt-0.5">Unassigned — needs crew</span>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3 py-4 border-b border-borderSubtle min-h-[48px]">
+                <div class="w-6 flex justify-center pt-0.5">
+                    <i class="fa-solid fa-check text-success text-[14px]"></i>
+                </div>
+                <div class="flex flex-col">
+                    <p class="font-sans text-[14px] text-textPrimary leading-snug">Kayla completed Alicia M.'s job &middot; 2:12 PM</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface border-t border-borderSubtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+</body>
+</html>

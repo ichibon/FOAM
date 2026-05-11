@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Add Location</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            surface: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4',
+                        },
+                        brand: {
+                            primary: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51,157,199,0.10)',
+                            card2: '#6BB8D4',
+                            card3: '#E1F0F7',
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif'],
+                    },
+                    spacing: {
+                        'screen-w': '375px',
+                        'screen-h': '840px',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 400ms ease-out forwards',
+                        'fade-in': 'fadeIn 300ms ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { margin: 0; padding: 0; background-color: #FAFAFA; overscroll-behavior-y: none; }
+        
+        .toggle-checkbox:checked {
+            background-color: #339DC7;
+            border-color: #339DC7;
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-circle {
+            transform: translateX(20px);
+        }
+        .toggle-circle {
+            transition: transform 0.2s ease;
+        }
+        .autocomplete-dropdown {
+            display: none;
+        }
+        .autocomplete-dropdown.active {
+            display: block;
+        }
+        .map-thumbnail {
+            background: linear-gradient(135deg, #E1F0F7 0%, #6BB8D4 100%);
+        }
+    </style>
+</head>
+<body class="bg-background-primary flex items-center justify-center min-h-[100dvh] antialiased m-0 p-0">
+
+    <main id="main-container" class="w-full max-w-[375px] h-[840px] max-h-[100dvh] bg-background-primary relative flex flex-col overflow-hidden mx-auto shadow-[0_0_40px_rgba(0,0,0,0.05)] sm:rounded-[40px] sm:my-8 sm:h-[840px] sm:border-[8px] sm:border-gray-900">
+        
+        <header id="screen_header" class="w-full pt-[64px] pb-[16px] px-[16px] flex-shrink-0 relative z-10 animate-fade-in bg-background-primary">
+            <button class="w-[44px] h-[44px] flex items-center justify-start absolute top-[54px] left-[6px] -ml-[8px] text-text-primary transition-transform active:scale-[0.95]">
+                <i data-lucide="chevron-left" class="w-[20px] h-[20px]"></i>
+            </button>
+            
+            <div class="w-full flex flex-col items-center mt-[16px]">
+                <span class="font-inter text-[12px] text-text-tertiary mb-[8px]">Step 3 of 5</span>
+                <div class="w-full h-[4px] bg-[#E4E4E7] rounded-[8px] overflow-hidden">
+                    <div class="h-full bg-brand-primary w-[60%] rounded-[8px]"></div>
+                </div>
+            </div>
+
+            <div class="mt-[20px]">
+                <h1 class="font-playfair text-[26px] font-[700] text-text-primary leading-[1.2] tracking-tight">
+                    Add your first location.
+                </h1>
+                <p class="font-inter text-[15px] font-[400] text-text-secondary mt-[8px]">
+                    You can add more after setup. Start with your primary location.
+                </p>
+            </div>
+        </header>
+
+        <section id="location_form" class="w-full px-[16px] flex flex-col flex-grow overflow-y-auto pb-[140px] animate-slide-up bg-background-primary z-0" style="animation-delay: 100ms;">
+            
+            <div class="flex flex-col gap-[16px] mt-[8px] w-full">
+                
+                <div id="location_name_input" class="w-full">
+                    <label class="font-inter text-[13px] font-[500] text-text-primary mb-[6px] block">Location name</label>
+                    <input type="text" placeholder="e.g., Buckhead Shop, Main Street Location" class="w-full h-[52px] bg-background-surface border border-border-subtle rounded-[12px] px-[16px] font-inter text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand-primary transition-colors">
+                    <p class="font-inter text-[11px] text-text-tertiary mt-[6px]">Customers will see this name when booking.</p>
+                </div>
+
+                <div id="address_input" class="w-full relative">
+                    <label class="font-inter text-[13px] font-[500] text-text-primary mb-[6px] block">Address</label>
+                    <div class="relative">
+                        <i data-lucide="map-pin" class="w-[18px] h-[18px] text-brand-primary absolute left-[16px] top-[17px]"></i>
+                        <input type="text" id="address_field" placeholder="Start typing your address..." class="w-full h-[52px] bg-background-surface border border-border-subtle rounded-[12px] pl-[44px] pr-[16px] font-inter text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand-primary transition-colors">
+                        <div id="autocomplete_dropdown" class="autocomplete-dropdown absolute top-[56px] left-0 w-full bg-background-surface border border-border-subtle rounded-[12px] shadow-[0_4px_16px_rgba(0,0,0,0.12)] max-h-[200px] overflow-y-auto z-30">
+                            <div class="suggestion-item p-[12px] border-b border-border-subtle cursor-pointer hover:bg-background-secondary transition-colors">
+                                <p class="font-inter text-[14px] text-text-primary">1234 Peachtree St NE, Atlanta, GA 30309</p>
+                            </div>
+                            <div class="suggestion-item p-[12px] border-b border-border-subtle cursor-pointer hover:bg-background-secondary transition-colors">
+                                <p class="font-inter text-[14px] text-text-primary">1234 Peachtree Rd NW, Atlanta, GA 30318</p>
+                            </div>
+                            <div class="suggestion-item p-[12px] cursor-pointer hover:bg-background-secondary transition-colors">
+                                <p class="font-inter text-[14px] text-text-primary">1234 Peachtree Industrial Blvd, Duluth, GA 30096</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="map_thumbnail" class="w-full h-[80px] rounded-[12px] mt-[12px] map-thumbnail hidden items-center justify-center">
+                        <i data-lucide="map" class="w-[32px] h-[32px] text-brand-primary opacity-60"></i>
+                    </div>
+                </div>
+
+                <div id="bay_config" class="w-full bg-background-surface border border-border-subtle rounded-[12px] p-[12px]">
+                    <label class="font-inter text-[11px] font-[500] text-text-tertiary uppercase mb-[4px] block tracking-wide">NUMBER OF BAYS</label>
+                    <p class="font-inter text-[13px] text-text-secondary mb-[16px]">How many vehicles can you service simultaneously?</p>
+                    <div class="flex items-center justify-center gap-[20px]">
+                        <button id="bay_minus" class="w-[40px] h-[40px] rounded-full border border-border-subtle flex items-center justify-center text-brand-primary font-inter text-[24px] font-[600] transition-transform active:scale-[0.95] hover:border-brand-primary">−</button>
+                        <span id="bay_count" class="font-inter text-[24px] font-[600] text-text-primary min-w-[40px] text-center">2</span>
+                        <button id="bay_plus" class="w-[40px] h-[40px] rounded-full border border-border-subtle flex items-center justify-center text-brand-primary font-inter text-[24px] font-[600] transition-transform active:scale-[0.95] hover:border-brand-primary">+</button>
+                    </div>
+                </div>
+
+                <div id="operating_hours" class="w-full bg-background-surface border border-border-subtle rounded-[16px] p-[16px]">
+                    <label class="font-inter text-[11px] font-[500] text-text-tertiary uppercase mb-[4px] block tracking-wide">DEFAULT HOURS</label>
+                    <p class="font-inter text-[12px] text-text-tertiary mb-[16px]">You can override specific days later.</p>
+                    
+                    <div class="flex flex-col gap-[12px]">
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Mon</span>
+                                <button class="time-range font-inter text-[13px] text-text-primary bg-background-secondary px-[10px] py-[6px] rounded-[6px]">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Tue</span>
+                                <button class="time-range font-inter text-[13px] text-text-primary bg-background-secondary px-[10px] py-[6px] rounded-[6px]">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Wed</span>
+                                <button class="time-range font-inter text-[13px] text-text-primary bg-background-secondary px-[10px] py-[6px] rounded-[6px]">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Thu</span>
+                                <button class="time-range font-inter text-[13px] text-text-primary bg-background-secondary px-[10px] py-[6px] rounded-[6px]">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Fri</span>
+                                <button class="time-range font-inter text-[13px] text-text-primary bg-background-secondary px-[10px] py-[6px] rounded-[6px]">9:00 AM – 6:00 PM</button>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Sat</span>
+                                <span class="font-inter text-[13px] text-text-tertiary">Unavailable</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="day-row flex items-center justify-between py-[8px]">
+                            <div class="flex items-center gap-[12px] flex-1">
+                                <span class="font-inter text-[14px] font-[500] text-text-primary w-[32px]">Sun</span>
+                                <span class="font-inter text-[13px] text-text-tertiary">Unavailable</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only toggle-checkbox peer">
+                                <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                    <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="walkin_toggle" class="w-full bg-background-surface border border-border-subtle rounded-[12px] p-[12px]">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-[12px] flex-1">
+                            <i data-lucide="footprints" class="w-[18px] h-[18px] text-brand-primary"></i>
+                            <div>
+                                <p class="font-inter text-[14px] font-[500] text-text-primary">Accept walk-ins</p>
+                                <p class="font-inter text-[11px] text-text-tertiary mt-[2px]">Walk-in customers can arrive without an appointment.</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer ml-[8px]">
+                            <input type="checkbox" checked class="sr-only toggle-checkbox peer">
+                            <div class="toggle-label w-[44px] h-[24px] bg-border-default rounded-full peer peer-checked:bg-brand-primary transition-colors relative">
+                                <div class="toggle-circle absolute top-[2px] left-[2px] bg-white w-[20px] h-[20px] rounded-full"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="add_location_link" class="w-full flex justify-center mt-[8px] mb-[16px]">
+                    <button class="font-inter text-[14px] font-[500] text-brand-primary flex items-center gap-[6px] transition-transform active:scale-[0.98]">
+                        <i data-lucide="plus" class="w-[16px] h-[16px]"></i>
+                        Add Another Location
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section id="primary_cta" class="absolute bottom-0 left-0 w-full bg-background-primary pt-[16px] pb-[24px] px-[16px] z-20 animate-fade-in" style="animation-delay: 200ms;">
+            <div class="w-full absolute top-0 left-0 h-[24px] -mt-[24px] bg-gradient-to-t from-background-primary to-transparent pointer-events-none"></div>
+            
+            <button id="continue_btn" class="w-full h-[48px] bg-brand-primary text-background-surface font-inter text-[14px] font-[600] rounded-[8px] flex items-center justify-center transition-transform active:scale-[0.98] hover:bg-brand-hover shadow-[0_4px_12px_rgba(51,157,199,0.2)]">
+                Continue
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const addressField = document.getElementById('address_field');
+            const autocompleteDropdown = document.getElementById('autocomplete_dropdown');
+            const mapThumbnail = document.getElementById('map_thumbnail');
+            const bayMinus = document.getElementById('bay_minus');
+            const bayPlus = document.getElementById('bay_plus');
+            const bayCount = document.getElementById('bay_count');
+
+            let currentBayCount = 2;
+
+            addressField.addEventListener('focus', () => {
+                autocompleteDropdown.classList.add('active');
+            });
+
+            addressField.addEventListener('blur', () => {
+                setTimeout(() => {
+                    autocompleteDropdown.classList.remove('active');
+                }, 200);
+            });
+
+            const suggestionItems = document.querySelectorAll('.suggestion-item');
+            suggestionItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    addressField.value = item.querySelector('p').textContent;
+                    autocompleteDropdown.classList.remove('active');
+                    mapThumbnail.classList.remove('hidden');
+                    mapThumbnail.classList.add('flex');
+                    lucide.createIcons();
+                });
+            });
+
+            bayMinus.addEventListener('click', () => {
+                if (currentBayCount > 1) {
+                    currentBayCount--;
+                    bayCount.textContent = currentBayCount;
+                }
+            });
+
+            bayPlus.addEventListener('click', () => {
+                if (currentBayCount < 10) {
+                    currentBayCount++;
+                    bayCount.textContent = currentBayCount;
+                }
+            });
+
+            const toggles = document.querySelectorAll('.toggle-checkbox');
+            toggles.forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    const dayRow = e.target.closest('.day-row');
+                    const timeRange = dayRow.querySelector('.time-range');
+                    const unavailableText = dayRow.querySelector('span.text-text-tertiary');
+                    
+                    if (e.target.checked) {
+                        if (unavailableText) {
+                            unavailableText.remove();
+                        }
+                        if (!timeRange) {
+                            const newTimeRange = document.createElement('button');
+                            newTimeRange.className = 'time-range font-inter text-[13px] text-text-primary bg-background-secondary px-[10px] py-[6px] rounded-[6px]';
+                            newTimeRange.textContent = '9:00 AM – 6:00 PM';
+                            dayRow.querySelector('.flex.items-center.gap-\\[12px\\]').appendChild(newTimeRange);
+                        }
+                    } else {
+                        if (timeRange) {
+                            timeRange.remove();
+                        }
+                        if (!unavailableText) {
+                            const newUnavailable = document.createElement('span');
+                            newUnavailable.className = 'font-inter text-[13px] text-text-tertiary';
+                            newUnavailable.textContent = 'Unavailable';
+                            dayRow.querySelector('.flex.items-center.gap-\\[12px\\]').appendChild(newUnavailable);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

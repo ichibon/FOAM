@@ -1,10 +1,15 @@
 # Data Model
-**Version 1.3 — Updated May 9, 2026**
+**Version 1.4 — Updated May 2026**
+
+Changes from v1.3 marked with `[v1.4]`
 Changes from v1.2 marked with `[v1.3]`
 Changes from v1.1 marked with `[v1.2]`
 Changes from v1.0 marked with `[v1.1]`
 
-Built on Supabase (PostgreSQL). All tables use UUID primary keys. Row-level security enforced via Supabase RLS policies. Role-based access control enforced at the application and database layer.
+Built on Supabase (PostgreSQL 17). All tables use UUID primary keys. Row-level security enforced at the database layer via Supabase RLS policies. Role-based access enforced at both application and database layers.
+
+**Migrations applied through v1.4:**
+`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes`
 
 ---
 
@@ -17,49 +22,144 @@ email                     text UNIQUE NOT NULL
 phone                     text
 full_name                 text
 avatar_url                text
-role                      text NOT NULL  -- 'customer' | 'operator' | 'manager' | 'team_member'
-first_payment_celebrated  boolean DEFAULT false  -- [v1.1] confetti trigger — fires once on first payment
+role                      text NOT NULL
+  -- 'customer' | 'operator' | 'manager' | 'team_member' | 'superadmin'
+  -- superadmin: FOAM ops only — not exposed in the app
+first_payment_celebrated  boolean DEFAULT false
+  -- [v1.1] confetti trigger — fires once on operator's first received payment
 created_at                timestamptz DEFAULT now()
 updated_at                timestamptz DEFAULT now()
 ```
 
+---
+
 ### detailer_profiles
+The central operator record. Every operator type (mobile, fixed, hybrid) uses this table. RLS ensures operators only see their own record; superadmins see all.
+
 ```sql
 id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
-user_id             uuid REFERENCES users(id)
+user_id             uuid NOT NULL REFERENCES users(id)
 business_name       text
 bio                 text
-operation_type      text NOT NULL DEFAULT 'mobile'  -- 'mobile' | 'fixed' | 'hybrid'
--- Mobile fields
-service_radius      integer  -- miles; used when operation_type = 'mobile' | 'hybrid'
+operation_type      text NOT NULL DEFAULT 'mobile'
+  -- 'mobile' | 'fixed' | 'hybrid'
+
+-- Mobile operator fields
+service_radius      integer          -- miles from home_base
 home_base_lat       decimal
 home_base_lng       decimal
+
 -- Fixed location fields
-location_address    text     -- used when operation_type = 'fixed' | 'hybrid'
+location_address    text
 location_lat        decimal
 location_lng        decimal
-location_hours      jsonb    -- { mon: {open:'08:00',close:'18:00'}, tue: ... }
-bay_count           integer DEFAULT 1  -- simultaneous jobs at fixed location
+location_hours      jsonb
+  -- { mon: {open:'08:00',close:'18:00'}, tue: ..., sat: ..., sun: null }
+bay_count           integer DEFAULT 1
 accepts_walkins     boolean DEFAULT false
--- Shared
+
+-- Multi-unit / fleet
+is_multi_unit       boolean DEFAULT false  -- [v1.3] fleet or franchise operator
+
+-- Stripe & payments
 stripe_account_id   text
-subscription_tier   text DEFAULT 'starter'  -- [v1.3] denormalized from detailer_subscriptions for edge function lookups. Values: 'starter' | 'pro' | 'crew'. Updated via trigger on detailer_subscriptions insert/update.
-platform_fee_override decimal(5,2) NULLABLE  -- [v1.3] manual override set by FOAM ops. NULL = use tier default.
+stripe_customer_id  text               -- Stripe Customer for subscription billing
+
+-- Subscription (denormalized for edge function perf)
+subscription_tier   text DEFAULT 'starter'
+  -- [v1.3] 'starter' | 'pro' | 'crew'
+  -- Kept in sync with detailer_subscriptions.tier via trigger
+subscription_started_at   timestamptz
+subscription_expires_at   timestamptz
+platform_fee_override     decimal(5,2)
+  -- [v1.3] NULL = use tier default. Set by FOAM ops for special cases.
+
+-- Approval & onboarding [v1.5]
+approval_status     text NOT NULL DEFAULT 'pending'
+  -- 'pending' | 'approved' | 'rejected' | 'flagged' | 'suspended'
+submitted_at        timestamptz
+reviewed_at         timestamptz
+reviewed_by         uuid REFERENCES users(id)   -- superadmin who actioned
+approved_at         timestamptz
+rejection_reasons   jsonb DEFAULT '[]'
+  -- array of {reason, note, rejected_by, rejected_at}
+resubmitted_at      timestamptz
+
+-- Verification badges [v1.5]
+badge_verified      boolean DEFAULT false
+  -- Set true by Stripe identity verification (account.updated webhook)
+badge_licensed      boolean DEFAULT false
+  -- Set true when business_license_status = 'verified'
+badge_insured       boolean DEFAULT false
+  -- Set true when insurance_name_match = true and doc reviewed
+
+-- Document storage [v1.5]
+license_doc_url     text    -- Supabase Storage path: /{detailer_id}/license/
+insurance_doc_url   text    -- Supabase Storage path: /{detailer_id}/insurance/
+identity_verified_at timestamptz
+
+-- AI review output [v1.4 — NEW]
+ai_review_score           decimal(4,3)
+  -- Composite confidence score from operator-review-ai (0.000–1.000)
+ai_flags                  jsonb NOT NULL DEFAULT '[]'
+  -- [{type, severity, detail, field}] — structured flags from AI review
+ai_auto_approve_eligible  boolean NOT NULL DEFAULT false
+  -- true when all deterministic checks pass AND ai_review_score >= 0.85
+ai_reviewed_at            timestamptz
+
+-- Insurance document AI vision check [v1.4 — NEW]
+insurance_name_match      boolean
+  -- null = not checked, true = name matches, false = mismatch
+insurance_extracted_name  text
+  -- Name as extracted from insurance certificate by Claude vision
+insurance_checked_at      timestamptz
+
+-- Background check [v1.4 — NEW]
+background_check_status   text NOT NULL DEFAULT 'not_started'
+  -- 'not_started' | 'pending' | 'clear' | 'review_required' | 'failed'
+  -- Initiated on Stripe Connect completion. Checkr webhook updates this.
+background_check_id       text   -- Checkr report ID
+background_check_completed_at timestamptz
+
+-- Business license [v1.4 — NEW]
+business_license_status   text NOT NULL DEFAULT 'not_uploaded'
+  -- 'not_uploaded' | 'uploaded' | 'verified'
+business_license_verified_at timestamptz
+
+-- Ops admin [v1.4 — NEW]
+ops_notes           jsonb NOT NULL DEFAULT '[]'
+  -- [{note, added_by (uuid), added_at}] — internal FOAM ops notes
+suspension_reason   text
+suspended_at        timestamptz
+suspended_by        uuid REFERENCES users(id)
+
+-- Performance metrics
 is_active           boolean DEFAULT true
 is_verified         boolean DEFAULT false
-badge_verified      boolean DEFAULT false  -- set true by Stripe identity verification on Connect onboarding
 avg_rating          decimal(3,2)
 total_reviews       integer DEFAULT 0
-cancellation_count  integer DEFAULT 0  -- [v1.1] tracks cancellations for strike system
-operator_cancel_strike_count integer DEFAULT 0  -- [v1.2] cumulative cancellation + reschedule strikes
+
+-- Strike tracking [v1.1]
+cancellation_count          integer DEFAULT 0
+operator_cancel_strike_count integer DEFAULT 0
+operator_flagged_at         timestamptz
+
+-- Tip configuration [v1.6]
+tip_collection_post_service boolean DEFAULT true
+tip_collection_pre_set      boolean DEFAULT false
+tip_collection_cash_logging boolean DEFAULT true
+tips_disabled               boolean DEFAULT false
+tip_distribution_model      text DEFAULT 'assigned_crew'
+  -- 'assigned_crew' | 'operator' | 'split_equal_day' | 'split_percentage'
+tip_crew_percentage         integer DEFAULT 100
+tip_operator_percentage     integer DEFAULT 0
+
 created_at          timestamptz DEFAULT now()
 updated_at          timestamptz DEFAULT now()
 ```
 
-**Note on `subscription_tier` [v1.3]:** This is a denormalized field kept in sync with `detailer_subscriptions.tier` via a database trigger. Edge functions query this column directly to determine platform fee percentage without joining `detailer_subscriptions` on every transaction. The trigger fires on `INSERT` and `UPDATE` of `detailer_subscriptions` where `status = 'active'`.
-
+**Subscription tier sync trigger:**
 ```sql
--- Trigger to keep subscription_tier in sync
 CREATE OR REPLACE FUNCTION sync_subscription_tier()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -77,13 +177,16 @@ CREATE TRIGGER on_subscription_change
   FOR EACH ROW EXECUTE FUNCTION sync_subscription_tier();
 ```
 
+---
+
 ### team_members
 ```sql
 id                          uuid PRIMARY KEY DEFAULT gen_random_uuid()
 user_id                     uuid REFERENCES users(id)
 manager_id                  uuid REFERENCES detailer_profiles(id)
 display_name                text
-team_role                   text NOT NULL DEFAULT 'member'  -- 'manager' | 'member'
+team_role                   text NOT NULL DEFAULT 'member'
+  -- 'manager' | 'member'
 is_active                   boolean DEFAULT true
 can_view_customer_contact   boolean DEFAULT false
 can_reschedule_jobs         boolean DEFAULT false
@@ -92,18 +195,28 @@ commission_rate             decimal(5,2)
 created_at                  timestamptz DEFAULT now()
 ```
 
+---
+
 ### customer_profiles
 ```sql
 id                     uuid PRIMARY KEY DEFAULT gen_random_uuid()
 user_id                uuid REFERENCES users(id)
 stripe_customer_id     text
 rain_protection_active boolean DEFAULT false
-rain_protection_sub_id text  -- Stripe subscription ID
-dispute_count          integer DEFAULT 0  -- [v1.1] tracks dispute history for fraud detection
-is_suspended           boolean DEFAULT false  -- [v1.1] account suspension flag
+  -- Legacy: kept for backwards compat. Use customer_subscriptions going forward.
+rain_protection_sub_id text
+  -- Legacy: Stripe sub ID for original Rain Coverage sub
+dispute_count          integer DEFAULT 0
+  -- [v1.1] tracks dispute history for fraud detection
+is_suspended           boolean DEFAULT false
+  -- [v1.1] account suspension flag — set by FOAM ops
+foam_credit            decimal(10,2) DEFAULT 0
+  -- [v1.9] platform credit balance, applied at checkout
 created_at             timestamptz DEFAULT now()
 updated_at             timestamptz DEFAULT now()
 ```
+
+---
 
 ### vehicles
 ```sql
@@ -113,8 +226,10 @@ make            text
 model           text
 year            integer
 color           text
-license_plate   text NULLABLE  -- [v1.1] optional, shown on operator job screens
-vehicle_type    text  -- 'sedan' | 'suv' | 'truck' | 'van' | 'coupe' | 'other'
+license_plate   text
+  -- [v1.1] optional, shown on operator job screens
+vehicle_type    text
+  -- 'sedan' | 'suv' | 'truck' | 'van' | 'coupe' | 'other'
 notes           text
 is_default      boolean DEFAULT false
 created_at      timestamptz DEFAULT now()
@@ -150,140 +265,208 @@ is_active       boolean DEFAULT true
 
 ### vehicle_size_pricing
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-package_id      uuid REFERENCES service_packages(id)
-vehicle_type    text  -- 'sedan' | 'suv' | 'truck' | 'van'
-price_adjustment decimal(10,2)  -- added to or subtracted from base price
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+package_id       uuid REFERENCES service_packages(id)
+vehicle_type     text   -- 'sedan' | 'suv' | 'truck' | 'van'
+price_adjustment decimal(10,2)
 ```
 
 ---
 
 ## Bookings
 
-### bookings [v1.1 — updated]
+### bookings
 ```sql
-id                      uuid PRIMARY KEY DEFAULT gen_random_uuid()
-customer_id             uuid REFERENCES customer_profiles(id)
-detailer_id             uuid REFERENCES detailer_profiles(id)
-team_member_id          uuid REFERENCES team_members(id) NULLABLE
-package_id              uuid REFERENCES service_packages(id) NULLABLE  -- [v1.1] nullable for multi-vehicle bookings
-service_type            text NOT NULL DEFAULT 'mobile'  -- 'mobile' | 'fixed'
-status                  text NOT NULL DEFAULT 'requested'
-  -- 'requested' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
-scheduled_at            timestamptz NOT NULL
-duration_mins           integer NOT NULL
-location_address        text  -- customer address for mobile; operator address for fixed
-location_lat            decimal
-location_lng            decimal
-notes                   text
-reschedule_count        integer DEFAULT 0  -- [v1.2] increments on each reschedule (max 2)
-operator_reschedule_count integer DEFAULT 0  -- [v1.2] separate counter for operator-initiated reschedules
-original_scheduled_at   timestamptz  -- [v1.2] preserves original appointment time
-cancellation_reason     text NULLABLE
-cancelled_by            text NULLABLE  -- 'customer' | 'operator' | 'foam' | 'system'
-created_at              timestamptz DEFAULT now()
-updated_at              timestamptz DEFAULT now()
+id                        uuid PRIMARY KEY DEFAULT gen_random_uuid()
+customer_id               uuid REFERENCES customer_profiles(id)
+detailer_id               uuid REFERENCES detailer_profiles(id)
+team_member_id            uuid REFERENCES team_members(id)
+crew_member_id            uuid   -- crew assignment (booking_crew table preferred)
+vehicle_id                uuid REFERENCES vehicles(id)
+package_id                uuid REFERENCES service_packages(id)
+service_type              text NOT NULL DEFAULT 'mobile'
+  -- 'mobile' | 'fixed'
+status                    text NOT NULL DEFAULT 'requested'
+  -- 'requested' | 'confirmed' | 'in_progress' | 'completed'
+  -- | 'cancelled' | 'no_show'
+scheduled_at              timestamptz NOT NULL
+estimated_duration_mins   integer
+service_address           text
+service_lat               decimal
+service_lng               decimal
+bay_number                integer   -- fixed location bay assignment
+location_id               uuid REFERENCES business_locations(id)
+asset_id                  uuid REFERENCES business_assets(id)
+subtotal                  decimal(10,2)
+platform_fee              decimal(10,2)
+tip_amount                decimal(10,2)
+total                     decimal(10,2)
+notes                     text
+is_recurring              boolean DEFAULT false
+recurrence_rule           text     -- iCal RRULE string
+parent_booking_id         uuid REFERENCES bookings(id)
+  -- links recurring instances to parent booking
+cancellation_policy       text
+  -- 'free' | 'twenty_five' | 'fifty' | 'no_show'
+cancelled_by              text     -- 'customer' | 'operator' | 'foam' | 'system'
+cancelled_at              timestamptz
+cancellation_reason       text
+no_show_reported_at       timestamptz
+submitted_by              uuid REFERENCES users(id)
+submitted_by_role         text
+reschedule_count          integer DEFAULT 0
+  -- [v1.2] increments each reschedule (max 2)
+operator_reschedule_count integer DEFAULT 0
+  -- [v1.2] operator-initiated reschedule counter
+original_scheduled_at     timestamptz
+  -- [v1.2] preserves original appointment time
+last_rescheduled_at       timestamptz
+last_rescheduled_by       uuid REFERENCES users(id)
+created_at                timestamptz DEFAULT now()
+updated_at                timestamptz DEFAULT now()
 ```
 
-### booking_vehicles [v1.1 — new]
+### booking_vehicles [v1.1]
+Multi-vehicle bookings — one row per vehicle per booking.
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-booking_id      uuid REFERENCES bookings(id)
-vehicle_id      uuid REFERENCES vehicles(id)
-status          text DEFAULT 'pending'  -- 'pending' | 'in_progress' | 'completed' | 'skipped'
-created_at      timestamptz DEFAULT now()
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id  uuid REFERENCES bookings(id)
+vehicle_id  uuid REFERENCES vehicles(id)
+status      text DEFAULT 'pending'
+  -- 'pending' | 'in_progress' | 'completed' | 'skipped'
+created_at  timestamptz DEFAULT now()
 ```
 
-### booking_vehicle_services [v1.1 — new]
-Supports partial completion per vehicle.
-
+### booking_vehicle_services [v1.1]
+Services applied per vehicle in a multi-vehicle booking.
 ```sql
-id                    uuid PRIMARY KEY DEFAULT gen_random_uuid()
-booking_vehicle_id    uuid REFERENCES booking_vehicles(id)
-package_id            uuid REFERENCES service_packages(id)
-price                 decimal(10,2)
-duration_mins         integer
-status                text  -- 'pending' | 'completed' | 'skipped'
-skip_reason           text NULLABLE
--- Skip reasons: 'time_constraint' | 'customer_requested' | 'vehicle_condition' | 'access_issue'
-created_at            timestamptz DEFAULT now()
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_vehicle_id  uuid REFERENCES booking_vehicles(id)
+service_package_id  uuid REFERENCES service_packages(id)
+price               decimal(10,2)
+created_at          timestamptz DEFAULT now()
 ```
 
 ### booking_addons
+Add-ons applied to a booking.
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-booking_id      uuid REFERENCES bookings(id)
-addon_id        uuid REFERENCES service_addons(id)
-price           decimal(10,2)
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id  uuid REFERENCES bookings(id)
+addon_id    uuid REFERENCES service_addons(id)
+price       decimal(10,2)
+created_at  timestamptz DEFAULT now()
 ```
 
-### booking_photos [v1.1 — updated]
+### booking_crew
+Crew member assignments per booking (supports multi-crew jobs).
 ```sql
 id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
 booking_id      uuid REFERENCES bookings(id)
-vehicle_id      uuid REFERENCES vehicles(id) NULLABLE  -- [v1.1] links photo to specific vehicle in multi-vehicle appointments
-photo_url       text NOT NULL
-photo_type      text  -- 'before' | 'after' | 'damage'
-uploaded_by     uuid REFERENCES users(id)
+team_member_id  uuid REFERENCES team_members(id)
+role            text DEFAULT 'technician'
 created_at      timestamptz DEFAULT now()
 ```
 
-### booking_modifications [v1.2 — NEW]
-Tracks field-level service changes made by team members during a job. Supports manager approval workflow before changes are committed to the booking total. Created when a team member adds or removes a service in the field.
+### booking_photos [v1.1]
+Before/after/damage photos linked to a booking and specific vehicle.
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id  uuid REFERENCES bookings(id)
+vehicle_id  uuid REFERENCES vehicles(id)
+  -- [v1.1] links photo to specific vehicle in multi-vehicle bookings
+photo_url   text NOT NULL
+photo_type  text   -- 'before' | 'after' | 'damage'
+uploaded_by uuid REFERENCES users(id)
+created_at  timestamptz DEFAULT now()
+```
 
+### booking_modifications [v1.2]
+Field-level service changes by crew during a job. Requires manager approval.
 ```sql
 id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
 booking_id          uuid REFERENCES bookings(id)
-booking_vehicle_id  uuid REFERENCES booking_vehicles(id) NULLABLE  -- which vehicle the change applies to
-modified_by         uuid REFERENCES users(id)  -- team member who requested the change
-modification_type   text NOT NULL  -- 'service_added' | 'service_removed'
-service_id          uuid REFERENCES service_packages(id)  -- service being added or removed
-original_price      decimal(10,2) NULLABLE  -- price before modification (for removals)
-new_price           decimal(10,2) NULLABLE  -- price after modification (for additions)
-reason              text NULLABLE  -- required for removals: 'customer_requested' | 'vehicle_condition' | 'time_constraint' | 'access_issue'
+booking_vehicle_id  uuid REFERENCES booking_vehicles(id)
+modified_by         uuid REFERENCES users(id)
+modification_type   text NOT NULL   -- 'service_added' | 'service_removed'
+service_id          uuid REFERENCES service_packages(id)
+original_price      decimal(10,2)
+new_price           decimal(10,2)
+reason              text
+  -- required for removals: 'customer_requested' | 'vehicle_condition'
+  -- | 'time_constraint' | 'access_issue'
 status              text NOT NULL DEFAULT 'pending'
   -- 'pending' | 'approved' | 'auto_approved' | 'rejected'
-  -- auto_approved fires after 5 minutes with no manager response
-approved_by         uuid REFERENCES users(id) NULLABLE  -- manager who approved/rejected
-approved_at         timestamptz NULLABLE
-auto_approve_at     timestamptz  -- set to created_at + 5 minutes on creation
-rejection_reason    text NULLABLE  -- manager can add context when rejecting
+approved_by         uuid REFERENCES users(id)
+approved_at         timestamptz
+auto_approve_at     timestamptz   -- created_at + 5 minutes
+rejection_reason    text
 created_at          timestamptz DEFAULT now()
 updated_at          timestamptz DEFAULT now()
 ```
-
-**Approval logic:**
-- On creation: `auto_approve_at` = `created_at + 5 minutes`
-- Manager push notification fires immediately via `booking-modification-request` Edge Function
-- If manager approves before `auto_approve_at`: status → `approved`, booking totals updated, additional Stripe hold created if price increases
-- If no response by `auto_approve_at`: status → `auto_approved`, same downstream actions
-- If manager rejects: status → `rejected`, service change not applied, team member notified
 
 ---
 
 ## Payments
 
-### payments [v1.2 — updated]
+### payments
 ```sql
-id                          uuid PRIMARY KEY DEFAULT gen_random_uuid()
-booking_id                  uuid REFERENCES bookings(id)
-stripe_payment_intent_id    text NOT NULL
-amount                      decimal(10,2) NOT NULL  -- total hold amount
-platform_fee_amount         decimal(10,2)  -- FOAM's cut (tier % of booking value)
-operator_amount             decimal(10,2)  -- operator's net after platform fee
-tip_amount                  decimal(10,2) DEFAULT 0
-tip_payment_intent_id       text  -- separate Stripe PaymentIntent for tip
-status                      text  -- 'authorized' | 'captured' | 'cancelled' | 'refunded' | 'disputed'
-hold_expires_at             timestamptz  -- Stripe auth hold expiry; re-authorized at T-48hrs
-payment_method_type         text  -- 'card' | 'apple_pay' | 'google_pay' | 'cashapp'
-modification_intents        jsonb  -- [v1.2] array of additional holds for field-added services: [{modification_id, payment_intent_id, amount, captured}]
-cancellation_fee_amount     decimal(10,2)  -- amount captured as cancellation fee
-cancellation_fee_tier       text  -- 'free' | 'twenty_five' | 'fifty' | 'no_show'
-cancellation_initiated_by   text  -- 'customer' | 'operator' | 'foam' | 'system'
-instant_payout_requested    boolean DEFAULT false
-instant_payout_fee          decimal(10,2)  -- 1.5% fee for instant payout
-created_at                  timestamptz DEFAULT now()
-updated_at                  timestamptz DEFAULT now()
+id                        uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id                uuid REFERENCES bookings(id)
+stripe_payment_intent_id  text NOT NULL
+amount                    decimal(10,2) NOT NULL
+hold_amount               decimal(10,2)
+hold_placed_at            timestamptz
+hold_expires_at           timestamptz
+capture_amount            decimal(10,2)
+stripe_capture_method     text
+platform_fee              decimal(10,2)
+payout_amount             decimal(10,2)
+tip_amount                decimal(10,2) DEFAULT 0
+tip_payment_intent_id     text
+tip_payment_status        text
+tip_model                 text
+status                    text
+  -- 'authorized' | 'captured' | 'cancelled' | 'refunded' | 'disputed'
+payment_method_type       text
+  -- 'card' | 'apple_pay' | 'google_pay' | 'cashapp'
+modification_intents      jsonb
+  -- [v1.2] [{modification_id, payment_intent_id, amount, captured}]
+cancellation_fee_amount   decimal(10,2)
+cancellation_fee_tier     text   -- 'free' | 'twenty_five' | 'fifty' | 'no_show'
+cancellation_initiated_by text   -- 'customer' | 'operator' | 'foam' | 'system'
+cancelled_at              timestamptz
+cancellation_reason       text
+instant_payout_requested  boolean DEFAULT false
+instant_payout_fee        decimal(10,2)
+dispute_opened_at         timestamptz
+dispute_resolved_at       timestamptz
+dispute_outcome           text   -- 'won' | 'lost' | 'pending'
+created_at                timestamptz DEFAULT now()
+updated_at                timestamptz DEFAULT now()
+```
+
+### payouts
+Operator payout records, linked to Stripe Transfer.
+```sql
+id                    uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id           uuid REFERENCES detailer_profiles(id)
+stripe_transfer_id    text
+amount                decimal(10,2)
+status                text   -- 'pending' | 'paid' | 'failed'
+payout_date           timestamptz
+created_at            timestamptz DEFAULT now()
+updated_at            timestamptz DEFAULT now()
+```
+
+### cash_tips [v1.6]
+In-person cash tips logged by operator/crew for record-keeping.
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id      uuid REFERENCES bookings(id)
+team_member_id  uuid REFERENCES team_members(id)
+amount          decimal(10,2)
+logged_by       uuid REFERENCES users(id)
+created_at      timestamptz DEFAULT now()
 ```
 
 ---
@@ -292,89 +475,95 @@ updated_at                  timestamptz DEFAULT now()
 
 ### reviews
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-booking_id      uuid REFERENCES bookings(id)
-customer_id     uuid REFERENCES customer_profiles(id)
-detailer_id     uuid REFERENCES detailer_profiles(id)
-rating          integer NOT NULL  -- 1-5
-body            text NOT NULL  -- required to submit rating
-created_at      timestamptz DEFAULT now()
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+booking_id  uuid REFERENCES bookings(id)
+customer_id uuid REFERENCES customer_profiles(id)
+detailer_id uuid REFERENCES detailer_profiles(id)
+rating      integer NOT NULL   -- 1–5
+body        text NOT NULL
+created_at  timestamptz DEFAULT now()
 ```
 
 ---
 
-## Fixed Location Scheduling
+## Fixed Location & Fleet Infrastructure [v1.3]
+
+### business_locations
+Physical locations for fixed and hybrid operators.
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id     uuid REFERENCES detailer_profiles(id)
+name            text
+address         text
+lat             decimal
+lng             decimal
+bay_count       integer DEFAULT 1
+accepts_walkins boolean DEFAULT false
+hours           jsonb
+is_active       boolean DEFAULT true
+created_at      timestamptz DEFAULT now()
+```
+
+### business_assets
+Vehicles, trailers, mobile units owned by the operator.
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id uuid REFERENCES detailer_profiles(id)
+asset_type  text   -- 'van' | 'trailer' | 'truck' | 'other'
+name        text
+is_active   boolean DEFAULT true
+created_at  timestamptz DEFAULT now()
+```
+
+### asset_crew_assignments
+Which crew member is assigned to which asset on a given day.
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+asset_id        uuid REFERENCES business_assets(id)
+team_member_id  uuid REFERENCES team_members(id)
+assigned_date   date
+created_at      timestamptz DEFAULT now()
+```
 
 ### fixed_location_slots
+Time slots for fixed location bay bookings.
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
-slot_date       date NOT NULL
-slot_time       time NOT NULL
-bay_number      integer DEFAULT 1
-is_booked       boolean DEFAULT false
-booking_id      uuid REFERENCES bookings(id) NULLABLE
-is_blocked      boolean DEFAULT false  -- maintenance, closures
-created_at      timestamptz DEFAULT now()
-```
-
-When a customer books a fixed location appointment, a slot row is marked as booked and linked to the booking. Walk-in jobs create a slot record on arrival. Operators can block slots for maintenance or closures.
-
----
-
-## CRM & Customer Retention (V2)
-
-### customer_notes
-```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
-customer_id     uuid REFERENCES customer_profiles(id)
-note            text
-created_at      timestamptz DEFAULT now()
-```
-
-### lapsed_customer_queue
-```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
-customer_id     uuid REFERENCES customer_profiles(id)
-last_booking_at timestamptz
-days_since_last integer
-outreach_sent_at timestamptz NULLABLE
-created_at      timestamptz DEFAULT now()
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id uuid REFERENCES detailer_profiles(id)
+slot_date   date NOT NULL
+slot_time   time NOT NULL
+bay_number  integer DEFAULT 1
+is_booked   boolean DEFAULT false
+booking_id  uuid REFERENCES bookings(id)
+is_blocked  boolean DEFAULT false   -- maintenance, closures
+created_at  timestamptz DEFAULT now()
 ```
 
 ---
 
-## Inventory (V2)
+## Crew Payroll [v1.6]
 
-### inventory_items
+### crew_time_entries
+Clock-in/out records for crew members.
 ```sql
 id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
-name            text NOT NULL
-unit            text  -- 'oz' | 'gallon' | 'count' | 'bottle'
-current_qty     decimal(10,2)
-low_stock_threshold decimal(10,2)
-cost_per_unit   decimal(10,2)
-created_at      timestamptz DEFAULT now()
-```
-
----
-
-## Rain Protection (V2)
-
-### rain_protection_claims
-```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-customer_id     uuid REFERENCES customer_profiles(id)
+team_member_id  uuid REFERENCES team_members(id)
 booking_id      uuid REFERENCES bookings(id)
-rain_detected_at timestamptz
-precipitation_inches decimal(5,3)
-zip_code        text
-claim_status    text  -- 'triggered' | 'redeemed' | 'expired'
-redemption_booking_id uuid NULLABLE REFERENCES bookings(id)
-expires_at      timestamptz
+clock_in        timestamptz
+clock_out       timestamptz
+duration_mins   integer   -- computed on clock_out
+created_at      timestamptz DEFAULT now()
+```
+
+### crew_manual_payments
+Manual payroll adjustments outside of job-based commission.
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+team_member_id  uuid REFERENCES team_members(id)
+amount          decimal(10,2)
+reason          text
+paid_by         uuid REFERENCES users(id)
+paid_at         timestamptz
 created_at      timestamptz DEFAULT now()
 ```
 
@@ -383,35 +572,290 @@ created_at      timestamptz DEFAULT now()
 ## Subscriptions
 
 ### detailer_subscriptions
+Operator tier subscriptions (Starter/Pro/Crew). Normalized source of truth.
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
+id                     uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id            uuid REFERENCES detailer_profiles(id)
 stripe_subscription_id text
-tier            text  -- 'starter' | 'pro' | 'crew'
-status          text  -- 'active' | 'past_due' | 'cancelled'
-current_period_start timestamptz
-current_period_end   timestamptz
-created_at      timestamptz DEFAULT now()
+tier                   text   -- 'starter' | 'pro' | 'crew'
+status                 text   -- 'active' | 'past_due' | 'cancelled'
+current_period_start   timestamptz
+current_period_end     timestamptz
+created_at             timestamptz DEFAULT now()
 ```
 
-**Note:** `detailer_subscriptions.tier` is the normalized source of truth for an operator's subscription tier. `detailer_profiles.subscription_tier` is a denormalized copy kept in sync via trigger for performant edge function lookups. See `detailer_profiles` note above.
+**Note:** `detailer_subscriptions.tier` is the source of truth. `detailer_profiles.subscription_tier` is a denormalized copy synced via trigger for performant edge function fee lookups.
+
+### subscription_products [v1.4 — NEW]
+Consumer subscription product catalog. Managed by FOAM ops superadmins.
+```sql
+id                       uuid PRIMARY KEY DEFAULT gen_random_uuid()
+name                     text NOT NULL          -- 'Rain Coverage' | 'FOAM+'
+slug                     text NOT NULL UNIQUE   -- 'rain-coverage' | 'foam-plus'
+description              text
+monthly_price            decimal(10,2) NOT NULL
+annual_price             decimal(10,2) NOT NULL
+status                   text NOT NULL DEFAULT 'draft'
+  -- 'draft' | 'active' | 'deprecated'
+stripe_monthly_price_id  text
+stripe_annual_price_id   text
+created_at               timestamptz DEFAULT now()
+updated_at               timestamptz DEFAULT now()
+```
+
+**Seeded at launch:**
+- Rain Coverage: $7.99/month, $69.99/year, status: draft (V2 launch)
+- FOAM+: $14.99/month, $129.99/year, status: draft (V2 launch)
+
+### customer_subscriptions [v1.4 — NEW]
+Per-customer subscription records. One record per product per customer.
+```sql
+id                      uuid PRIMARY KEY DEFAULT gen_random_uuid()
+customer_id             uuid NOT NULL REFERENCES customer_profiles(id)
+product_id              uuid NOT NULL REFERENCES subscription_products(id)
+stripe_subscription_id  text UNIQUE
+stripe_customer_id      text
+plan                    text NOT NULL DEFAULT 'monthly'
+  -- 'monthly' | 'annual'
+status                  text NOT NULL DEFAULT 'active'
+  -- 'active' | 'paused' | 'cancelled' | 'trial' | 'past_due'
+trial_ends_at           timestamptz
+current_period_start    timestamptz
+current_period_end      timestamptz
+cancelled_at            timestamptz
+cancellation_reason     text
+cancelled_by            text   -- 'customer' | 'ops' | 'system'
+paused_at               timestamptz
+paused_by               text   -- 'customer' | 'ops' | 'system'
+foam_credit_issued      decimal(10,2) DEFAULT 0
+  -- total credits issued against this subscription
+ops_notes               jsonb NOT NULL DEFAULT '[]'
+  -- [{note, added_by, added_at}]
+created_at              timestamptz DEFAULT now()
+updated_at              timestamptz DEFAULT now()
+UNIQUE (customer_id, product_id)
+```
 
 ---
 
-## Key Relationships Summary [v1.3]
+## Rain Protection
+
+### rain_protection_claims
+```sql
+id                    uuid PRIMARY KEY DEFAULT gen_random_uuid()
+customer_id           uuid REFERENCES customer_profiles(id)
+booking_id            uuid REFERENCES bookings(id)
+rain_detected_at      timestamptz
+precipitation_inches  decimal(5,3)
+zip_code              text
+claim_status          text   -- 'triggered' | 'redeemed' | 'expired'
+redemption_booking_id uuid REFERENCES bookings(id)
+expires_at            timestamptz
+created_at            timestamptz DEFAULT now()
+```
+
+---
+
+## Events & Campaigns [v1.4 — NEW]
+
+### events
+Community washes, fundraisers, platform campaigns, general events.
+```sql
+id                            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+title                         text NOT NULL
+slug                          text UNIQUE
+event_type                    text NOT NULL DEFAULT 'general'
+  -- 'community_wash' | 'fundraiser' | 'campaign' | 'general'
+status                        text NOT NULL DEFAULT 'draft'
+  -- 'draft' | 'published' | 'live' | 'completed' | 'cancelled'
+description                   text
+event_date                    date
+start_time                    time
+end_time                      time
+is_all_day                    boolean DEFAULT false
+location_name                 text
+location_address              text
+location_lat                  decimal
+location_lng                  decimal
+is_virtual                    boolean DEFAULT false
+  -- true for platform-wide campaigns with no physical location
+capacity                      integer DEFAULT 0   -- 0 = unlimited
+registered_count              integer DEFAULT 0   -- denormalized
+operator_participation        text NOT NULL DEFAULT 'none'
+  -- 'none' (FOAM-run only) | 'open' | 'invite'
+operator_signup_count         integer DEFAULT 0   -- denormalized
+fundraiser_goal               decimal(10,2)
+fundraiser_raised             decimal(10,2) DEFAULT 0
+fundraiser_price_per_vehicle  decimal(10,2)
+campaign_discount_pct         integer
+campaign_service_ids          jsonb   -- array of service_package IDs
+published_at                  timestamptz
+starts_at                     timestamptz
+completed_at                  timestamptz
+cancelled_at                  timestamptz
+cancellation_reason           text
+created_by                    uuid REFERENCES users(id)
+updated_by                    uuid REFERENCES users(id)
+created_at                    timestamptz DEFAULT now()
+updated_at                    timestamptz DEFAULT now()
+```
+
+### event_operator_signups [v1.4 — NEW]
+Operator participation in events (future use when operator_participation ≠ 'none').
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+event_id      uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE
+detailer_id   uuid NOT NULL REFERENCES detailer_profiles(id)
+status        text NOT NULL DEFAULT 'pending'
+  -- 'pending' | 'confirmed' | 'declined' | 'cancelled'
+confirmed_at  timestamptz
+notes         text
+created_at    timestamptz DEFAULT now()
+UNIQUE (event_id, detailer_id)
+```
+
+---
+
+## Ops Administration [v1.4 — NEW]
+
+### ops_audit_log
+Immutable audit trail of every FOAM ops superadmin action.
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+performed_by  uuid NOT NULL REFERENCES users(id)
+  -- superadmin user who performed the action
+action        text NOT NULL
+  -- 'operator_approved' | 'operator_rejected' | 'operator_suspended'
+  -- | 'operator_reactivated' | 'strike_cleared' | 'fee_override_set'
+  -- | 'fee_override_removed' | 'subscription_cancelled' | 'subscription_paused'
+  -- | 'subscription_resumed' | 'credit_issued' | 'customer_suspended'
+  -- | 'customer_reactivated' | 'dispute_evidence_submitted' | 'payout_released'
+  -- | 'event_published' | 'event_cancelled'
+target_type   text NOT NULL
+  -- 'detailer_profile' | 'customer_profile' | 'booking'
+  -- | 'payment' | 'subscription' | 'event'
+target_id     uuid NOT NULL
+payload       jsonb NOT NULL DEFAULT '{}'
+  -- {reason, previous_value, new_value, amount, note}
+ip_address    inet
+created_at    timestamptz DEFAULT now()
+```
+
+**RLS:** Superadmins only. No update or delete policies — append-only by design.
+
+---
+
+## CRM & Customer Retention (V2)
+
+### customer_notes
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id uuid REFERENCES detailer_profiles(id)
+customer_id uuid REFERENCES customer_profiles(id)
+note        text
+created_at  timestamptz DEFAULT now()
+```
+
+### lapsed_customer_queue
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id      uuid REFERENCES detailer_profiles(id)
+customer_id      uuid REFERENCES customer_profiles(id)
+last_booking_at  timestamptz
+days_since_last  integer
+outreach_sent_at timestamptz
+created_at       timestamptz DEFAULT now()
+```
+
+---
+
+## Inventory (V2)
+
+### inventory_items
+```sql
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id         uuid REFERENCES detailer_profiles(id)
+name                text NOT NULL
+unit                text   -- 'oz' | 'gallon' | 'count' | 'bottle'
+current_qty         decimal(10,2)
+low_stock_threshold decimal(10,2)
+cost_per_unit       decimal(10,2)
+created_at          timestamptz DEFAULT now()
+```
+
+---
+
+## Views (SECURITY INVOKER)
+
+### booking_summary
+Fast read view for booking + payment status. Uses SECURITY INVOKER — RLS of the querying user is enforced.
+```sql
+SELECT b.id, b.customer_id, b.detailer_id, b.status, b.scheduled_at,
+       b.service_type, b.estimated_duration_mins, b.service_address,
+       b.created_at, p.amount, p.platform_fee, p.payout_amount,
+       p.status AS payment_status
+FROM bookings b LEFT JOIN payments p ON p.booking_id = b.id
+```
+
+### detailer_summary
+Lightweight operator view for discovery and ops queue. Uses SECURITY INVOKER.
+```sql
+SELECT dp.id, dp.user_id, dp.business_name, dp.operation_type,
+       dp.approval_status, dp.subscription_tier, dp.badge_verified,
+       dp.avg_rating, dp.total_reviews, dp.is_active, dp.created_at
+FROM detailer_profiles dp
+```
+
+---
+
+## Key Relationships [v1.4]
 ```
 users (1) ──── (1) detailer_profiles
 users (1) ──── (1) customer_profiles
 users (1) ──── (1) team_members
+
 detailer_profiles (1) ──── (many) team_members
 detailer_profiles (1) ──── (many) service_packages
+detailer_profiles (1) ──── (1) detailer_subscriptions
+detailer_profiles (1) ──── (many) business_locations      [v1.3]
+detailer_profiles (1) ──── (many) business_assets         [v1.3]
+
 customer_profiles (1) ──── (many) vehicles
+customer_profiles (1) ──── (many) customer_subscriptions  [v1.4 — NEW]
+
+subscription_products (1) ──── (many) customer_subscriptions  [v1.4 — NEW]
+
 bookings (many) ──── (1) customer_profiles
 bookings (many) ──── (1) detailer_profiles
-bookings (1) ──── (many) booking_vehicles          [v1.1 — replaces single vehicle_id]
-booking_vehicles (1) ──── (many) booking_vehicle_services  [v1.1 — new]
-booking_vehicles (1) ──── (many) booking_photos    [v1.1 — photos now vehicle-linked]
-bookings (1) ──── (many) booking_modifications     [v1.2 — new, team member field edits]
+bookings (1) ──── (many) booking_vehicles           [v1.1]
+bookings (1) ──── (many) booking_addons
+bookings (1) ──── (many) booking_crew
+booking_vehicles (1) ──── (many) booking_vehicle_services  [v1.1]
+booking_vehicles (1) ──── (many) booking_photos     [v1.1]
+bookings (1) ──── (many) booking_modifications      [v1.2]
 bookings (1) ──── (1) reviews
 bookings (1) ──── (1) payments
+
+events (1) ──── (many) event_operator_signups        [v1.4 — NEW]
+ops_audit_log (many) ──── (1) users (performed_by)   [v1.4 — NEW]
 ```
+
+---
+
+## RLS Policy Summary
+
+| Table | Customer | Operator | Team Member | Superadmin |
+|-------|----------|----------|-------------|------------|
+| users | own row | own row | own row | all rows |
+| detailer_profiles | read approved only | own row | manager's profile | all rows |
+| customer_profiles | own row | bookings only | — | all rows |
+| bookings | own bookings | assigned bookings | assigned jobs | all rows |
+| payments | own bookings | own bookings | — | all rows |
+| customer_subscriptions | own rows | — | — | all rows |
+| subscription_products | active only | active only | active only | all rows |
+| events | published/live | published/live | published/live | all rows |
+| ops_audit_log | — | — | — | all rows |
+
+---
+
+*Last updated: May 2026. Cross-reference ARCHITECTURE.md for edge functions, PAYMENT_POLICY.md for fee logic, CAPABILITY_LAYER.md for system integrations.*

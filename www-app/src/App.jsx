@@ -5,6 +5,7 @@ import { FoamPricing, FoamFounderStory, FoamFoundingOperator, FoamFinalCTA, Foam
 import { TermsOfService } from './pages/TermsOfService.jsx';
 import { PrivacyPolicy } from './pages/PrivacyPolicy.jsx';
 import { OperatorAgreement } from './pages/OperatorAgreement.jsx';
+import { CookieBanner } from './components/CookieBanner.jsx';
 
 function HomePage() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/operator-agreement" element={<OperatorAgreement />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
+      <CookieBanner />
     </BrowserRouter>
   );
 }

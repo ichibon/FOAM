@@ -22,7 +22,7 @@ export function FoamNav() {
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
         transition: 'background 200ms ease, border-color 200ms ease, backdrop-filter 200ms ease',
       }}>
-        <span style={{ fontFamily:"'Playfair Display',Georgia,serif", fontWeight:800, fontSize:22, color:'var(--accent,#339DC7)', letterSpacing:'-0.5px', cursor:'pointer' }}>FOAM</span>
+        <img src="/foam_logo.png" alt="FOAM" style={{ height:30, width:'auto', display:'block', cursor:'pointer' }} />
         <div className="nav-desktop" style={{ display:'flex', gap:32, alignItems:'center' }}>
           {links.map(l => (
             <a key={l} href={`#${l.replace(/\s+/g,'-').toLowerCase()}`}

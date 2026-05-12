@@ -91,10 +91,7 @@ export function LegalLayout({ title, effectiveDate, children }) {
         >
           ← Back to FOAM
         </Link>
-        <span style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontWeight: 800, fontSize: 20, color: '#339DC7',
-        }}>FOAM</span>
+        <img src="/foam_logo.png" alt="FOAM" style={{ height:28, width:'auto', display:'block' }} />
       </nav>
 
       <main style={{

@@ -1,9 +1,9 @@
-/* FOAM Landing — Shared Utilities & Primitives */
+import { useRef, useState, useEffect } from 'react';
 
-const useScrollReveal = (threshold = 0.15) => {
-  const ref = React.useRef(null);
-  const [visible, setVisible] = React.useState(false);
-  React.useEffect(() => {
+export function useScrollReveal(threshold = 0.15) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
     const obs = new IntersectionObserver(
       ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
       { threshold }
@@ -12,9 +12,9 @@ const useScrollReveal = (threshold = 0.15) => {
     return () => obs.disconnect();
   }, []);
   return [ref, visible];
-};
+}
 
-const AnimatedSection = ({ children, delay = 0, style, className }) => {
+export function AnimatedSection({ children, delay = 0, style, className }) {
   const [ref, visible] = useScrollReveal();
   return (
     <div ref={ref} className={className} style={{
@@ -24,13 +24,13 @@ const AnimatedSection = ({ children, delay = 0, style, className }) => {
       ...(style || {})
     }}>{children}</div>
   );
-};
+}
 
-const StatusChip = ({ label, color = 'gray', dark = false }) => {
+export function StatusChip({ label, color = 'gray', dark = false }) {
   const palettes = {
     green: {
-      light: { bg: 'rgba(22,163,74,0.12)', text: '#16A34A', border: 'rgba(22,163,74,0.25)' },
-      dark:  { bg: 'rgba(34,197,94,0.18)', text: '#22C55E', border: 'rgba(34,197,94,0.3)' },
+      light: { bg: 'rgba(22,163,74,0.12)',  text: '#16A34A', border: 'rgba(22,163,74,0.25)' },
+      dark:  { bg: 'rgba(34,197,94,0.18)',  text: '#22C55E', border: 'rgba(34,197,94,0.3)' },
     },
     blue: {
       light: { bg: 'rgba(51,157,199,0.12)', text: '#339DC7', border: 'rgba(51,157,199,0.25)' },
@@ -41,7 +41,7 @@ const StatusChip = ({ label, color = 'gray', dark = false }) => {
       dark:  { bg: 'rgba(255,255,255,0.07)', text: 'rgba(255,255,255,0.4)', border: 'rgba(255,255,255,0.12)' },
     },
     amber: {
-      light: { bg: 'rgba(217,119,6,0.1)', text: '#D97706', border: 'rgba(217,119,6,0.2)' },
+      light: { bg: 'rgba(217,119,6,0.1)',   text: '#D97706', border: 'rgba(217,119,6,0.2)' },
       dark:  { bg: 'rgba(245,158,11,0.18)', text: '#F59E0B', border: 'rgba(245,158,11,0.3)' },
     },
   };
@@ -55,54 +55,58 @@ const StatusChip = ({ label, color = 'gray', dark = false }) => {
       whiteSpace: 'nowrap', lineHeight: '18px',
     }}>{label}</span>
   );
-};
+}
 
-const FeatureCheck = ({ children, dark = false }) => (
-  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 7 }}>
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent, #339DC7)"
-      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-      style={{ flexShrink: 0, marginTop: 3 }}>
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-    <span style={{ fontSize: 14, lineHeight: 1.55, fontFamily: 'Inter, sans-serif',
-      color: dark ? '#A3C4CF' : '#525252' }}>
-      {children}
-    </span>
-  </div>
-);
+export function FeatureCheck({ children, dark = false }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 7 }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent, #339DC7)"
+        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        style={{ flexShrink: 0, marginTop: 3 }}>
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      <span style={{ fontSize: 14, lineHeight: 1.55, fontFamily: 'Inter, sans-serif',
+        color: dark ? '#A3C4CF' : '#525252' }}>
+        {children}
+      </span>
+    </div>
+  );
+}
 
-const SectionLabel = ({ children, dark = false, style: extraStyle }) => (
-  <div style={{
-    display: 'inline-flex', alignItems: 'center',
-    padding: '4px 12px', borderRadius: 9999,
-    background: dark ? 'rgba(51,157,199,0.15)' : 'rgba(51,157,199,0.10)',
-    border: `1px solid ${dark ? 'rgba(51,157,199,0.3)' : 'rgba(51,157,199,0.2)'}`,
-    fontSize: 11, fontWeight: 600, letterSpacing: '0.8px',
-    textTransform: 'uppercase', color: 'var(--accent, #339DC7)',
-    fontFamily: 'Inter, sans-serif',
-    ...(extraStyle || {})
-  }}>{children}</div>
-);
+export function SectionLabel({ children, dark = false, style: extraStyle }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '4px 12px', borderRadius: 9999,
+      background: dark ? 'rgba(51,157,199,0.15)' : 'rgba(51,157,199,0.10)',
+      border: `1px solid ${dark ? 'rgba(51,157,199,0.3)' : 'rgba(51,157,199,0.2)'}`,
+      fontSize: 11, fontWeight: 600, letterSpacing: '0.8px',
+      textTransform: 'uppercase', color: 'var(--accent, #339DC7)',
+      fontFamily: 'Inter, sans-serif',
+      ...(extraStyle || {})
+    }}>{children}</div>
+  );
+}
 
-const PillBtn = ({ children, variant = 'primary', onClick, size = 'md', style: extraStyle }) => {
-  const [hovered, setHovered] = React.useState(false);
+export function PillBtn({ children, variant = 'primary', onClick, size = 'md', style: extraStyle }) {
+  const [hovered, setHovered] = useState(false);
   const sizes = {
-    sm:  { padding: '7px 18px', fontSize: 13 },
+    sm:  { padding: '7px 18px',  fontSize: 13 },
     md:  { padding: '11px 26px', fontSize: 15 },
     lg:  { padding: '14px 34px', fontSize: 16 },
   };
   const variants = {
     primary: {
       bg: 'var(--accent, #339DC7)', bg2: 'var(--accent-dark, #2B85A9)',
-      text: '#fff', border: 'none'
+      text: '#fff', border: 'none',
     },
     secondary: {
       bg: '#fff', bg2: 'rgba(51,157,199,0.05)',
-      text: 'var(--accent, #339DC7)', border: '1.5px solid var(--accent, #339DC7)'
+      text: 'var(--accent, #339DC7)', border: '1.5px solid var(--accent, #339DC7)',
     },
     'outline-white': {
       bg: 'transparent', bg2: 'rgba(255,255,255,0.1)',
-      text: '#fff', border: '1.5px solid rgba(255,255,255,0.6)'
+      text: '#fff', border: '1.5px solid rgba(255,255,255,0.6)',
     },
   };
   const v = variants[variant] || variants.primary;
@@ -125,10 +129,10 @@ const PillBtn = ({ children, variant = 'primary', onClick, size = 'md', style: e
       onClick={onClick}
     >{children}</button>
   );
-};
+}
 
-const HoverCard = ({ children, style: extraStyle, accent = false, accentColor = '#339DC7' }) => {
-  const [hovered, setHovered] = React.useState(false);
+export function HoverCard({ children, style: extraStyle, accent = false, accentColor = '#339DC7' }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <div
       style={{
@@ -145,9 +149,4 @@ const HoverCard = ({ children, style: extraStyle, accent = false, accentColor = 
       onMouseLeave={() => setHovered(false)}
     >{children}</div>
   );
-};
-
-Object.assign(window, {
-  useScrollReveal, AnimatedSection,
-  StatusChip, FeatureCheck, SectionLabel, PillBtn, HoverCard,
-});
+}

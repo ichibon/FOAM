@@ -21,6 +21,7 @@ import {
   signUpWithEmail,
   resetPassword,
 } from "@/lib/auth";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type AuthMode = "login" | "signup";
@@ -192,21 +193,19 @@ export default function WelcomeScreen() {
               </TouchableOpacity>
 
               {Platform.OS === "ios" && (
-                <TouchableOpacity
-                  style={[styles.oauthButton, styles.appleButton, anyLoading && styles.oauthButtonDisabled]}
-                  onPress={handleAppleSignIn}
-                  disabled={anyLoading}
-                  activeOpacity={0.85}
-                >
-                  {oauthLoading === "apple" ? (
+                oauthLoading === "apple" ? (
+                  <View style={styles.appleLoadingContainer}>
                     <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text style={styles.appleLogo}></Text>
-                      <Text style={[styles.oauthButtonText, styles.appleButtonText]}>Continue with Apple</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                  </View>
+                ) : (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={Radius.md}
+                    style={[styles.appleNativeButton, anyLoading && styles.oauthButtonDisabled]}
+                    onPress={anyLoading ? undefined : handleAppleSignIn}
+                  />
+                )
               )}
             </View>
 
@@ -420,17 +419,17 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyM,
     color: Colors.light.textPrimary,
   },
-  appleButton: {
+  appleNativeButton: {
+    width: "100%",
+    height: 52,
+  },
+  appleLoadingContainer: {
+    width: "100%",
+    height: 52,
+    borderRadius: Radius.md,
     backgroundColor: Colors.black,
-    borderColor: Colors.black,
-  },
-  appleLogo: {
-    fontSize: 18,
-    lineHeight: 20,
-    color: Colors.white,
-  },
-  appleButtonText: {
-    color: Colors.white,
+    alignItems: "center",
+    justifyContent: "center",
   },
   divider: {
     flexDirection: "row",

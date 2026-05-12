@@ -114,9 +114,11 @@ export async function resetPassword(email: string): Promise<void> {
  * Supports both PKCE flow (code= query param) and implicit flow (#access_token hash).
  */
 export async function handleOAuthCallback(url: string): Promise<void> {
-  // PKCE flow: URL contains ?code= — use Supabase's official exchange method
+  // PKCE flow: URL contains ?code= — extract the code and exchange it
   if (url.includes("code=")) {
-    const { error } = await supabase.auth.exchangeCodeForSession(url);
+    const code = new URL(url).searchParams.get("code");
+    if (!code) throw new Error("PKCE callback URL missing code parameter");
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) throw error;
     return;
   }

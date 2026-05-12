@@ -43,9 +43,22 @@ These must be registered in the Supabase dashboard, Google Cloud Console, and Ap
 - App deep-link (Supabase → app): `foam://auth/callback`
 
 ## Development
-- **Workflow**: "Start application" runs `npx expo start --web --port 5000`
+- **Workflow**: "Start application" runs `npx expo start --web --port 5000` (web preview in Replit canvas)
 - **Port**: 5000 (web preview)
-- **QR Code**: Scan from Expo's console output to test on device via Expo Go
+
+## Native Device Testing
+Testing native features (Google OAuth, Apple Sign In, SecureStore, deep links) requires a real device build — Expo Go and tunnel mode are not sufficient.
+
+### One-time setup: EAS development build
+1. Log in to Expo on your machine: `npx eas login`
+2. From the project root, run: `eas build --profile development --platform ios`
+3. EAS builds the `.ipa` on Expo's cloud servers (~10–15 min) and sends you a link
+4. Open the link on your iPhone to install the dev build via TestFlight or direct download
+
+### Each dev session (after the build is installed)
+1. From the Replit shell, run: `npx expo start --tunnel`
+2. Scan the QR code shown in the console with the **FOAM dev build** app (not Expo Go)
+3. The app loads and hot-reloads from the Replit server over the tunnel
 
 ## Design System
 Defined in `constants/design.ts`. Key brand colors:

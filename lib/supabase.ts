@@ -15,7 +15,8 @@ export interface FoamUser {
   role: UserRole;
 }
 
-// SecureStore has a 2048 byte value limit — chunk large values (tokens can exceed this)
+// SecureStore has a 2048 byte value limit — chunk large values (tokens can exceed this).
+// Stale data is cleaned up on every write to prevent old chunks overriding new values.
 const CHUNK_SIZE = 1800;
 
 const SecureStoreAdapter = {
@@ -34,13 +35,25 @@ const SecureStoreAdapter = {
       return AsyncStorage.getItem(key);
     }
   },
+
   async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === "web") return AsyncStorage.setItem(key, value);
     try {
       if (value.length <= CHUNK_SIZE) {
+        // Clean up any stale chunked data left from a previous larger value
+        const oldNumChunksStr = await SecureStore.getItemAsync(`${key}.chunks`);
+        if (oldNumChunksStr) {
+          const oldN = parseInt(oldNumChunksStr, 10);
+          await SecureStore.deleteItemAsync(`${key}.chunks`);
+          await Promise.all(
+            Array.from({ length: oldN }, (_, i) => SecureStore.deleteItemAsync(`${key}.${i}`))
+          );
+        }
         await SecureStore.setItemAsync(key, value);
         return;
       }
+      // Writing chunked — clean up any stale base key from a previous smaller value
+      await SecureStore.deleteItemAsync(key).catch(() => {});
       const chunks: string[] = [];
       for (let i = 0; i < value.length; i += CHUNK_SIZE) {
         chunks.push(value.slice(i, i + CHUNK_SIZE));
@@ -51,6 +64,7 @@ const SecureStoreAdapter = {
       await AsyncStorage.setItem(key, value);
     }
   },
+
   async removeItem(key: string): Promise<void> {
     if (Platform.OS === "web") return AsyncStorage.removeItem(key);
     try {
@@ -90,6 +104,7 @@ export function getSupabase(): SupabaseClient {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      flowType: "pkce",
     },
   });
 

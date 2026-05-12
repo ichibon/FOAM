@@ -6,20 +6,35 @@ import { Colors } from "@/constants/design";
 
 /**
  * Handles the foam://auth/callback deep link after Google OAuth.
- * Extracts tokens from the URL and sets the Supabase session.
- * Navigation is handled automatically by the auth state listener in _layout.tsx.
+ *
+ * Covers two entry paths:
+ *   Cold start — app launched from the deep link (getInitialURL)
+ *   Warm start — app already running when the deep link arrives (addEventListener)
+ *
+ * Once handleOAuthCallback sets the Supabase session the auth state listener
+ * in app/_layout.tsx navigates the user automatically — no manual router.replace needed.
  */
 export default function AuthCallbackScreen() {
   useEffect(() => {
-    async function process() {
+    async function process(url: string) {
       try {
-        const url = await Linking.getInitialURL();
-        if (url) await handleOAuthCallback(url);
+        await handleOAuthCallback(url);
       } catch (err) {
-        console.warn("[AuthCallback] failed to process callback", err);
+        console.warn("[AuthCallback] failed to process callback URL", err);
       }
     }
-    process();
+
+    // Cold start: app opened directly by the deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) process(url);
+    });
+
+    // Warm start: app was already running when the deep link arrived
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      process(url);
+    });
+
+    return () => subscription.remove();
   }, []);
 
   return (

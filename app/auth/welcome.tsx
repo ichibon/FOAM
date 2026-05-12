@@ -14,8 +14,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
-import { supabase } from "@/lib/supabase";
-import { signInWithGoogle, signInWithApple } from "@/lib/auth";
+import {
+  signInWithGoogle,
+  signInWithApple,
+  signInWithEmail,
+  signUpWithEmail,
+  resetPassword,
+} from "@/lib/auth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type AuthMode = "login" | "signup";
@@ -41,12 +46,13 @@ export default function WelcomeScreen() {
       return;
     }
     setLoading(true);
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim());
-    setLoading(false);
-    if (resetErr) {
-      setError(resetErr.message);
-    } else {
+    try {
+      await resetPassword(email.trim());
       Alert.alert("Check your email", "We sent a password reset link to " + email.trim());
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to send reset email.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -59,12 +65,13 @@ export default function WelcomeScreen() {
         return;
       }
       setLoading(true);
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      setLoading(false);
-      if (signInErr) setError(signInErr.message);
+      try {
+        await signInWithEmail(email.trim(), password);
+      } catch (err: any) {
+        setError(err?.message ?? "Login failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     } else {
       if (!fullName.trim() || !email.trim() || !password) {
         setError("Please fill in all fields.");
@@ -75,21 +82,18 @@ export default function WelcomeScreen() {
         return;
       }
       setLoading(true);
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { data: { full_name: fullName.trim() } },
-      });
-      setLoading(false);
-      if (signUpErr) {
-        setError(signUpErr.message);
-        return;
+      try {
+        const { needsConfirmation } = await signUpWithEmail(email.trim(), password, fullName.trim());
+        if (needsConfirmation) {
+          setError("Check your email and click the confirmation link to continue.");
+          return;
+        }
+        router.replace("/auth/role-select");
+      } catch (err: any) {
+        setError(err?.message ?? "Sign up failed. Please try again.");
+      } finally {
+        setLoading(false);
       }
-      if (!signUpData.session) {
-        setError("Check your email and click the confirmation link to continue.");
-        return;
-      }
-      router.replace("/auth/role-select");
     }
   }
 

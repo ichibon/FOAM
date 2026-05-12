@@ -34,8 +34,13 @@ FOAM is a React Native (Expo) mobile app and marketplace for the auto detailing 
 
 ## Environment Variables
 See `env.example` for all required variables. Key ones:
-- `EXPO_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `EXPO_PUBLIC_SUPABASE_URL` — `https://api.foamauto.com` (custom domain; never use the raw `.supabase.co` URL in production)
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key (safe for client)
+
+## OAuth Callback URLs
+These must be registered in the Supabase dashboard, Google Cloud Console, and Apple Developer portal:
+- Browser-side (OAuth provider → Supabase): `https://api.foamauto.com/auth/v1/callback`
+- App deep-link (Supabase → app): `foam://auth/callback`
 
 ## Development
 - **Workflow**: "Start application" runs `npx expo start --web --port 5000`

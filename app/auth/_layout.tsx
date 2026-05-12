@@ -7,6 +7,7 @@ export default function AuthLayout() {
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="role-select" />
+      <Stack.Screen name="callback" />
     </Stack>
   );
 }

@@ -104,7 +104,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StripeProvider
           publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""}
-          merchantIdentifier="merchant.app.foam.mobile"
+          merchantIdentifier="merchant.com.foamauto.app"
           urlScheme="foam"
         >
           <AuthProvider>

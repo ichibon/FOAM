@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { signInWithGoogle, signInWithApple } from "@/lib/auth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type AuthMode = "login" | "signup";
@@ -26,6 +27,7 @@ export default function WelcomeScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function switchMode(next: AuthMode) {
@@ -91,6 +93,37 @@ export default function WelcomeScreen() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setError(null);
+    setOauthLoading("google");
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      if (err?.message !== "BROWSER_CLOSED") {
+        setError(err?.message ?? "Google sign in failed. Please try again.");
+      }
+    } finally {
+      setOauthLoading(null);
+    }
+  }
+
+  async function handleAppleSignIn() {
+    setError(null);
+    setOauthLoading("apple");
+    try {
+      await signInWithApple();
+    } catch (err: any) {
+      const code = err?.code ?? "";
+      if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
+        setError(err?.message ?? "Apple sign in failed. Please try again.");
+      }
+    } finally {
+      setOauthLoading(null);
+    }
+  }
+
+  const anyLoading = loading || oauthLoading !== null;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -135,6 +168,50 @@ export default function WelcomeScreen() {
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
+
+            {/* OAuth buttons */}
+            <View style={styles.oauthGroup}>
+              <TouchableOpacity
+                style={[styles.oauthButton, anyLoading && styles.oauthButtonDisabled]}
+                onPress={handleGoogleSignIn}
+                disabled={anyLoading}
+                activeOpacity={0.85}
+              >
+                {oauthLoading === "google" ? (
+                  <ActivityIndicator size="small" color={Colors.light.textPrimary} />
+                ) : (
+                  <>
+                    <Text style={styles.googleG}>G</Text>
+                    <Text style={styles.oauthButtonText}>Continue with Google</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {Platform.OS === "ios" && (
+                <TouchableOpacity
+                  style={[styles.oauthButton, styles.appleButton, anyLoading && styles.oauthButtonDisabled]}
+                  onPress={handleAppleSignIn}
+                  disabled={anyLoading}
+                  activeOpacity={0.85}
+                >
+                  {oauthLoading === "apple" ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <>
+                      <Text style={styles.appleLogo}></Text>
+                      <Text style={[styles.oauthButtonText, styles.appleButtonText]}>Continue with Apple</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
             <View style={styles.form}>
               {mode === "signup" && (
@@ -207,9 +284,9 @@ export default function WelcomeScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              style={[styles.submitButton, anyLoading && styles.submitButtonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={anyLoading}
               activeOpacity={0.85}
             >
               {loading ? (
@@ -311,6 +388,61 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
     lineHeight: 18,
+  },
+  oauthGroup: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  oauthButton: {
+    height: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: Colors.light.bgPrimary,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+  },
+  oauthButtonDisabled: { opacity: 0.55 },
+  googleG: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 17,
+    color: "#4285F4",
+    lineHeight: 20,
+  },
+  oauthButtonText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  appleButton: {
+    backgroundColor: Colors.black,
+    borderColor: Colors.black,
+  },
+  appleLogo: {
+    fontSize: 18,
+    lineHeight: 20,
+    color: Colors.white,
+  },
+  appleButtonText: {
+    color: Colors.white,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.light.borderSubtle,
+  },
+  dividerText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
   },
   form: { gap: Spacing.sm, marginBottom: Spacing.md },
   inputGroup: { gap: 5 },

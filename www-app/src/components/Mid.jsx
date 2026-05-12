@@ -225,14 +225,6 @@ export function FoamProductFeature() {
           <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 16, color: '#525252', lineHeight: 1.7, margin: '0 0 28px' }}>
             Most tools are built for one or the other. FOAM was built by someone who ran both simultaneously — a mobile van and three physical shops in Atlanta. Mobile routes, bay boards, drop-offs, walk-ins, crew assignments, and customer history. All in one platform.
           </p>
-          <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '16px 20px' }}>
-            <div style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 14, color: '#0A0A0A', marginBottom: 6 }}>
-              Built from firsthand experience — not assumptions.
-            </div>
-            <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: '#525252', lineHeight: 1.5 }}>
-              The founder ran Foam Auto Spa: a mobile van and three physical shops in Atlanta simultaneously.
-            </div>
-          </div>
         </AnimatedSection>
         <AnimatedSection delay={150}>
           <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center' }}>

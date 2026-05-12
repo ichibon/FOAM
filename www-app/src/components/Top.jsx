@@ -226,10 +226,6 @@ export function FoamHero({ city = 'Atlanta' }) {
             <p style={{ fontFamily:'Inter,sans-serif', fontSize:'clamp(16px,1.5vw,18px)', color:'#525252', lineHeight:1.65, margin:'0 0 36px', maxWidth:540 }}>
               FOAM is the operating system for auto detailing. Mobile detailers and shop owners manage bookings, payments, customers, and crews in one app. Customers book trusted detailers in two minutes.
             </p>
-            <div style={{ display:'flex', gap:12, flexWrap:'wrap', alignItems:'center', marginBottom:20 }}>
-              <PillBtn variant="primary" size="md">Join as an Operator</PillBtn>
-              <PillBtn variant="secondary" size="md">Book a Detail</PillBtn>
-            </div>
             <StoreButtons />
           </div>
         </div>
@@ -252,16 +248,15 @@ export function FoamHero({ city = 'Atlanta' }) {
 /* ─── STATS BAR ─── */
 export function FoamStatsBar() {
   const stats = [
-    { num: "Atlanta's first", label: 'detailing marketplace' },
-    { num: '< 2 min',         label: 'average booking time' },
-    { num: 'Mobile + Shop',   label: 'both operator types' },
-    { num: '1 app',           label: 'to run everything' },
-    { num: 'Zero',            label: 'whiteboards required' },
+    { num: '< 2 min',       label: 'average booking time' },
+    { num: 'Mobile + Shop', label: 'both operator types' },
+    { num: '1 app',         label: 'to run everything' },
+    { num: 'Zero',          label: 'whiteboards required' },
   ];
   return (
     <section style={{ background:'#0F2F3C', padding:'clamp(40px,5vw,60px) clamp(20px,5vw,64px)' }}>
       <AnimatedSection>
-        <div style={{ maxWidth:1100, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:0 }} className="stats-grid">
+        <div style={{ maxWidth:1100, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:0 }} className="stats-grid">
           {stats.map((s,i)=>(
             <div key={i} style={{
               display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',

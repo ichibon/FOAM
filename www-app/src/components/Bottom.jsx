@@ -1,4 +1,5 @@
-/* FOAM Landing — Pricing, FounderStory, FoundingOperator, FinalCTA, Footer */
+import { useState, useRef, useEffect } from 'react';
+import { AnimatedSection, HoverCard, SectionLabel, PillBtn } from './shared.jsx';
 
 /* ─── PRICING ─── */
 const pricingTiers = [
@@ -28,10 +29,10 @@ const pricingTiers = [
   },
 ];
 
-const PricingCard = ({ tier, annual }) => {
-  const [priceVis, setPriceVis] = React.useState(true);
-  const prevAnnual = React.useRef(annual);
-  React.useEffect(() => {
+function PricingCard({ tier, annual }) {
+  const [priceVis, setPriceVis] = useState(true);
+  const prevAnnual = useRef(annual);
+  useEffect(() => {
     if (prevAnnual.current !== annual) {
       setPriceVis(false);
       setTimeout(() => setPriceVis(true), 140);
@@ -82,10 +83,10 @@ const PricingCard = ({ tier, annual }) => {
       </div>
     </HoverCard>
   );
-};
+}
 
-const FoamPricing = () => {
-  const [annual, setAnnual] = React.useState(true);
+export function FoamPricing() {
+  const [annual, setAnnual] = useState(true);
   return (
     <section id="pricing" style={{ background:'#FFFFFF', padding:'clamp(72px,8vw,100px) clamp(20px,5vw,64px)' }}>
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
@@ -124,48 +125,50 @@ const FoamPricing = () => {
       </div>
     </section>
   );
-};
+}
 
 /* ─── FOUNDER STORY ─── */
-const FoamFounderStory = () => (
-  <section style={{ background:'#0F2F3C', padding:'clamp(72px,8vw,100px) clamp(20px,5vw,64px)' }}>
-    <div style={{ maxWidth:1200, margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'clamp(40px,6vw,80px)', alignItems:'center' }} className="founder-grid">
-      <AnimatedSection>
-        <SectionLabel dark={true} style={{ marginBottom:20 }}>Why FOAM Exists</SectionLabel>
-        <h2 style={{
-          fontFamily:"'Playfair Display',Georgia,serif",
-          fontWeight:800, fontSize:'clamp(28px,3vw,44px)',
-          color:'#FFFFFF', margin:'0 0 24px', letterSpacing:'-0.8px', lineHeight:1.15,
-        }}>Built by someone who ran the van and the bay.</h2>
-        <p style={{ fontFamily:'Inter,sans-serif', fontSize:17, color:'#E1F0F7', lineHeight:1.7, margin:'0 0 32px' }}>
-          Every detailer I've ever met is brilliant at the work and exhausted by everything around it. FOAM exists because the founder ran Foam Auto Spa — a mobile van and three physical shops in Atlanta — and couldn't find a single tool that worked for either. So he built the one he needed.
-        </p>
-        <PillBtn variant="outline-white">Read the story</PillBtn>
-      </AnimatedSection>
-      <AnimatedSection delay={150}>
-        <div style={{
-          background:'#164558', borderRadius:20, minHeight:360,
-          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-          padding:40, border:'1px solid #1E5D72',
-        }}>
-          <div style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#6A9BAA', textAlign:'center', lineHeight:1.8, letterSpacing:'0.3px' }}>
-            Founder photography<br />Mobile van · Shop bay<br />Detailing tools · Atlanta
+export function FoamFounderStory() {
+  return (
+    <section style={{ background:'#0F2F3C', padding:'clamp(72px,8vw,100px) clamp(20px,5vw,64px)' }}>
+      <div style={{ maxWidth:1200, margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'clamp(40px,6vw,80px)', alignItems:'center' }} className="founder-grid">
+        <AnimatedSection>
+          <SectionLabel dark={true} style={{ marginBottom:20 }}>Why FOAM Exists</SectionLabel>
+          <h2 style={{
+            fontFamily:"'Playfair Display',Georgia,serif",
+            fontWeight:800, fontSize:'clamp(28px,3vw,44px)',
+            color:'#FFFFFF', margin:'0 0 24px', letterSpacing:'-0.8px', lineHeight:1.15,
+          }}>Built by someone who ran the van and the bay.</h2>
+          <p style={{ fontFamily:'Inter,sans-serif', fontSize:17, color:'#E1F0F7', lineHeight:1.7, margin:'0 0 32px' }}>
+            Every detailer I've ever met is brilliant at the work and exhausted by everything around it. FOAM exists because the founder ran Foam Auto Spa — a mobile van and three physical shops in Atlanta — and couldn't find a single tool that worked for either. So he built the one he needed.
+          </p>
+          <PillBtn variant="outline-white">Read the story</PillBtn>
+        </AnimatedSection>
+        <AnimatedSection delay={150}>
+          <div style={{
+            background:'#164558', borderRadius:20, minHeight:360,
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            padding:40, border:'1px solid #1E5D72',
+          }}>
+            <div style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#6A9BAA', textAlign:'center', lineHeight:1.8, letterSpacing:'0.3px' }}>
+              Founder photography<br />Mobile van · Shop bay<br />Detailing tools · Atlanta
+            </div>
           </div>
-        </div>
-      </AnimatedSection>
-    </div>
-  </section>
-);
+        </AnimatedSection>
+      </div>
+    </section>
+  );
+}
 
 /* ─── FOUNDING OPERATOR ─── */
 const foundingCards = [
-  { emoji:'🎁', title:'3 months free on Pro', body:'Start with full Pro access at no cost for your first 90 days.' },
-  { emoji:'🏅', title:'Founding Operator badge', body:'Marked permanently as an original. It never goes away.' },
-  { emoji:'✦', title:'Zero booking fees — 60 days', body:'$0 platform fee per booking for your first two months.' },
+  { emoji:'🎁', title:'3 months free on Pro',         body:'Start with full Pro access at no cost for your first 90 days.' },
+  { emoji:'🏅', title:'Founding Operator badge',       body:"Marked permanently as an original. It never goes away." },
+  { emoji:'✦',  title:'Zero booking fees — 60 days',  body:'$0 platform fee per booking for your first two months.' },
   { emoji:'💬', title:'Direct line to the product team', body:'Your feedback shapes what gets built next.' },
 ];
 
-const FoamFoundingOperator = ({ show = true }) => {
+export function FoamFoundingOperator({ show = true }) {
   if (!show) return null;
   return (
     <section style={{ background:'#E1F0F7', padding:'clamp(72px,8vw,100px) clamp(20px,5vw,64px)' }}>
@@ -206,70 +209,72 @@ const FoamFoundingOperator = ({ show = true }) => {
       </div>
     </section>
   );
-};
+}
 
 /* ─── FINAL CTA ─── */
-const FoamFinalCTA = () => (
-  <section style={{ background:'#0F2F3C', position:'relative', overflow:'hidden' }}>
-    <div style={{ height:4, background:'var(--accent,#339DC7)' }} />
-    <div style={{ padding:'clamp(80px,10vw,120px) clamp(20px,5vw,64px)', textAlign:'center' }}>
-      <AnimatedSection>
-        <h2 style={{
-          fontFamily:"'Playfair Display',Georgia,serif",
-          fontWeight:800, fontSize:'clamp(36px,5vw,72px)',
-          color:'#FFFFFF', margin:'0 0 24px', letterSpacing:'-2px', lineHeight:1.05,
-        }}>The whiteboard days are over.</h2>
-        <p style={{ fontFamily:'Inter,sans-serif', fontSize:'clamp(15px,1.5vw,18px)', color:'#E1F0F7', margin:'0 auto 40px', maxWidth:600, lineHeight:1.7 }}>
-          Whether you run a van, a bay, or both — FOAM gives your detailing business the infrastructure it deserved from day one.
-        </p>
-        <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
-          <PillBtn variant="primary" size="lg">Join FOAM</PillBtn>
-          <PillBtn variant="outline-white" size="lg">See Pricing</PillBtn>
-        </div>
-      </AnimatedSection>
-    </div>
-  </section>
-);
+export function FoamFinalCTA() {
+  return (
+    <section style={{ background:'#0F2F3C', position:'relative', overflow:'hidden' }}>
+      <div style={{ height:4, background:'var(--accent,#339DC7)' }} />
+      <div style={{ padding:'clamp(80px,10vw,120px) clamp(20px,5vw,64px)', textAlign:'center' }}>
+        <AnimatedSection>
+          <h2 style={{
+            fontFamily:"'Playfair Display',Georgia,serif",
+            fontWeight:800, fontSize:'clamp(36px,5vw,72px)',
+            color:'#FFFFFF', margin:'0 0 24px', letterSpacing:'-2px', lineHeight:1.05,
+          }}>The whiteboard days are over.</h2>
+          <p style={{ fontFamily:'Inter,sans-serif', fontSize:'clamp(15px,1.5vw,18px)', color:'#E1F0F7', margin:'0 auto 40px', maxWidth:600, lineHeight:1.7 }}>
+            Whether you run a van, a bay, or both — FOAM gives your detailing business the infrastructure it deserved from day one.
+          </p>
+          <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
+            <PillBtn variant="primary" size="lg">Join FOAM</PillBtn>
+            <PillBtn variant="outline-white" size="lg">See Pricing</PillBtn>
+          </div>
+        </AnimatedSection>
+      </div>
+    </section>
+  );
+}
 
 /* ─── FOOTER ─── */
 const footerLinks = {
-  Product: ['For Customers','For Detailers','For Shops','Pricing'],
-  Company: ['About','Blog','Contact','Press'],
+  Product:   ['For Customers','For Detailers','For Shops','Pricing'],
+  Company:   ['About','Blog','Contact','Press'],
   Resources: ['Mobile Detailing Guide','Shop Operator Guide','Atlanta Detailing','FAQs'],
-  Legal: ['Privacy Policy','Terms of Service'],
+  Legal:     ['Privacy Policy','Terms of Service'],
 };
 
-const FoamFooter = () => (
-  <footer style={{ background:'#FFFFFF', borderTop:'1px solid #E4E4E7', padding:'60px clamp(20px,5vw,64px) 32px' }}>
-    <div style={{ maxWidth:1200, margin:'0 auto' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1.5fr repeat(4,1fr)', gap:40, marginBottom:48 }} className="footer-grid">
-        <div>
-          <div style={{ fontFamily:"'Playfair Display',Georgia,serif", fontWeight:800, fontSize:22, color:'var(--accent,#339DC7)', marginBottom:8 }}>FOAM</div>
-          <div style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>Your business. Your car. Clean.</div>
-        </div>
-        {Object.entries(footerLinks).map(([col, links]) => (
-          <div key={col}>
-            <div style={{ fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:12, color:'#0A0A0A', letterSpacing:'0.5px', marginBottom:16, textTransform:'uppercase' }}>{col}</div>
-            {links.map(l => (
-              <a key={l} href="#" style={{ display:'block', fontFamily:'Inter,sans-serif', fontSize:13, color:'#525252', textDecoration:'none', marginBottom:10, transition:'color 150ms' }}
-                onMouseEnter={e=>e.target.style.color='#0A0A0A'}
-                onMouseLeave={e=>e.target.style.color='#525252'}>{l}</a>
-            ))}
+export function FoamFooter() {
+  return (
+    <footer style={{ background:'#FFFFFF', borderTop:'1px solid #E4E4E7', padding:'60px clamp(20px,5vw,64px) 32px' }}>
+      <div style={{ maxWidth:1200, margin:'0 auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1.5fr repeat(4,1fr)', gap:40, marginBottom:48 }} className="footer-grid">
+          <div>
+            <div style={{ fontFamily:"'Playfair Display',Georgia,serif", fontWeight:800, fontSize:22, color:'var(--accent,#339DC7)', marginBottom:8 }}>FOAM</div>
+            <div style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>Your business. Your car. Clean.</div>
           </div>
-        ))}
-      </div>
-      <div style={{ borderTop:'1px solid #E4E4E7', paddingTop:24, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
-        <span style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>© 2026 FOAM. All rights reserved.</span>
-        <div style={{ display:'flex', gap:20 }}>
-          {['Instagram','TikTok','Facebook'].map(s=>(
-            <a key={s} href="#" style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3', textDecoration:'none', transition:'color 150ms' }}
-              onMouseEnter={e=>e.target.style.color='var(--accent,#339DC7)'}
-              onMouseLeave={e=>e.target.style.color='#A3A3A3'}>{s}</a>
+          {Object.entries(footerLinks).map(([col, links]) => (
+            <div key={col}>
+              <div style={{ fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:12, color:'#0A0A0A', letterSpacing:'0.5px', marginBottom:16, textTransform:'uppercase' }}>{col}</div>
+              {links.map(l => (
+                <a key={l} href="#" style={{ display:'block', fontFamily:'Inter,sans-serif', fontSize:13, color:'#525252', textDecoration:'none', marginBottom:10, transition:'color 150ms' }}
+                  onMouseEnter={e=>e.target.style.color='#0A0A0A'}
+                  onMouseLeave={e=>e.target.style.color='#525252'}>{l}</a>
+              ))}
+            </div>
           ))}
         </div>
+        <div style={{ borderTop:'1px solid #E4E4E7', paddingTop:24, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
+          <span style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>© 2026 FOAM. All rights reserved.</span>
+          <div style={{ display:'flex', gap:20 }}>
+            {['Instagram','TikTok','Facebook'].map(s=>(
+              <a key={s} href="#" style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3', textDecoration:'none', transition:'color 150ms' }}
+                onMouseEnter={e=>e.target.style.color='var(--accent,#339DC7)'}
+                onMouseLeave={e=>e.target.style.color='#A3A3A3'}>{s}</a>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  </footer>
-);
-
-Object.assign(window, { FoamPricing, FoamFounderStory, FoamFoundingOperator, FoamFinalCTA, FoamFooter });
+    </footer>
+  );
+}

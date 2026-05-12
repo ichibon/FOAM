@@ -1,0 +1,39 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent:      #339DC7;
+  --accent-dark: #2B85A9;
+  --dark:        #0F2F3C;
+}
+html { scroll-behavior: smooth; }
+body { background: #FAFAFA; -webkit-font-smoothing: antialiased; }
+a { transition: color 150ms ease; }
+button { outline: none; }
+
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .hero-grid     { grid-template-columns: 1fr !important; }
+  .hero-cards    { display: none !important; }
+  .audience-grid { grid-template-columns: 1fr !important; }
+  .steps-grid    { grid-template-columns: 1fr !important; }
+  .feature-grid  { grid-template-columns: 1fr !important; }
+  .pricing-grid  { grid-template-columns: 1fr !important; }
+  .founder-grid  { grid-template-columns: 1fr !important; }
+  .founding-grid { grid-template-columns: 1fr !important; }
+  .footer-grid   { grid-template-columns: 1fr 1fr !important; }
+  .stats-grid    { grid-template-columns: repeat(2,1fr) !important; gap: 24px !important; }
+  .stats-grid > div { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 24px !important; }
+  .nav-desktop   { display: none !important; }
+  .nav-mobile-btn { display: flex !important; }
+}
+@media (max-width: 600px) {
+  .footer-grid { grid-template-columns: 1fr !important; }
+  .stats-grid  { grid-template-columns: 1fr 1fr !important; }
+}

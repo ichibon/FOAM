@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AnimatedSection, HoverCard, SectionLabel, PillBtn } from './shared.jsx';
 
 /* ─── PRICING ─── */
@@ -162,9 +163,9 @@ export function FoamFounderStory() {
 
 /* ─── FOUNDING OPERATOR ─── */
 const foundingCards = [
-  { emoji:'🎁', title:'3 months free on Pro',         body:'Start with full Pro access at no cost for your first 90 days.' },
-  { emoji:'🏅', title:'Founding Operator badge',       body:"Marked permanently as an original. It never goes away." },
-  { emoji:'✦',  title:'Zero booking fees — 60 days',  body:'$0 platform fee per booking for your first two months.' },
+  { emoji:'🎁', title:'3 months free on Pro',          body:'Start with full Pro access at no cost for your first 90 days.' },
+  { emoji:'🏅', title:'Founding Operator badge',        body:"Marked permanently as an original. It never goes away." },
+  { emoji:'✦',  title:'Zero booking fees — 60 days',   body:'$0 platform fee per booking for your first two months.' },
   { emoji:'💬', title:'Direct line to the product team', body:'Your feedback shapes what gets built next.' },
 ];
 
@@ -184,7 +185,7 @@ export function FoamFoundingOperator({ show = true }) {
             Join the first wave of FOAM operators in Atlanta. Lock in founding benefits before they're gone.
           </p>
         </AnimatedSection>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:20, marginBottom:40 }} className="founding-grid">
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:20 }} className="founding-grid">
           {foundingCards.map((c,i)=>(
             <AnimatedSection key={i} delay={i*100}>
               <div style={{
@@ -203,9 +204,6 @@ export function FoamFoundingOperator({ show = true }) {
             </AnimatedSection>
           ))}
         </div>
-        <AnimatedSection style={{ textAlign:'center' }}>
-          <PillBtn variant="primary" size="lg">Apply to become a founding operator</PillBtn>
-        </AnimatedSection>
       </div>
     </section>
   );
@@ -227,8 +225,10 @@ export function FoamFinalCTA() {
             Whether you run a van, a bay, or both — FOAM gives your detailing business the infrastructure it deserved from day one.
           </p>
           <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
-            <PillBtn variant="primary" size="lg">Join FOAM</PillBtn>
-            <PillBtn variant="outline-white" size="lg">See Pricing</PillBtn>
+            <PillBtn variant="primary" size="lg">Coming Soon</PillBtn>
+            <a href="#pricing" style={{ textDecoration:'none' }}>
+              <PillBtn variant="outline-white" size="lg">See Pricing</PillBtn>
+            </a>
           </div>
         </AnimatedSection>
       </div>
@@ -237,11 +237,21 @@ export function FoamFinalCTA() {
 }
 
 /* ─── FOOTER ─── */
-const footerLinks = {
+const footerCols = {
   Product:   ['For Customers','For Detailers','For Shops','Pricing'],
   Company:   ['About','Blog','Contact','Press'],
   Resources: ['Mobile Detailing Guide','Shop Operator Guide','Atlanta Detailing','FAQs'],
-  Legal:     ['Privacy Policy','Terms of Service'],
+};
+
+const legalLinks = [
+  { label: 'Privacy Policy',      to: '/privacy' },
+  { label: 'Terms of Service',    to: '/terms' },
+  { label: 'Operator Agreement',  to: '/operator-agreement' },
+];
+
+const linkStyle = {
+  display:'block', fontFamily:'Inter,sans-serif', fontSize:13, color:'#525252',
+  textDecoration:'none', marginBottom:10, transition:'color 150ms',
 };
 
 export function FoamFooter() {
@@ -253,19 +263,27 @@ export function FoamFooter() {
             <div style={{ fontFamily:"'Playfair Display',Georgia,serif", fontWeight:800, fontSize:22, color:'var(--accent,#339DC7)', marginBottom:8 }}>FOAM</div>
             <div style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>Your business. Your car. Clean.</div>
           </div>
-          {Object.entries(footerLinks).map(([col, links]) => (
+          {Object.entries(footerCols).map(([col, links]) => (
             <div key={col}>
               <div style={{ fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:12, color:'#0A0A0A', letterSpacing:'0.5px', marginBottom:16, textTransform:'uppercase' }}>{col}</div>
               {links.map(l => (
-                <a key={l} href="#" style={{ display:'block', fontFamily:'Inter,sans-serif', fontSize:13, color:'#525252', textDecoration:'none', marginBottom:10, transition:'color 150ms' }}
+                <a key={l} href="#" style={linkStyle}
                   onMouseEnter={e=>e.target.style.color='#0A0A0A'}
                   onMouseLeave={e=>e.target.style.color='#525252'}>{l}</a>
               ))}
             </div>
           ))}
+          <div>
+            <div style={{ fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:12, color:'#0A0A0A', letterSpacing:'0.5px', marginBottom:16, textTransform:'uppercase' }}>Legal</div>
+            {legalLinks.map(l => (
+              <Link key={l.label} to={l.to} style={linkStyle}
+                onMouseEnter={e=>e.currentTarget.style.color='#0A0A0A'}
+                onMouseLeave={e=>e.currentTarget.style.color='#525252'}>{l.label}</Link>
+            ))}
+          </div>
         </div>
         <div style={{ borderTop:'1px solid #E4E4E7', paddingTop:24, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
-          <span style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>© 2026 FOAM. All rights reserved.</span>
+          <span style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>© 2026 FOAM, LLC. All rights reserved.</span>
           <div style={{ display:'flex', gap:20 }}>
             {['Instagram','TikTok','Facebook'].map(s=>(
               <a key={s} href="#" style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3', textDecoration:'none', transition:'color 150ms' }}

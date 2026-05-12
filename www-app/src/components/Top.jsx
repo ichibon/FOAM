@@ -32,7 +32,7 @@ export function FoamNav() {
           ))}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <span className="nav-desktop"><PillBtn size="sm">Join FOAM</PillBtn></span>
+          <span className="nav-desktop"><PillBtn size="sm">Coming Soon</PillBtn></span>
           <button className="nav-mobile-btn" onClick={()=>setMobileOpen(!mobileOpen)}
             style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'none' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round">
@@ -54,7 +54,7 @@ export function FoamNav() {
             <a key={l} href="#" style={{ fontFamily:'Inter,sans-serif', fontSize:22, fontWeight:600, color:'#0A0A0A', textDecoration:'none' }}
               onClick={()=>setMobileOpen(false)}>{l}</a>
           ))}
-          <PillBtn size="lg" onClick={()=>setMobileOpen(false)}>Join FOAM</PillBtn>
+          <PillBtn size="lg" onClick={()=>setMobileOpen(false)}>Coming Soon</PillBtn>
         </div>
       )}
     </>
@@ -70,9 +70,9 @@ function TodaysJobsCard() {
         <span style={{ fontFamily:'Inter,sans-serif', fontSize:12, fontWeight:700, color:'var(--accent,#339DC7)' }}>$680 today</span>
       </div>
       {[
-        { time:'9:00 AM',  svc:'Full Detail',     status:'Completed',  color:'green' },
+        { time:'9:00 AM',  svc:'Full Detail',     status:'Completed',   color:'green' },
         { time:'11:30 AM', svc:'Ceramic Coat',    status:'In Progress', color:'blue' },
-        { time:'2:00 PM',  svc:'Interior Detail', status:'Upcoming',   color:'gray' },
+        { time:'2:00 PM',  svc:'Interior Detail', status:'Upcoming',    color:'gray' },
       ].map((j,i,arr)=>(
         <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 0', borderBottom: i<arr.length-1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
           <span style={{ fontFamily:'Inter,sans-serif', fontSize:11, color:'#6A9BAA', width:58, flexShrink:0 }}>{j.time}</span>
@@ -217,15 +217,6 @@ export function FoamHero({ city = 'Atlanta' }) {
       <div style={{ maxWidth:1200, margin:'0 auto', display:'grid', gridTemplateColumns:'60fr 40fr', gap:'clamp(40px,5vw,80px)', alignItems:'center' }} className="hero-grid">
         <div>
           <div style={{ animation:'heroFadeUp 0.5s ease-out forwards', opacity:0 }}>
-            <div style={{ marginBottom:20 }}>
-              <span style={{
-                display:'inline-flex', alignItems:'center',
-                padding:'5px 14px', borderRadius:9999,
-                background:'rgba(51,157,199,0.10)', border:'1px solid rgba(51,157,199,0.25)',
-                fontSize:11, fontWeight:600, letterSpacing:'0.8px', textTransform:'uppercase',
-                color:'var(--accent,#339DC7)', fontFamily:'Inter,sans-serif',
-              }}>Now in {city}</span>
-            </div>
             <h1 style={{
               fontFamily:"'Playfair Display',Georgia,serif",
               fontWeight:800, fontSize:'clamp(36px,4.5vw,64px)',

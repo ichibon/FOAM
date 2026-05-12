@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-export const CONSENT_KEY = 'foam_cookie_consent';
+export const CONSENT_KEY = 'cookieConsent';
 
 export function getCookieConsent() {
   try {
@@ -33,6 +33,14 @@ export function CookieBanner() {
 
   function dismiss(choice) {
     try { localStorage.setItem(CONSENT_KEY, choice); } catch { /* storage unavailable */ }
+    if (choice === 'accepted') {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function() { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', 'G-Y6E3HE3N11');
+    } else {
+      window.gtag = function() {};
+    }
     dispatchConsentEvent(choice);
     setHiding(true);
     setTimeout(() => setVisible(false), 320);

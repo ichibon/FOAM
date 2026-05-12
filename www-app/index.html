@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Google Analytics 4 — gated behind cookie consent -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y6E3HE3N11"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    if (localStorage.getItem('cookieConsent') === 'accepted') {
+      window.gtag = function() { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', 'G-Y6E3HE3N11');
+    } else {
+      window.gtag = function() {};
+    }
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FOAM — The Operating System for Auto Detailing</title>

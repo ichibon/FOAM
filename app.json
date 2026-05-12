@@ -14,8 +14,9 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.foam.mobile",
+      "bundleIdentifier": "com.foamauto.app",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "FOAM uses your camera to take before and after photos of detailing jobs.",
         "NSPhotoLibraryUsageDescription": "FOAM needs access to your photo library to upload job photos.",
@@ -28,7 +29,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F2F3C"
       },
-      "package": "app.foam.mobile",
+      "package": "com.foamauto.app",
       "versionCode": 1,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -51,7 +52,7 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.app.foam.mobile",
+          "merchantIdentifier": "merchant.com.foamauto.app",
           "enableGooglePay": true
         }
       ],

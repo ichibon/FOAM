@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Switch,
   Alert,
 } from "react-native";
-import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -753,6 +753,13 @@ export default function BuildOperationScreen() {
             <View style={styles.drawerHandle} />
 
             <View style={styles.drawerHeaderRow}>
+              <TouchableOpacity
+                onPress={() => { setShowVanDrawer(false); resetVanForm(); }}
+                style={styles.drawerCloseBtn}
+                activeOpacity={0.7}
+              >
+                <LucideIcon name="X" size={18} color={Colors.light.textSecondary} />
+              </TouchableOpacity>
               {editingVanId ? (
                 <>
                   <Text style={styles.drawerTitle}>Edit Van</Text>
@@ -761,10 +768,14 @@ export default function BuildOperationScreen() {
                   </TouchableOpacity>
                 </>
               ) : (
-                <Text style={styles.drawerTitleCenter}>Add a Van</Text>
+                <Text style={styles.drawerTitle}>Add a Van</Text>
               )}
             </View>
 
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
             <ScrollView
               style={styles.drawerScroll}
               showsVerticalScrollIndicator={false}
@@ -846,20 +857,19 @@ export default function BuildOperationScreen() {
                     <Text style={styles.sectionMiniLabel}>TRAVEL RADIUS</Text>
                     <Text style={styles.radiusValue}>{vanRadius} mi</Text>
                   </View>
-                  <Slider
-                    style={styles.radiusSlider}
-                    minimumValue={RADIUS_MIN}
-                    maximumValue={RADIUS_MAX}
-                    step={1}
-                    value={vanRadius}
-                    onValueChange={(v) => setVanRadius(Math.round(v))}
-                    minimumTrackTintColor={Colors.foamBlue}
-                    maximumTrackTintColor={Colors.light.borderDefault}
-                    thumbTintColor={Colors.foamBlue}
-                  />
-                  <View style={styles.radiusRangeRow}>
-                    <Text style={styles.radiusRangeLabel}>{RADIUS_MIN} mi</Text>
-                    <Text style={styles.radiusRangeLabel}>{RADIUS_MAX} mi</Text>
+                  <View style={styles.radiusChipsRow}>
+                    {[5, 10, 15, 25, 50].map((r) => (
+                      <TouchableOpacity
+                        key={r}
+                        style={[styles.radiusChip, vanRadius === r && styles.radiusChipActive]}
+                        onPress={() => setVanRadius(r)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.radiusChipText, vanRadius === r && styles.radiusChipTextActive]}>
+                          {r} mi
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                   <View style={styles.radiusInfoBox}>
                     <Text style={styles.radiusInfoText}>
@@ -988,6 +998,7 @@ export default function BuildOperationScreen() {
                 </View>
               </View>
             </ScrollView>
+            </KeyboardAvoidingView>
 
             {vanError && <Text style={styles.drawerError}>{vanError}</Text>}
 
@@ -1025,6 +1036,13 @@ export default function BuildOperationScreen() {
             <View style={styles.drawerHandle} />
 
             <View style={styles.drawerHeaderRow}>
+              <TouchableOpacity
+                onPress={() => { setShowLocDrawer(false); resetLocForm(); }}
+                style={styles.drawerCloseBtn}
+                activeOpacity={0.7}
+              >
+                <LucideIcon name="X" size={18} color={Colors.light.textSecondary} />
+              </TouchableOpacity>
               {editingLocId ? (
                 <>
                   <Text style={styles.drawerTitle}>Edit Location</Text>
@@ -1033,10 +1051,14 @@ export default function BuildOperationScreen() {
                   </TouchableOpacity>
                 </>
               ) : (
-                <Text style={styles.drawerTitleCenter}>Add a Location</Text>
+                <Text style={styles.drawerTitle}>Add a Location</Text>
               )}
             </View>
 
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
             <ScrollView
               style={styles.drawerScroll}
               showsVerticalScrollIndicator={false}
@@ -1303,6 +1325,7 @@ export default function BuildOperationScreen() {
                 )}
               </View>
             </ScrollView>
+            </KeyboardAvoidingView>
 
             {locError && <Text style={styles.drawerError}>{locError}</Text>}
 
@@ -1582,12 +1605,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: Colors.light.textPrimary,
   },
-  drawerTitleCenter: {
-    flex: 1,
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 17,
-    color: Colors.light.textPrimary,
-    textAlign: "center",
+  drawerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.light.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.sm,
   },
   deleteText: {
     fontFamily: Typography.bodyMedium,
@@ -1684,19 +1709,30 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyL,
     color: Colors.foamBlue,
   },
-  radiusSlider: {
-    width: "100%",
-    height: 40,
-  },
-  radiusRangeRow: {
+  radiusChipsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: -6,
+    flexWrap: "wrap",
+    gap: 8,
   },
-  radiusRangeLabel: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
+  radiusChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.bgSecondary,
+  },
+  radiusChipActive: {
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  radiusChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+  },
+  radiusChipTextActive: {
+    color: Colors.foamBlue,
   },
   radiusInfoBox: {
     backgroundColor: Colors.foamBlueSubtle,

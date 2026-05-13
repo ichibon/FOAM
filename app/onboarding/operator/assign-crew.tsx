@@ -21,11 +21,16 @@ type InputMode = "phone" | "email";
 type InviteTab = "invite" | "code";
 type InviteRole = "team_member" | "manager";
 
+interface TeamMember {
+  id: string;
+  display_name: string;
+  team_role: string;
+}
+
 interface UnitVan {
   id: string;
   name: string;
   asset_type: string;
-  crew: CrewChip[];
 }
 
 interface UnitLocation {
@@ -33,24 +38,25 @@ interface UnitLocation {
   name: string;
   address: string;
   bay_count: number;
-  crew: CrewChip[];
-}
-
-interface CrewChip {
-  id: string;
-  label: string;
 }
 
 const SHARE_CODE = "FOAM-K7X2";
+const DEFAULT_COMMISSION = "38";
 
 export default function AssignCrewScreen() {
   const [vans, setVans] = useState<UnitVan[]>([]);
   const [locations, setLocations] = useState<UnitLocation[]>([]);
+  const [allMembers, setAllMembers] = useState<TeamMember[]>([]);
+  // map: assetId -> Set<memberId> (assigned today)
+  const [vanCrewMap, setVanCrewMap] = useState<Record<string, Set<string>>>({});
+  // map: locationId -> Set<memberId> (local only — no DB table for location_crew_assignments)
+  const [locCrewMap, setLocCrewMap] = useState<Record<string, Set<string>>>({});
   const [loadingUnits, setLoadingUnits] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [continuing, setContinuing] = useState(false);
   const [detailerId, setDetailerId] = useState<string | null>(null);
 
-  // Add crew drawer state
+  // Add crew drawer
   const [showAddCrewDrawer, setShowAddCrewDrawer] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<{
     id: string;
@@ -62,7 +68,7 @@ export default function AssignCrewScreen() {
   const [currentInput, setCurrentInput] = useState("");
   const [recipients, setRecipients] = useState<{ id: string; value: string; mode: InputMode }[]>([]);
   const [inviteRole, setInviteRole] = useState<InviteRole>("team_member");
-  const [commission, setCommission] = useState("");
+  const [commission, setCommission] = useState(DEFAULT_COMMISSION);
   const [sending, setSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -81,7 +87,10 @@ export default function AssignCrewScreen() {
       if (!profile) return;
       setDetailerId(profile.id);
 
-      const [{ data: assetsData }, { data: locsData }] = await Promise.all([
+      // Load units, team members, and today's crew assignments in parallel
+      const today = new Date().toISOString().split("T")[0];
+
+      const [assetsResult, locsResult, membersResult] = await Promise.all([
         supabase
           .from("business_assets")
           .select("id, name, asset_type")
@@ -94,18 +103,55 @@ export default function AssignCrewScreen() {
           .eq("detailer_id", profile.id)
           .eq("is_active", true)
           .order("created_at"),
+        supabase
+          .from("team_members")
+          .select("id, display_name, team_role")
+          .eq("manager_id", profile.id)
+          .eq("is_active", true)
+          .order("display_name"),
       ]);
 
-      setVans((assetsData ?? []).map((a) => ({ ...a, crew: [] })));
+      const assetsData = assetsResult.data ?? [];
+      const locsData = locsResult.data ?? [];
+      const membersData = membersResult.data ?? [];
+
+      setVans(assetsData);
       setLocations(
-        (locsData ?? []).map((l) => ({
+        locsData.map((l) => ({
           id: l.id,
           name: l.name,
           address: (l.address as string) ?? "",
           bay_count: (l.bay_count as number) ?? 0,
-          crew: [],
         }))
       );
+      setAllMembers(membersData);
+
+      // Load today's crew assignments for all vans
+      if (assetsData.length > 0) {
+        const assetIds = assetsData.map((a) => a.id);
+        const { data: assignmentsData } = await supabase
+          .from("asset_crew_assignments")
+          .select("asset_id, team_member_id")
+          .in("asset_id", assetIds)
+          .eq("assigned_date", today);
+
+        const crewMap: Record<string, Set<string>> = {};
+        for (const a of assetsData) {
+          crewMap[a.id] = new Set(
+            (assignmentsData ?? [])
+              .filter((ac) => ac.asset_id === a.id)
+              .map((ac) => ac.team_member_id)
+          );
+        }
+        setVanCrewMap(crewMap);
+      }
+
+      // Initialize empty location crew map
+      const initLocMap: Record<string, Set<string>> = {};
+      for (const l of locsData) {
+        initLocMap[l.id] = new Set();
+      }
+      setLocCrewMap(initLocMap);
     } catch (err) {
       console.warn("[AssignCrew] loadUnits failed", err);
     }
@@ -116,6 +162,61 @@ export default function AssignCrewScreen() {
     void loadUnits();
   }, [loadUnits]);
 
+  async function handleToggleCrewOnVan(vanId: string, memberId: string) {
+    const today = new Date().toISOString().split("T")[0];
+    const isAssigned = vanCrewMap[vanId]?.has(memberId) ?? false;
+    const toggleKey = `${vanId}:${memberId}`;
+    setTogglingId(toggleKey);
+
+    // Optimistic update
+    setVanCrewMap((prev) => {
+      const next = { ...prev };
+      const updated = new Set(next[vanId] ?? []);
+      if (isAssigned) updated.delete(memberId);
+      else updated.add(memberId);
+      next[vanId] = updated;
+      return next;
+    });
+
+    try {
+      if (isAssigned) {
+        await supabase
+          .from("asset_crew_assignments")
+          .delete()
+          .eq("asset_id", vanId)
+          .eq("team_member_id", memberId)
+          .eq("assigned_date", today);
+      } else {
+        await supabase
+          .from("asset_crew_assignments")
+          .upsert({ asset_id: vanId, team_member_id: memberId, assigned_date: today });
+      }
+    } catch (err) {
+      console.warn("[AssignCrew] toggleCrewOnVan failed", err);
+      // Revert on error
+      setVanCrewMap((prev) => {
+        const next = { ...prev };
+        const reverted = new Set(next[vanId] ?? []);
+        if (isAssigned) reverted.add(memberId);
+        else reverted.delete(memberId);
+        next[vanId] = reverted;
+        return next;
+      });
+    }
+    setTogglingId(null);
+  }
+
+  function handleToggleCrewOnLocation(locId: string, memberId: string) {
+    setLocCrewMap((prev) => {
+      const next = { ...prev };
+      const updated = new Set(next[locId] ?? []);
+      if (updated.has(memberId)) updated.delete(memberId);
+      else updated.add(memberId);
+      next[locId] = updated;
+      return next;
+    });
+  }
+
   function openAddCrewDrawer(unitId: string, unitType: "van" | "location", unitName: string) {
     setSelectedUnit({ id: unitId, type: unitType, name: unitName });
     setInviteTab("invite");
@@ -123,7 +224,7 @@ export default function AssignCrewScreen() {
     setCurrentInput("");
     setRecipients([]);
     setInviteRole("team_member");
-    setCommission("");
+    setCommission(DEFAULT_COMMISSION);
     setInviteError(null);
     setCodeCopied(false);
     setShowAddCrewDrawer(true);
@@ -132,7 +233,10 @@ export default function AssignCrewScreen() {
   function handleAddRecipient() {
     const val = currentInput.trim();
     if (!val) return;
-    setRecipients((prev) => [...prev, { id: Date.now().toString(), value: val, mode: inputMode }]);
+    setRecipients((prev) => [
+      ...prev,
+      { id: Date.now().toString(), value: val, mode: inputMode },
+    ]);
     setCurrentInput("");
   }
 
@@ -143,7 +247,9 @@ export default function AssignCrewScreen() {
   async function handleSendInvite() {
     const allRecipients = [
       ...recipients,
-      ...(currentInput.trim() ? [{ id: "cur", value: currentInput.trim(), mode: inputMode }] : []),
+      ...(currentInput.trim()
+        ? [{ id: "cur", value: currentInput.trim(), mode: inputMode }]
+        : []),
     ];
     if (allRecipients.length === 0 || !detailerId || !selectedUnit) return;
     setSending(true);
@@ -155,7 +261,7 @@ export default function AssignCrewScreen() {
           contact: r.value,
           contact_type: r.mode,
           role: inviteRole,
-          commission_rate: commission ? parseFloat(commission) / 100 : null,
+          commission_rate: commission ? parseFloat(commission) / 100 : 0.38,
           asset_id: selectedUnit.type === "van" ? selectedUnit.id : null,
           location_id: selectedUnit.type === "location" ? selectedUnit.id : null,
         }))
@@ -163,7 +269,9 @@ export default function AssignCrewScreen() {
       setShowAddCrewDrawer(false);
     } catch (err) {
       console.warn("[AssignCrew] handleSendInvite failed", err);
-      setInviteError("Invite couldn't be sent. Your team member can still join using the share code.");
+      setInviteError(
+        "Invite couldn't be sent right now. Your team member can still join using the share code."
+      );
     }
     setSending(false);
   }
@@ -188,9 +296,12 @@ export default function AssignCrewScreen() {
 
   function getUnitIcon(assetType: string): string {
     switch (assetType) {
-      case "trailer": return "Package";
-      case "truck": return "Truck";
-      default: return "Truck";
+      case "trailer":
+        return "Package";
+      case "truck":
+        return "Truck";
+      default:
+        return "Truck";
     }
   }
 
@@ -209,7 +320,11 @@ export default function AssignCrewScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.progressHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
           <LucideIcon name="ChevronLeft" size={20} color={Colors.light.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.stepLabel}>Step 3 of 4</Text>
@@ -222,11 +337,15 @@ export default function AssignCrewScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.introBlock}>
           <Text style={styles.headline}>Assign your crew.</Text>
           <Text style={styles.subheadline}>
-            Invite team members to each van or location. You can always change this later.
+            Tap a crew member to assign them to a unit. Use{" "}
+            <Text style={styles.subheadlineBold}>+</Text> to invite someone new.
           </Text>
         </View>
 
@@ -244,38 +363,54 @@ export default function AssignCrewScreen() {
           </View>
         ) : (
           <View style={styles.unitList}>
-            {vans.map((van) => (
-              <UnitCrewCard
-                key={van.id}
-                icon={getUnitIcon(van.asset_type)}
-                name={van.name}
-                meta={`${assetTypeLabel(van.asset_type)} · Mobile service`}
-                crew={van.crew}
-                onAddCrew={() => openAddCrewDrawer(van.id, "van", van.name)}
-              />
-            ))}
-            {locations.map((loc) => (
-              <UnitCrewCard
-                key={loc.id}
-                icon="Building2"
-                name={loc.name}
-                meta={[
-                  loc.address.split(",")[0],
-                  loc.bay_count > 0 ? `${loc.bay_count} ${loc.bay_count === 1 ? "bay" : "bays"}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-                crew={loc.crew}
-                onAddCrew={() => openAddCrewDrawer(loc.id, "location", loc.name)}
-              />
-            ))}
+            {vans.map((van) => {
+              const assignedIds = vanCrewMap[van.id] ?? new Set<string>();
+              return (
+                <UnitCrewCard
+                  key={van.id}
+                  icon={getUnitIcon(van.asset_type)}
+                  name={van.name}
+                  meta={`${assetTypeLabel(van.asset_type)} · Mobile service`}
+                  allMembers={allMembers}
+                  assignedMemberIds={assignedIds}
+                  togglingId={togglingId}
+                  onToggleMember={(memberId) => handleToggleCrewOnVan(van.id, memberId)}
+                  onAddCrew={() => openAddCrewDrawer(van.id, "van", van.name)}
+                />
+              );
+            })}
+            {locations.map((loc) => {
+              const assignedIds = locCrewMap[loc.id] ?? new Set<string>();
+              return (
+                <UnitCrewCard
+                  key={loc.id}
+                  icon="Building2"
+                  name={loc.name}
+                  meta={[
+                    loc.address.split(",")[0],
+                    loc.bay_count > 0
+                      ? `${loc.bay_count} ${loc.bay_count === 1 ? "bay" : "bays"}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  allMembers={allMembers}
+                  assignedMemberIds={assignedIds}
+                  togglingId={togglingId}
+                  onToggleMember={(memberId) => handleToggleCrewOnLocation(loc.id, memberId)}
+                  onAddCrew={() => openAddCrewDrawer(loc.id, "location", loc.name)}
+                />
+              );
+            })}
           </View>
         )}
 
         <View style={styles.infoBox}>
           <LucideIcon name="Users" size={16} color={Colors.foamBlue} />
           <Text style={styles.infoBoxText}>
-            Your team members will receive an invite and create their FOAM crew account to clock in, track jobs, and get paid.
+            {allMembers.length === 0
+              ? "No crew members yet. Use + to invite your first team member — they'll appear here once they join."
+              : "Tap a crew member chip to assign or unassign them from a unit. Use + to invite someone new."}
           </Text>
         </View>
       </ScrollView>
@@ -325,7 +460,7 @@ export default function AssignCrewScreen() {
                   color={Colors.foamBlue}
                 />
                 <Text style={drawerStyles.unitBannerText}>
-                  Assigning crew to{" "}
+                  Inviting crew for{" "}
                   <Text style={drawerStyles.unitBannerBold}>{selectedUnit.name}</Text>
                 </Text>
               </View>
@@ -333,44 +468,28 @@ export default function AssignCrewScreen() {
 
             {/* Tabs */}
             <View style={drawerStyles.tabBar}>
-              <TouchableOpacity
-                style={[drawerStyles.tab, inviteTab === "invite" && drawerStyles.tabActive]}
-                onPress={() => setInviteTab("invite")}
-                activeOpacity={0.8}
-              >
-                <LucideIcon
-                  name="Mail"
-                  size={15}
-                  color={inviteTab === "invite" ? Colors.foamBlue : Colors.light.textTertiary}
-                />
-                <Text
-                  style={[
-                    drawerStyles.tabText,
-                    inviteTab === "invite" && drawerStyles.tabTextActive,
-                  ]}
+              {(["invite", "code"] as InviteTab[]).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  style={[drawerStyles.tab, inviteTab === tab && drawerStyles.tabActive]}
+                  onPress={() => setInviteTab(tab)}
+                  activeOpacity={0.8}
                 >
-                  Send Invite
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[drawerStyles.tab, inviteTab === "code" && drawerStyles.tabActive]}
-                onPress={() => setInviteTab("code")}
-                activeOpacity={0.8}
-              >
-                <LucideIcon
-                  name="Share2"
-                  size={15}
-                  color={inviteTab === "code" ? Colors.foamBlue : Colors.light.textTertiary}
-                />
-                <Text
-                  style={[
-                    drawerStyles.tabText,
-                    inviteTab === "code" && drawerStyles.tabTextActive,
-                  ]}
-                >
-                  Share Code
-                </Text>
-              </TouchableOpacity>
+                  <LucideIcon
+                    name={tab === "invite" ? "Mail" : "Share2"}
+                    size={15}
+                    color={inviteTab === tab ? Colors.foamBlue : Colors.light.textTertiary}
+                  />
+                  <Text
+                    style={[
+                      drawerStyles.tabText,
+                      inviteTab === tab && drawerStyles.tabTextActive,
+                    ]}
+                  >
+                    {tab === "invite" ? "Send Invite" : "Share Code"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
             {inviteTab === "invite" ? (
@@ -404,7 +523,7 @@ export default function AssignCrewScreen() {
                   ))}
                 </View>
 
-                {/* Recipients */}
+                {/* Recipient chips */}
                 {recipients.length > 0 && (
                   <View style={drawerStyles.recipientChips}>
                     {recipients.map((r) => (
@@ -446,13 +565,26 @@ export default function AssignCrewScreen() {
                 <View style={drawerStyles.roleCards}>
                   {(
                     [
-                      { id: "team_member" as InviteRole, label: "Team Member", desc: "Executes jobs, clocks in/out", icon: "User" },
-                      { id: "manager" as InviteRole, label: "Manager", desc: "Can manage crew & view reports", icon: "ShieldCheck" },
+                      {
+                        id: "team_member" as InviteRole,
+                        label: "Team Member",
+                        desc: "Executes jobs, clocks in/out",
+                        icon: "User",
+                      },
+                      {
+                        id: "manager" as InviteRole,
+                        label: "Manager",
+                        desc: "Can manage crew & view reports",
+                        icon: "ShieldCheck",
+                      },
                     ] as const
                   ).map((r) => (
                     <TouchableOpacity
                       key={r.id}
-                      style={[drawerStyles.roleCard, inviteRole === r.id && drawerStyles.roleCardActive]}
+                      style={[
+                        drawerStyles.roleCard,
+                        inviteRole === r.id && drawerStyles.roleCardActive,
+                      ]}
                       onPress={() => setInviteRole(r.id)}
                       activeOpacity={0.8}
                     >
@@ -465,7 +597,9 @@ export default function AssignCrewScreen() {
                         <LucideIcon
                           name={r.icon}
                           size={18}
-                          color={inviteRole === r.id ? Colors.foamBlue : Colors.light.textTertiary}
+                          color={
+                            inviteRole === r.id ? Colors.foamBlue : Colors.light.textTertiary
+                          }
                         />
                       </View>
                       <View style={drawerStyles.roleTextBlock}>
@@ -487,11 +621,11 @@ export default function AssignCrewScreen() {
                 </View>
 
                 {/* Commission */}
-                <Text style={drawerStyles.fieldLabel}>COMMISSION RATE (OPTIONAL)</Text>
+                <Text style={drawerStyles.fieldLabel}>COMMISSION RATE</Text>
                 <View style={drawerStyles.commissionRow}>
                   <TextInput
                     style={[drawerStyles.textInput, { flex: 1 }]}
-                    placeholder="e.g. 40"
+                    placeholder="38"
                     placeholderTextColor={Colors.light.textDisabled}
                     value={commission}
                     onChangeText={(v) => setCommission(v.replace(/[^0-9.]/g, ""))}
@@ -510,7 +644,10 @@ export default function AssignCrewScreen() {
                 )}
 
                 <TouchableOpacity
-                  style={[drawerStyles.sendButton, !canSend && drawerStyles.sendButtonDisabled]}
+                  style={[
+                    drawerStyles.sendButton,
+                    !canSend && drawerStyles.sendButtonDisabled,
+                  ]}
                   onPress={handleSendInvite}
                   disabled={!canSend || sending}
                   activeOpacity={0.85}
@@ -531,7 +668,10 @@ export default function AssignCrewScreen() {
                   <Text style={drawerStyles.codeLabel}>YOUR TEAM CODE</Text>
                   <Text style={drawerStyles.codeValue}>{SHARE_CODE}</Text>
                   <TouchableOpacity
-                    style={[drawerStyles.copyButton, codeCopied && drawerStyles.copyButtonDone]}
+                    style={[
+                      drawerStyles.copyButton,
+                      codeCopied && drawerStyles.copyButtonDone,
+                    ]}
                     onPress={handleCopyCode}
                     activeOpacity={0.85}
                   >
@@ -551,7 +691,8 @@ export default function AssignCrewScreen() {
                   </TouchableOpacity>
                 </View>
                 <Text style={drawerStyles.codeInstructions}>
-                  Share this code with your team. They enter it during signup to join your operation automatically.
+                  Share this code with your team. They enter it during signup to join your
+                  operation automatically.
                 </Text>
                 {[
                   { icon: "Download", text: "Team member downloads FOAM Crew app" },
@@ -578,11 +719,23 @@ interface UnitCrewCardProps {
   icon: string;
   name: string;
   meta: string;
-  crew: CrewChip[];
+  allMembers: TeamMember[];
+  assignedMemberIds: Set<string>;
+  togglingId: string | null;
+  onToggleMember: (memberId: string) => void;
   onAddCrew: () => void;
 }
 
-function UnitCrewCard({ icon, name, meta, crew, onAddCrew }: UnitCrewCardProps) {
+function UnitCrewCard({
+  icon,
+  name,
+  meta,
+  allMembers,
+  assignedMemberIds,
+  togglingId,
+  onToggleMember,
+  onAddCrew,
+}: UnitCrewCardProps) {
   return (
     <View style={cardStyles.card}>
       <View style={cardStyles.cardHeader}>
@@ -591,7 +744,9 @@ function UnitCrewCard({ icon, name, meta, crew, onAddCrew }: UnitCrewCardProps) 
         </View>
         <View style={cardStyles.headerText}>
           <Text style={cardStyles.unitName}>{name}</Text>
-          <Text style={cardStyles.unitMeta} numberOfLines={1}>{meta}</Text>
+          <Text style={cardStyles.unitMeta} numberOfLines={1}>
+            {meta}
+          </Text>
         </View>
       </View>
 
@@ -600,19 +755,46 @@ function UnitCrewCard({ icon, name, meta, crew, onAddCrew }: UnitCrewCardProps) 
       <View style={cardStyles.crewRow}>
         <Text style={cardStyles.crewLabel}>CREW</Text>
         <View style={cardStyles.chipsRow}>
-          {crew.length === 0 ? (
+          {allMembers.length === 0 ? (
             <View style={cardStyles.noCrewChip}>
               <LucideIcon name="AlertCircle" size={12} color={Colors.warningLight} />
               <Text style={cardStyles.noCrewText}>No crew assigned</Text>
             </View>
           ) : (
-            crew.map((c) => (
-              <View key={c.id} style={cardStyles.crewChip}>
-                <Text style={cardStyles.crewChipText}>{c.label}</Text>
-              </View>
-            ))
+            allMembers.map((member) => {
+              const isAssigned = assignedMemberIds.has(member.id);
+              const isToggling = togglingId === `${name}:${member.id}`;
+              return (
+                <TouchableOpacity
+                  key={member.id}
+                  style={[
+                    cardStyles.crewChip,
+                    isAssigned && cardStyles.crewChipAssigned,
+                  ]}
+                  onPress={() => onToggleMember(member.id)}
+                  disabled={isToggling}
+                  activeOpacity={0.8}
+                >
+                  {isAssigned && (
+                    <LucideIcon name="Check" size={11} color={Colors.foamBlue} />
+                  )}
+                  <Text
+                    style={[
+                      cardStyles.crewChipText,
+                      isAssigned && cardStyles.crewChipTextAssigned,
+                    ]}
+                  >
+                    {member.display_name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
           )}
-          <TouchableOpacity style={cardStyles.addButton} onPress={onAddCrew} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={cardStyles.addButton}
+            onPress={onAddCrew}
+            activeOpacity={0.8}
+          >
             <LucideIcon name="Plus" size={16} color={Colors.foamBlue} />
           </TouchableOpacity>
         </View>
@@ -707,11 +889,7 @@ const drawerStyles = StyleSheet.create({
     fontSize: 13,
     color: Colors.foamBlue,
   },
-  inputRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
+  inputRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   textInput: {
     flex: 1,
     height: 46,
@@ -874,11 +1052,7 @@ const drawerStyles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
   },
-  codeStep: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  codeStep: { flexDirection: "row", alignItems: "center", gap: 12 },
   codeStepIcon: {
     width: 32,
     height: 32,
@@ -962,16 +1136,26 @@ const cardStyles = StyleSheet.create({
     color: Colors.warningLight,
   },
   crewChip: {
-    backgroundColor: Colors.foamBlueSubtle,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     borderRadius: Radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.surface,
+  },
+  crewChipAssigned: {
+    backgroundColor: Colors.foamBlueSubtle,
+    borderColor: Colors.foamBlue,
   },
   crewChipText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.caption,
-    color: Colors.foamBlue,
+    color: Colors.light.textSecondary,
   },
+  crewChipTextAssigned: { color: Colors.foamBlue },
   addButton: {
     width: 32,
     height: 32,
@@ -1025,11 +1209,8 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     lineHeight: 22,
   },
-  loadingContainer: {
-    alignItems: "center",
-    marginTop: 60,
-    gap: 12,
-  },
+  subheadlineBold: { fontFamily: Typography.bodySemiBold, color: Colors.light.textPrimary },
+  loadingContainer: { alignItems: "center", marginTop: 60, gap: 12 },
   loadingText: {
     fontFamily: Typography.body,
     fontSize: 14,

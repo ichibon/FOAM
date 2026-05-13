@@ -8,6 +8,7 @@ import {
   Platform,
   Animated,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,25 +16,28 @@ import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
-interface UnitCounts {
+interface SubmittedState {
   vans: number;
   locations: number;
+  crewInvited: boolean;
+  stripeConnected: boolean;
 }
 
-function buildUnitLabel(counts: UnitCounts): string | null {
-  const { vans, locations } = counts;
+function buildUnitLabel(vans: number, locations: number): string | null {
   if (vans === 0 && locations === 0) return null;
-  const vanLabel = vans > 0 ? `${vans} ${vans === 1 ? "Van" : "Vans"}` : null;
-  const locLabel =
-    locations > 0 ? `${locations} ${locations === 1 ? "Location" : "Locations"}` : null;
-  if (locLabel && vanLabel) return `${locLabel} and ${vanLabel} added`;
-  if (locLabel) return `${locLabel} added`;
-  return `${vanLabel} added`;
+  const parts: string[] = [];
+  if (locations > 0) parts.push(`${locations} ${locations === 1 ? "Location" : "Locations"}`);
+  if (vans > 0) parts.push(`${vans} ${vans === 1 ? "Van" : "Vans"}`);
+  return parts.join(" and ") + " added";
 }
 
 export default function OnboardingPendingScreen() {
-  const [unitCounts, setUnitCounts] = useState<UnitCounts>({ vans: 0, locations: 0 });
-  const [stripeConnected, setStripeConnected] = useState(false);
+  const [state, setState] = useState<SubmittedState>({
+    vans: 0,
+    locations: 0,
+    crewInvited: false,
+    stripeConnected: false,
+  });
   const [loading, setLoading] = useState(true);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -71,9 +75,7 @@ export default function OnboardingPendingScreen() {
         .single();
       if (!profile) return;
 
-      setStripeConnected(!!profile.stripe_account_id);
-
-      const [assetsResult, locsResult] = await Promise.all([
+      const [assetsResult, locsResult, crewResult] = await Promise.all([
         supabase
           .from("business_assets")
           .select("id", { count: "exact", head: true })
@@ -84,11 +86,18 @@ export default function OnboardingPendingScreen() {
           .select("id", { count: "exact", head: true })
           .eq("detailer_id", profile.id)
           .eq("is_active", true),
+        supabase
+          .from("team_members")
+          .select("id", { count: "exact", head: true })
+          .eq("manager_id", profile.id)
+          .eq("is_active", true),
       ]);
 
-      setUnitCounts({
+      setState({
         vans: assetsResult.count ?? 0,
         locations: locsResult.count ?? 0,
+        crewInvited: (crewResult.count ?? 0) > 0,
+        stripeConnected: !!profile.stripe_account_id,
       });
     } catch (err) {
       console.warn("[OnboardingPending] loadData failed", err);
@@ -100,23 +109,54 @@ export default function OnboardingPendingScreen() {
     void loadData();
   }, [loadData]);
 
-  const unitLabel = buildUnitLabel(unitCounts);
+  const unitLabel = buildUnitLabel(state.vans, state.locations);
+  const operationBuilt = state.vans > 0 || state.locations > 0;
 
   const checklist = [
-    { key: "operation", icon: "Truck", label: "Operation built", done: unitCounts.vans > 0 || unitCounts.locations > 0 },
-    { key: "stripe", icon: "Landmark", label: "Bank account connected", done: stripeConnected },
-    { key: "review", icon: "Clock", label: "Under FOAM review", done: false, inProgress: true },
+    {
+      key: "profile",
+      icon: "UserCheck",
+      label: "Profile created",
+      done: true,
+    },
+    {
+      key: "operation",
+      icon: "Truck",
+      label: unitLabel ?? `${state.vans + state.locations} units added`,
+      done: operationBuilt,
+    },
+    {
+      key: "crew",
+      icon: "Users",
+      label: state.crewInvited ? "Crew invited" : "Crew invited (optional)",
+      done: state.crewInvited,
+      optional: true,
+    },
+    {
+      key: "stripe",
+      icon: "Landmark",
+      label: "Bank account connected",
+      done: state.stripeConnected,
+    },
+    {
+      key: "review",
+      icon: "Clock",
+      label: "Under FOAM review",
+      done: false,
+      inProgress: true,
+    },
   ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
         <View style={styles.heroSection}>
           <Animated.View
             style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
           />
           <View style={styles.checkCircle}>
-            <LucideIcon name="CheckCircle" size={44} color={Colors.foamBlue} />
+            <LucideIcon name="Clock" size={44} color={Colors.foamBlue} />
           </View>
 
           <Text style={styles.headline}>You're in the queue.</Text>
@@ -135,6 +175,7 @@ export default function OnboardingPendingScreen() {
           ) : null}
         </View>
 
+        {/* Submitted checklist */}
         <View style={styles.checklistCard}>
           <Text style={styles.checklistHeading}>SUBMITTED</Text>
           {loading ? (
@@ -159,7 +200,11 @@ export default function OnboardingPendingScreen() {
                     ) : item.inProgress ? (
                       <LucideIcon name={item.icon} size={16} color={Colors.foamBlue} />
                     ) : (
-                      <LucideIcon name={item.icon} size={16} color={Colors.light.textTertiary} />
+                      <LucideIcon
+                        name={item.icon}
+                        size={16}
+                        color={Colors.light.textTertiary}
+                      />
                     )}
                   </View>
                   <Text
@@ -171,17 +216,22 @@ export default function OnboardingPendingScreen() {
                   >
                     {item.label}
                   </Text>
-                  {item.inProgress && (
+                  {item.inProgress ? (
                     <View style={styles.inProgressBadge}>
                       <Text style={styles.inProgressBadgeText}>In Review</Text>
                     </View>
-                  )}
+                  ) : item.optional && !item.done ? (
+                    <View style={styles.optionalBadge}>
+                      <Text style={styles.optionalBadgeText}>Optional</Text>
+                    </View>
+                  ) : null}
                 </View>
               ))}
             </View>
           )}
         </View>
 
+        {/* What happens next */}
         <View style={styles.nextStepsCard}>
           <View style={styles.nextStepsHeader}>
             <LucideIcon name="Info" size={18} color={Colors.foamBlue} />
@@ -227,9 +277,17 @@ export default function OnboardingPendingScreen() {
           <LucideIcon name="ArrowRight" size={18} color={Colors.white} />
         </TouchableOpacity>
 
-        <Text style={styles.footnote}>
-          You'll see the pending status in your dashboard until FOAM approves your account.
-        </Text>
+        <View style={styles.footnoteRow}>
+          <Text style={styles.footnote}>
+            Questions?{" "}
+          </Text>
+          <TouchableOpacity
+            onPress={() => void Linking.openURL("mailto:support@foamauto.com")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.footnoteLink}>Contact FOAM support</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -361,6 +419,17 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.label,
     color: Colors.foamBlue,
   },
+  optionalBadge: {
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  optionalBadgeText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+  },
   nextStepsCard: {
     backgroundColor: Colors.foamLightBlue,
     borderRadius: Radius.lg,
@@ -418,13 +487,21 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyL,
     color: Colors.white,
   },
+  footnoteRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: -8,
+  },
   footnote: {
     fontFamily: Typography.body,
     fontSize: Typography.size.caption,
     color: Colors.light.textTertiary,
-    textAlign: "center",
-    lineHeight: 18,
-    paddingHorizontal: 16,
-    marginTop: -8,
+  },
+  footnoteLink: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.foamBlue,
+    textDecorationLine: "underline",
   },
 });

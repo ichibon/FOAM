@@ -28,8 +28,8 @@ SplashScreen.preventAutoHideAsync();
 function onboardingEntryFor(role: UserRole): string {
   switch (role) {
     case "customer": return "/onboarding/customer/vehicle";
-    case "operator": return "/onboarding/operator/type";
-    case "manager": return "/onboarding/operator/type";
+    case "operator": return "/onboarding/operator/build";
+    case "manager": return "/onboarding/operator/build";
     case "team_member": return "/onboarding/crew/invite";
     default: return "/auth/role-select";
   }

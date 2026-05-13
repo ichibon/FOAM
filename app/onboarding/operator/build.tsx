@@ -50,8 +50,6 @@ interface AddedLocation {
   phone: string;
 }
 
-const RADIUS_MIN = 5;
-const RADIUS_MAX = 50;
 
 const TIME_OPTIONS = [
   "6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM",
@@ -315,6 +313,9 @@ export default function BuildOperationScreen() {
     setLocPhone("");
     setLocError(null);
   }
+
+  function closeVanDrawer() { setShowVanDrawer(false); resetVanForm(); }
+  function closeLocDrawer() { setShowLocDrawer(false); resetLocForm(); }
 
   function openAddVan() {
     resetVanForm();
@@ -742,19 +743,19 @@ export default function BuildOperationScreen() {
       {/* Add/Edit Van Drawer */}
       <DrawerModal
         visible={showVanDrawer}
-        onRequestClose={() => { setShowVanDrawer(false); resetVanForm(); }}
+        onRequestClose={closeVanDrawer}
       >
         <View style={styles.backdrop}>
           <TouchableOpacity
             style={styles.backdropTouchable}
-            onPress={() => { setShowVanDrawer(false); resetVanForm(); }}
+            onPress={closeVanDrawer}
           />
           <View style={styles.drawer}>
             <View style={styles.drawerHandle} />
 
             <View style={styles.drawerHeaderRow}>
               <TouchableOpacity
-                onPress={() => { setShowVanDrawer(false); resetVanForm(); }}
+                onPress={closeVanDrawer}
                 style={styles.drawerCloseBtn}
                 activeOpacity={0.7}
               >
@@ -1025,19 +1026,19 @@ export default function BuildOperationScreen() {
       {/* Add/Edit Location Drawer */}
       <DrawerModal
         visible={showLocDrawer}
-        onRequestClose={() => { setShowLocDrawer(false); resetLocForm(); }}
+        onRequestClose={closeLocDrawer}
       >
         <View style={styles.backdrop}>
           <TouchableOpacity
             style={styles.backdropTouchable}
-            onPress={() => { setShowLocDrawer(false); resetLocForm(); }}
+            onPress={closeLocDrawer}
           />
           <View style={styles.drawer}>
             <View style={styles.drawerHandle} />
 
             <View style={styles.drawerHeaderRow}>
               <TouchableOpacity
-                onPress={() => { setShowLocDrawer(false); resetLocForm(); }}
+                onPress={closeLocDrawer}
                 style={styles.drawerCloseBtn}
                 activeOpacity={0.7}
               >

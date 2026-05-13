@@ -6,6 +6,8 @@ export default function OperatorOnboardingLayout() {
       <Stack.Screen name="type" />
       <Stack.Screen name="build" />
       <Stack.Screen name="services" />
+      <Stack.Screen name="assign-crew" />
+      <Stack.Screen name="add-team-member" />
       <Stack.Screen name="stripe" />
       <Stack.Screen name="pending" />
     </Stack>

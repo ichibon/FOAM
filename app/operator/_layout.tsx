@@ -15,6 +15,7 @@ export default function OperatorLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="today" />
       <Stack.Screen name="pending" />
+      <Stack.Screen name="locations-vans" />
     </Stack>
   );
 }

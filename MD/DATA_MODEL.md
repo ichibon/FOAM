@@ -512,6 +512,11 @@ detailer_id uuid REFERENCES detailer_profiles(id)
 asset_type  text   -- 'van' | 'trailer' | 'truck' | 'other'
 name        text
 is_active   boolean DEFAULT true
+metadata    jsonb
+  -- Operator-entered van details: { license_plate, home_base, radius_miles,
+  --   availability: [{key,day,enabled,open,close}], equipment_notes }
+  -- Stored on the asset record so van metadata moves with the asset row.
+  -- Populated during onboarding (Build step) and editable from operator dashboard.
 created_at  timestamptz DEFAULT now()
 ```
 
@@ -522,6 +527,23 @@ id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
 asset_id        uuid REFERENCES business_assets(id)
 team_member_id  uuid REFERENCES team_members(id)
 assigned_date   date
+created_at      timestamptz DEFAULT now()
+```
+
+### operator_invites
+Pending invitations sent by an operator to a prospective crew member.
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id     uuid REFERENCES detailer_profiles(id)
+contact         text NOT NULL        -- phone number or email address
+contact_type    text NOT NULL        -- 'phone' | 'email'
+role            text NOT NULL DEFAULT 'team_member'
+  -- 'team_member' | 'manager'
+commission_rate decimal(5,2)         -- percentage, e.g. 0.38 = 38%
+unit_id         uuid                 -- optional: pre-assigns to a specific asset or location
+unit_type       text                 -- 'van' | 'location' (paired with unit_id)
+status          text NOT NULL DEFAULT 'pending'
+  -- 'pending' | 'accepted' | 'expired'
 created_at      timestamptz DEFAULT now()
 ```
 

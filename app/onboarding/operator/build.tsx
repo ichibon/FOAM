@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
@@ -77,79 +77,48 @@ const DEFAULT_AVAILABILITY: DayAvailability[] = [
 ];
 
 async function saveVanMeta(
-  detailerId: string,
+  _detailerId: string,
   vanId: string,
   meta: { licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string }
 ) {
-  // Primary: persist to Supabase (business_asset_details — extended van metadata table)
-  try {
-    const { error } = await supabase.from("business_asset_details").upsert(
-      {
-        asset_id: vanId,
-        detailer_id: detailerId,
+  // Persist van metadata as JSONB on the canonical business_assets row.
+  // The `metadata` column is documented in DATA_MODEL.md under business_assets.
+  const { error } = await supabase
+    .from("business_assets")
+    .update({
+      metadata: {
         license_plate: meta.licensePlate,
         home_base: meta.homeBase,
         radius_miles: meta.radius,
         availability: meta.availability,
         equipment_notes: meta.notes,
       },
-      { onConflict: "asset_id" }
-    );
-    if (!error) return;
-  } catch {
-    // Table not yet provisioned — fall through to AsyncStorage
-  }
-  // Fallback: device-local AsyncStorage when DB table not yet available
-  try {
-    await AsyncStorage.setItem(
-      `foam_van_extra_${detailerId}_${vanId}`,
-      JSON.stringify(meta)
-    );
-  } catch {
-    // no-op
-  }
+    })
+    .eq("id", vanId);
+  if (error) throw error;
 }
 
 async function loadVanMeta(
-  detailerId: string,
+  _detailerId: string,
   vanId: string
 ): Promise<{ licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string } | null> {
-  // Primary: load from Supabase
-  try {
-    const { data } = await supabase
-      .from("business_asset_details")
-      .select("license_plate, home_base, radius_miles, availability, equipment_notes")
-      .eq("asset_id", vanId)
-      .maybeSingle();
-    if (data) {
-      return {
-        licensePlate: (data.license_plate as string) ?? "",
-        homeBase: (data.home_base as string) ?? "",
-        radius: (data.radius_miles as number) ?? 15,
-        availability: Array.isArray(data.availability)
-          ? (data.availability as DayAvailability[])
-          : DEFAULT_AVAILABILITY.map((d) => ({ ...d })),
-        notes: (data.equipment_notes as string) ?? "",
-      };
-    }
-  } catch {
-    // Table not yet provisioned — fall through to AsyncStorage
-  }
-  // Fallback: AsyncStorage
-  try {
-    const raw = await AsyncStorage.getItem(`foam_van_extra_${detailerId}_${vanId}`);
-    return raw
-      ? (JSON.parse(raw) as {
-          licensePlate: string;
-          homeBase: string;
-          radius: number;
-          availability: DayAvailability[];
-          notes: string;
-        })
-      : null;
-  } catch {
-    return null;
-  }
+  const { data, error } = await supabase
+    .from("business_assets")
+    .select("metadata")
+    .eq("id", vanId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.metadata) return null;
+  const m = data.metadata as Record<string, unknown>;
+  return {
+    licensePlate: (m.license_plate as string) ?? "",
+    homeBase: (m.home_base as string) ?? "",
+    radius: (m.radius_miles as number) ?? 15,
+    availability: Array.isArray(m.availability)
+      ? (m.availability as DayAvailability[])
+      : DEFAULT_AVAILABILITY.map((d) => ({ ...d })),
+    notes: (m.equipment_notes as string) ?? "",
+  };
 }
 
 function hoursJsonbToAvailability(

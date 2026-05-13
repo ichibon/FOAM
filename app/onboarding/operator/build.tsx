@@ -11,6 +11,7 @@ import {
   Switch,
   Alert,
 } from "react-native";
+import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -53,7 +54,8 @@ interface AddedLocation {
   phone: string;
 }
 
-const RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 40, 50];
+const RADIUS_MIN = 5;
+const RADIUS_MAX = 50;
 
 const TIME_OPTIONS = [
   "6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM",
@@ -895,20 +897,24 @@ export default function BuildOperationScreen() {
                 </View>
 
                 <View style={styles.radiusCard}>
-                  <Text style={styles.sectionMiniLabel}>TRAVEL RADIUS</Text>
-                  <View style={styles.radiusGrid}>
-                    {RADIUS_OPTIONS.map((r) => (
-                      <TouchableOpacity
-                        key={r}
-                        style={[styles.radiusPill, vanRadius === r && styles.radiusPillActive]}
-                        onPress={() => setVanRadius(r)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.radiusPillText, vanRadius === r && styles.radiusPillTextActive]}>
-                          {r} mi
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View style={styles.radiusLabelRow}>
+                    <Text style={styles.sectionMiniLabel}>TRAVEL RADIUS</Text>
+                    <Text style={styles.radiusValue}>{vanRadius} mi</Text>
+                  </View>
+                  <Slider
+                    style={styles.radiusSlider}
+                    minimumValue={RADIUS_MIN}
+                    maximumValue={RADIUS_MAX}
+                    step={1}
+                    value={vanRadius}
+                    onValueChange={(v) => setVanRadius(Math.round(v))}
+                    minimumTrackTintColor={Colors.foamBlue}
+                    maximumTrackTintColor={Colors.light.borderDefault}
+                    thumbTintColor={Colors.foamBlue}
+                  />
+                  <View style={styles.radiusRangeRow}>
+                    <Text style={styles.radiusRangeLabel}>{RADIUS_MIN} mi</Text>
+                    <Text style={styles.radiusRangeLabel}>{RADIUS_MAX} mi</Text>
                   </View>
                   <View style={styles.radiusInfoBox}>
                     <Text style={styles.radiusInfoText}>
@@ -1827,24 +1833,32 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,
-    gap: 12,
+    gap: 8,
   },
-  radiusGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  radiusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
-    backgroundColor: Colors.light.surface,
+  radiusLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  radiusPillActive: { backgroundColor: Colors.foamBlue, borderColor: Colors.foamBlue },
-  radiusPillText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyS,
-    color: Colors.light.textSecondary,
+  radiusValue: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyL,
+    color: Colors.foamBlue,
   },
-  radiusPillTextActive: { color: Colors.white },
+  radiusSlider: {
+    width: "100%",
+    height: 40,
+  },
+  radiusRangeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: -6,
+  },
+  radiusRangeLabel: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+  },
   radiusInfoBox: {
     backgroundColor: Colors.foamBlueSubtle,
     borderRadius: Radius.sm,

@@ -34,21 +34,27 @@ export default function AddTeamMemberScreen() {
   }>();
 
   const [activeTab, setActiveTab] = useState<TabId>("invite");
-  const [inputMode, setInputMode] = useState<InputMode>("phone");
   const [currentInput, setCurrentInput] = useState("");
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [role, setRole] = useState<RoleId>("team_member");
-  const [commissionRate, setCommissionRate] = useState("");
+  const [commissionRate, setCommissionRate] = useState("38");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
+
+  // Auto-detect contact mode from input value
+  const currentMode: InputMode = currentInput.includes("@") ? "email" : "phone";
+
+  function detectMode(val: string): InputMode {
+    return val.includes("@") ? "email" : "phone";
+  }
 
   function handleAddRecipient() {
     const val = currentInput.trim();
     if (!val) return;
     setRecipients((prev) => [
       ...prev,
-      { id: Date.now().toString(), value: val, mode: inputMode },
+      { id: Date.now().toString(), value: val, mode: detectMode(val) },
     ]);
     setCurrentInput("");
   }
@@ -63,7 +69,7 @@ export default function AddTeamMemberScreen() {
       allRecipients.push({
         id: "current",
         value: currentInput.trim(),
-        mode: inputMode,
+        mode: detectMode(currentInput.trim()),
       });
     }
     if (allRecipients.length === 0) return;
@@ -84,7 +90,7 @@ export default function AddTeamMemberScreen() {
       const invites = allRecipients.map((r) => ({
         detailer_id: profile.id,
         contact: r.value,
-        contact_type: r.mode,
+        contact_type: detectMode(r.value),
         role,
         commission_rate: commissionRate ? parseFloat(commissionRate) : null,
         unit_id: unit_id ?? null,
@@ -185,42 +191,11 @@ export default function AddTeamMemberScreen() {
             <View style={styles.sectionBlock}>
               <Text style={styles.sectionLabel}>CONTACT</Text>
 
-              <View style={styles.inputModeRow}>
-                <TouchableOpacity
-                  style={[styles.modePill, inputMode === "phone" && styles.modePillActive]}
-                  onPress={() => setInputMode("phone")}
-                  activeOpacity={0.8}
-                >
-                  <LucideIcon
-                    name="Phone"
-                    size={14}
-                    color={inputMode === "phone" ? Colors.white : Colors.light.textSecondary}
-                  />
-                  <Text style={[styles.modePillText, inputMode === "phone" && styles.modePillTextActive]}>
-                    Phone
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modePill, inputMode === "email" && styles.modePillActive]}
-                  onPress={() => setInputMode("email")}
-                  activeOpacity={0.8}
-                >
-                  <LucideIcon
-                    name="AtSign"
-                    size={14}
-                    color={inputMode === "email" ? Colors.white : Colors.light.textSecondary}
-                  />
-                  <Text style={[styles.modePillText, inputMode === "email" && styles.modePillTextActive]}>
-                    Email
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               <View style={styles.inputAddRow}>
                 <View style={styles.inputWithIconWrap}>
                   <View style={styles.inputIconLeft}>
                     <LucideIcon
-                      name={inputMode === "phone" ? "Phone" : "AtSign"}
+                      name={currentMode === "phone" ? "Phone" : "AtSign"}
                       size={17}
                       color={Colors.light.textTertiary}
                     />
@@ -229,13 +204,9 @@ export default function AddTeamMemberScreen() {
                     style={styles.inputWithIconField}
                     value={currentInput}
                     onChangeText={setCurrentInput}
-                    placeholder={
-                      inputMode === "phone"
-                        ? "(404) 555-0123"
-                        : "crew@example.com"
-                    }
+                    placeholder="Phone or email"
                     placeholderTextColor={Colors.light.textTertiary}
-                    keyboardType={inputMode === "phone" ? "phone-pad" : "email-address"}
+                    keyboardType={currentMode === "phone" ? "phone-pad" : "email-address"}
                     autoCapitalize="none"
                     onSubmitEditing={handleAddRecipient}
                     returnKeyType="done"
@@ -572,25 +543,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     textTransform: "none",
   },
-  inputModeRow: { flexDirection: "row", gap: 8 },
-  modePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
-    backgroundColor: Colors.light.surface,
-  },
-  modePillActive: { backgroundColor: Colors.foamBlue, borderColor: Colors.foamBlue },
-  modePillText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  modePillTextActive: { color: Colors.white },
   inputAddRow: { flexDirection: "row", gap: 8 },
   inputWithIconWrap: {
     flex: 1,

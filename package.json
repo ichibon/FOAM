@@ -17,6 +17,7 @@
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^14.0.0",
     "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-community/slider": "4.5.2",
     "@stripe/stripe-react-native": "0.38.0",
     "@supabase/supabase-js": "^2.105.1",
     "expo": "~51.0.0",

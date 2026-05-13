@@ -31,6 +31,7 @@ interface UnitLocation {
   name: string;
   address: string;
   bay_count: number;
+  crew_member_ids: string[];
 }
 
 export default function AssignCrewScreen() {
@@ -39,7 +40,7 @@ export default function AssignCrewScreen() {
   const [allMembers, setAllMembers] = useState<TeamMember[]>([]);
   // map: assetId -> Set<memberId> (assigned today)
   const [vanCrewMap, setVanCrewMap] = useState<Record<string, Set<string>>>({});
-  // map: locationId -> Set<memberId> (local only — no DB table for location_crew_assignments)
+  // map: locationId -> Set<memberId> (persisted to business_locations.crew_member_ids)
   const [locCrewMap, setLocCrewMap] = useState<Record<string, Set<string>>>({});
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export default function AssignCrewScreen() {
           .order("created_at"),
         supabase
           .from("business_locations")
-          .select("id, name, address, bay_count")
+          .select("id, name, address, bay_count, crew_member_ids")
           .eq("detailer_id", profile.id)
           .eq("is_active", true)
           .order("created_at"),
@@ -87,14 +88,14 @@ export default function AssignCrewScreen() {
       const membersData = membersResult.data ?? [];
 
       setVans(assetsData);
-      setLocations(
-        locsData.map((l) => ({
-          id: l.id,
-          name: l.name,
-          address: (l.address as string) ?? "",
-          bay_count: (l.bay_count as number) ?? 0,
-        }))
-      );
+      const mappedLocs: UnitLocation[] = locsData.map((l) => ({
+        id: l.id,
+        name: l.name,
+        address: (l.address as string) ?? "",
+        bay_count: (l.bay_count as number) ?? 0,
+        crew_member_ids: (l.crew_member_ids as string[]) ?? [],
+      }));
+      setLocations(mappedLocs);
       setAllMembers(membersData);
 
       // Load today's crew assignments for all vans
@@ -117,10 +118,10 @@ export default function AssignCrewScreen() {
         setVanCrewMap(crewMap);
       }
 
-      // Initialize empty location crew map
+      // Initialize location crew map from persisted crew_member_ids
       const initLocMap: Record<string, Set<string>> = {};
-      for (const l of locsData) {
-        initLocMap[l.id] = new Set();
+      for (const l of mappedLocs) {
+        initLocMap[l.id] = new Set(l.crew_member_ids);
       }
       setLocCrewMap(initLocMap);
     } catch (err) {
@@ -179,15 +180,32 @@ export default function AssignCrewScreen() {
     setTogglingId(null);
   }
 
-  function handleToggleCrewOnLocation(locId: string, memberId: string) {
-    setLocCrewMap((prev) => {
-      const next = { ...prev };
-      const updated = new Set(next[locId] ?? []);
-      if (updated.has(memberId)) updated.delete(memberId);
-      else updated.add(memberId);
-      next[locId] = updated;
-      return next;
-    });
+  async function handleToggleCrewOnLocation(locId: string, memberId: string) {
+    const isAssigned = locCrewMap[locId]?.has(memberId) ?? false;
+    const toggleKey = `loc:${locId}:${memberId}`;
+    setTogglingId(toggleKey);
+
+    // Optimistic update
+    const nextSet = new Set(locCrewMap[locId] ?? []);
+    if (isAssigned) nextSet.delete(memberId);
+    else nextSet.add(memberId);
+    setLocCrewMap((prev) => ({ ...prev, [locId]: nextSet }));
+
+    try {
+      const { error } = await supabase
+        .from("business_locations")
+        .update({ crew_member_ids: [...nextSet] })
+        .eq("id", locId);
+      if (error) throw error;
+    } catch (err) {
+      console.warn("[AssignCrew] toggleCrewOnLocation failed", err);
+      // Revert on error
+      const revertedSet = new Set(locCrewMap[locId] ?? []);
+      if (isAssigned) revertedSet.add(memberId);
+      else revertedSet.delete(memberId);
+      setLocCrewMap((prev) => ({ ...prev, [locId]: revertedSet }));
+    }
+    setTogglingId(null);
   }
 
   function openAddCrewScreen(unitId: string, unitType: "van" | "location") {

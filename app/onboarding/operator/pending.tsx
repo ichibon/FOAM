@@ -161,8 +161,8 @@ export default function OnboardingPendingScreen() {
 
           <Text style={styles.headline}>You're building something real.</Text>
           <Text style={styles.subheadline}>
-            FOAM's team will review your application within{" "}
-            <Text style={styles.subheadlineBold}>1–2 business days.</Text>
+            FOAM's team will review your application.{" "}
+            <Text style={styles.subheadlineBold}>Usually less than 24 hours.</Text>
           </Text>
 
           {loading ? (
@@ -247,7 +247,7 @@ export default function OnboardingPendingScreen() {
               {
                 icon: "Bell",
                 title: "You get notified",
-                body: "Check your email and notifications — approval takes 1–2 business days.",
+                body: "Check your email and notifications. Most decisions arrive within 24 hours.",
               },
               {
                 icon: "Rocket",
@@ -273,19 +273,17 @@ export default function OnboardingPendingScreen() {
           onPress={() => router.replace("/operator/today")}
           activeOpacity={0.85}
         >
-          <Text style={styles.dashboardButtonText}>Go to Dashboard</Text>
+          <Text style={styles.dashboardButtonText}>Explore the App</Text>
           <LucideIcon name="ArrowRight" size={18} color={Colors.white} />
         </TouchableOpacity>
 
         <View style={styles.footnoteRow}>
-          <Text style={styles.footnote}>
-            Questions?{" "}
-          </Text>
+          <Text style={styles.footnote}>Questions? </Text>
           <TouchableOpacity
-            onPress={() => void Linking.openURL("mailto:support@foamauto.com")}
+            onPress={() => void Linking.openURL("mailto:hello@foamauto.com")}
             activeOpacity={0.7}
           >
-            <Text style={styles.footnoteLink}>Contact FOAM support</Text>
+            <Text style={styles.footnoteLink}>Reach the FOAM team</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

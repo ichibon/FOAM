@@ -491,17 +491,20 @@ created_at  timestamptz DEFAULT now()
 ### business_locations
 Physical locations for fixed and hybrid operators.
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
-name            text
-address         text
-lat             decimal
-lng             decimal
-bay_count       integer DEFAULT 1
-accepts_walkins boolean DEFAULT false
-hours           jsonb
-is_active       boolean DEFAULT true
-created_at      timestamptz DEFAULT now()
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id      uuid REFERENCES detailer_profiles(id)
+name             text
+address          text
+lat              decimal
+lng              decimal
+bay_count        integer DEFAULT 1
+accepts_walkins  boolean DEFAULT false
+hours            jsonb
+is_active        boolean DEFAULT true
+crew_member_ids  jsonb DEFAULT '[]'
+  -- Array of team_member UUIDs assigned to this location.
+  -- Populated during onboarding (Assign Crew step) and editable from operator dashboard.
+created_at       timestamptz DEFAULT now()
 ```
 
 ### business_assets

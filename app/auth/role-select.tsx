@@ -179,27 +179,6 @@ const styles = StyleSheet.create({
     position: "relative",
     ...Shadows.light.level1,
   },
-  roleCardFeatured: {
-    borderWidth: 2,
-    borderColor: Colors.foamBlue,
-    ...Shadows.light.level2,
-  },
-  badge: {
-    position: "absolute",
-    top: -10,
-    right: 16,
-    backgroundColor: Colors.foamBlueSubtle,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: "rgba(51,157,199,0.2)",
-  },
-  badgeText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.label,
-    color: Colors.foamBlue,
-  },
   iconCircle: {
     width: 56,
     height: 56,
@@ -219,9 +198,6 @@ const styles = StyleSheet.create({
     color: Colors.light.textPrimary,
     marginBottom: 2,
   },
-  roleTitleFeatured: {
-    color: Colors.light.textPrimary,
-  },
   roleDescription: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
@@ -235,13 +211,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.sm,
-  },
-  footnote: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
-    textAlign: "center",
-    marginTop: Spacing.xl,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

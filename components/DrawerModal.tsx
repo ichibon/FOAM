@@ -36,10 +36,19 @@ export function DrawerModal({ visible, onRequestClose, children }: DrawerModalPr
       visible={modalVisible}
       animationType="none"
       transparent
+      statusBarTranslucent
       onRequestClose={onRequestClose}
     >
       <Animated.View
-        style={{ flex: 1, transform: [{ translateY: slideAnim }] }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          flex: 1,
+          transform: [{ translateY: slideAnim }],
+        }}
       >
         {children}
       </Animated.View>

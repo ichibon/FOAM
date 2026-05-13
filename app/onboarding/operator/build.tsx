@@ -15,7 +15,7 @@ import {
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
+import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { DrawerModal } from "@/components/DrawerModal";
 import { LucideIcon } from "@/components/LucideIcon";
@@ -745,14 +745,7 @@ export default function BuildOperationScreen() {
         visible={showVanDrawer}
         onRequestClose={closeVanDrawer}
       >
-        <View style={styles.backdrop}>
-          <TouchableOpacity
-            style={styles.backdropTouchable}
-            onPress={closeVanDrawer}
-          />
-          <View style={styles.drawer}>
-            <View style={styles.drawerHandle} />
-
+        <View style={styles.drawer}>
             <View style={styles.drawerHeaderRow}>
               <TouchableOpacity
                 onPress={closeVanDrawer}
@@ -1019,7 +1012,6 @@ export default function BuildOperationScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
         </View>
       </DrawerModal>
 
@@ -1028,14 +1020,7 @@ export default function BuildOperationScreen() {
         visible={showLocDrawer}
         onRequestClose={closeLocDrawer}
       >
-        <View style={styles.backdrop}>
-          <TouchableOpacity
-            style={styles.backdropTouchable}
-            onPress={closeLocDrawer}
-          />
-          <View style={styles.drawer}>
-            <View style={styles.drawerHandle} />
-
+        <View style={styles.drawer}>
             <View style={styles.drawerHeaderRow}>
               <TouchableOpacity
                 onPress={closeLocDrawer}
@@ -1346,7 +1331,6 @@ export default function BuildOperationScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
         </View>
       </DrawerModal>
 
@@ -1576,21 +1560,8 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     textAlign: "center",
   },
-  backdrop: { flex: 1, backgroundColor: Drawer.background },
-  backdropTouchable: { height: 0 },
   drawer: {
     flex: 1,
-    backgroundColor: Drawer.background,
-    ...Shadows.light.level3,
-  },
-  drawerHandle: {
-    width: Drawer.dragHandleWidth,
-    height: Drawer.dragHandleHeight,
-    borderRadius: 2,
-    backgroundColor: Drawer.dragHandleColor,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 8,
   },
   drawerHeaderRow: {
     flexDirection: "row",

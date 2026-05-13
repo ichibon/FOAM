@@ -15,16 +15,12 @@ import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { DrawerModal } from "@/components/DrawerModal";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type AssetType = "van" | "trailer" | "truck" | "other";
-type StripeDrawerState = "default" | "success" | "error";
-
 interface DayAvailability {
   day: string;
   key: string;
@@ -203,11 +199,6 @@ export default function BuildOperationScreen() {
   const [allTeamMembers, setAllTeamMembers] = useState<{ id: string; display_name: string; team_role: string }[]>([]);
   const [locCrewAssignments, setLocCrewAssignments] = useState<Record<string, Set<string>>>({});
 
-  // Stripe drawer state
-  const [showStripeDrawer, setShowStripeDrawer] = useState(false);
-  const [stripeState, setStripeState] = useState<StripeDrawerState>("default");
-  const [stripeConnected, setStripeConnected] = useState(false);
-  const [stripeFetching, setStripeFetching] = useState(false);
 
   const assetTypes: { id: AssetType; label: string }[] = [
     { id: "van", label: "Van" },
@@ -243,7 +234,7 @@ export default function BuildOperationScreen() {
             .order("created_at"),
           supabase
             .from("business_locations")
-            .select("id, name, address, bay_count, accepts_walkins, hours")
+            .select("id, name, address, bay_count, accepts_walkins, hours, phone, crew_member_ids")
             .eq("detailer_id", detailerId)
             .eq("is_active", true)
             .order("created_at"),
@@ -272,8 +263,14 @@ export default function BuildOperationScreen() {
           hours: hoursJsonbToAvailability(
             l.hours as Record<string, { open: string; close: string } | null> | null
           ),
-          phone: "",
+          phone: (l.phone as string) ?? "",
         }));
+        // Restore location crew assignments from DB
+        const initLocCrew: Record<string, Set<string>> = {};
+        for (const l of locsData ?? []) {
+          initLocCrew[l.id] = new Set((l.crew_member_ids as string[]) ?? []);
+        }
+        setLocCrewAssignments(initLocCrew);
         setVans(loadedVans);
         setLocations(loadedLocs);
 
@@ -452,6 +449,8 @@ export default function BuildOperationScreen() {
             bay_count: locBays,
             accepts_walkins: locWalkIns,
             hours: hoursJsonb,
+            phone: locPhone.trim() || null,
+            crew_member_ids: [...(locCrewAssignments[editingLocId] ?? new Set())],
           })
           .eq("id", editingLocId);
         if (error) throw error;
@@ -480,6 +479,8 @@ export default function BuildOperationScreen() {
             bay_count: locBays,
             accepts_walkins: locWalkIns,
             hours: hoursJsonb,
+            phone: locPhone.trim() || null,
+            crew_member_ids: [],
           })
           .select("id")
           .single();
@@ -532,54 +533,6 @@ export default function BuildOperationScreen() {
       setLocError("Couldn't delete location. Please try again.");
     }
     setLocSaving(false);
-  }
-
-  async function handleStripeConnect() {
-    setStripeFetching(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
-      const detailerId = await getDetailerProfileId();
-      if (!detailerId) throw new Error("No profile");
-
-      const response = await fetch(
-        "https://yteffvegixoqvjoykwzx.supabase.co/functions/v1/stripe-connect-onboard",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ detailer_id: detailerId }),
-        }
-      );
-      const json = await response.json();
-      if (!json?.url) throw new Error("No URL returned");
-
-      const result = await WebBrowser.openAuthSessionAsync(
-        json.url,
-        Linking.createURL("stripe-return")
-      );
-
-      if (result.type === "success") {
-        const { data: profile } = await supabase
-          .from("detailer_profiles")
-          .select("badge_verified, stripe_account_id")
-          .eq("id", detailerId)
-          .single();
-        setStripeState("success");
-        setTimeout(() => {
-          setShowStripeDrawer(false);
-          setStripeConnected(!!(profile?.stripe_account_id));
-        }, 2000);
-      } else {
-        setStripeState("default");
-      }
-    } catch (err) {
-      console.warn("[Build] handleStripeConnect failed", err);
-      setStripeState("error");
-    }
-    setStripeFetching(false);
   }
 
   function toggleVanDay(idx: number) {
@@ -677,7 +630,6 @@ export default function BuildOperationScreen() {
                       {van.homeBase ? `${van.homeBase.split(",")[0]} · ` : ""}
                       {van.radius} mi radius
                     </Text>
-                    <Text style={styles.unitCrewWarning}>No crew assigned</Text>
                   </View>
                   <LucideIcon name="PencilLine" size={18} color={Colors.light.textTertiary} />
                 </TouchableOpacity>
@@ -733,30 +685,22 @@ export default function BuildOperationScreen() {
             <View style={styles.getPaidSection}>
               <Text style={styles.sectionLabel}>GET PAID</Text>
               <TouchableOpacity
-                style={[styles.bankButton, stripeConnected && styles.bankButtonConnected]}
-                onPress={() => { setStripeState("default"); setShowStripeDrawer(true); }}
+                style={styles.bankButton}
+                onPress={() => router.push("/onboarding/operator/stripe")}
                 activeOpacity={0.85}
               >
                 <View style={styles.bankButtonLeft}>
-                  <View style={[styles.bankIconCircle, stripeConnected && styles.bankIconCircleConnected]}>
-                    <LucideIcon
-                      name={stripeConnected ? "CheckCircle" : "Landmark"}
-                      size={20}
-                      color={stripeConnected ? "#16A34A" : Colors.foamBlue}
-                    />
+                  <View style={styles.bankIconCircle}>
+                    <LucideIcon name="Landmark" size={20} color={Colors.foamBlue} />
                   </View>
                   <View style={styles.bankButtonTextBlock}>
-                    <Text style={[styles.bankButtonLabel, stripeConnected && styles.bankButtonLabelConnected]}>
-                      {stripeConnected ? "Bank connected" : "Connect your bank — get paid faster"}
+                    <Text style={styles.bankButtonLabel}>Connect your bank — get paid faster</Text>
+                    <Text style={styles.bankButtonCaption}>
+                      Optional now — required before your first payout.
                     </Text>
-                    {!stripeConnected && (
-                      <Text style={styles.bankButtonCaption}>
-                        Optional now — required before your first payout.
-                      </Text>
-                    )}
                   </View>
                 </View>
-                <LucideIcon name="ChevronRight" size={18} color={stripeConnected ? "#16A34A" : Colors.foamBlue} />
+                <LucideIcon name="ChevronRight" size={18} color={Colors.foamBlue} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1381,98 +1325,6 @@ export default function BuildOperationScreen() {
         </View>
       </DrawerModal>
 
-      {/* Stripe Connect Drawer */}
-      <DrawerModal
-        visible={showStripeDrawer}
-        onRequestClose={() => setShowStripeDrawer(false)}
-      >
-        <View style={styles.backdrop}>
-          <TouchableOpacity
-            style={styles.backdropTouchable}
-            onPress={() => setShowStripeDrawer(false)}
-          />
-          <View style={styles.stripeDrawer}>
-            <View style={styles.drawerHandle} />
-
-            {stripeState === "success" ? (
-              <View style={styles.stripeSuccess}>
-                <View style={styles.stripeSuccessIcon}>
-                  <LucideIcon name="CheckCircle" size={44} color="#16A34A" />
-                </View>
-                <Text style={styles.stripeSuccessTitle}>You're connected.</Text>
-                <Text style={styles.stripeSuccessBody}>Your bank account is ready to receive payouts.</Text>
-              </View>
-            ) : stripeState === "error" ? (
-              <View style={styles.stripeError}>
-                <View style={styles.stripeErrorIcon}>
-                  <LucideIcon name="AlertCircle" size={36} color={Colors.warningLight} />
-                </View>
-                <Text style={styles.stripeErrorTitle}>Something went wrong.</Text>
-                <Text style={styles.stripeErrorBody}>Tap to try again.</Text>
-                <TouchableOpacity
-                  style={styles.stripeRetryButton}
-                  onPress={handleStripeConnect}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.stripeRetryText}>Try Again</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.stripeDefaultScroll}>
-                <View style={styles.stripeDefaultContent}>
-                  <View style={styles.stripeShieldIcon}>
-                    <LucideIcon name="Shield" size={24} color={Colors.foamBlue} />
-                  </View>
-                  <Text style={styles.stripeDrawerTitle}>Get paid with Stripe.</Text>
-                  <Text style={styles.stripeDrawerBody}>
-                    Stripe is how FOAM sends you money after every job. Free to set up, takes about 3 minutes. Your banking info is always encrypted — FOAM never stores it.
-                  </Text>
-
-                  <View style={styles.stripeFeatureList}>
-                    {[
-                      { icon: "ShieldCheck", title: "Bank-level encryption", body: "Your data is never stored by FOAM", color: Colors.foamBlue, bg: Colors.foamBlueSubtle },
-                      { icon: "Zap", title: "Fast payouts", body: "Standard 2 days · Instant transfer available", color: Colors.successLight, bg: "rgba(22,163,74,0.10)" },
-                      { icon: "Globe", title: "Trusted by millions", body: "3M+ businesses worldwide use Stripe", color: "#2563EB", bg: "rgba(59,130,246,0.10)" },
-                    ].map((f, i) => (
-                      <View key={i} style={styles.stripeFeatureRow}>
-                        <View style={[styles.stripeFeatureIcon, { backgroundColor: f.bg }]}>
-                          <LucideIcon name={f.icon} size={18} color={f.color} />
-                        </View>
-                        <View style={styles.stripeFeatureText}>
-                          <Text style={styles.stripeFeatureTitle}>{f.title}</Text>
-                          <Text style={styles.stripeFeatureBody}>{f.body}</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.stripeSetupButton, stripeFetching && styles.buttonDisabled]}
-                    onPress={handleStripeConnect}
-                    disabled={stripeFetching}
-                    activeOpacity={0.85}
-                  >
-                    {stripeFetching ? (
-                      <ActivityIndicator color={Colors.white} />
-                    ) : (
-                      <Text style={styles.stripeSetupButtonText}>Set up Stripe — it's free</Text>
-                    )}
-                  </TouchableOpacity>
-                  <Text style={styles.stripePoweredBy}>Powered by Stripe</Text>
-
-                  <TouchableOpacity
-                    style={styles.stripeLaterButton}
-                    onPress={() => setShowStripeDrawer(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.stripeLaterText}>I'll do this later</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </DrawerModal>
     </SafeAreaView>
   );
 }
@@ -1618,12 +1470,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 2,
   },
-  unitCrewWarning: {
-    fontFamily: Typography.body,
-    fontSize: 12,
-    color: Colors.warningLight,
-    marginTop: 2,
-  },
   addMoreRow: { gap: 8, marginBottom: 32 },
   addMoreButton: {
     height: 44,
@@ -1655,10 +1501,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     ...Shadows.light.level1,
   },
-  bankButtonConnected: {
-    borderColor: "rgba(22,163,74,0.3)",
-    backgroundColor: "rgba(22,163,74,0.05)",
-  },
   bankButtonLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   bankIconCircle: {
     width: 36,
@@ -1668,7 +1510,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bankIconCircleConnected: { backgroundColor: "rgba(22,163,74,0.10)" },
   bankButtonTextBlock: { flex: 1 },
   bankButtonLabel: {
     fontFamily: Typography.bodySemiBold,
@@ -1676,7 +1517,6 @@ const styles = StyleSheet.create({
     color: Colors.foamBlue,
     lineHeight: 18,
   },
-  bankButtonLabelConnected: { color: "#16A34A" },
   bankButtonCaption: {
     fontFamily: Typography.body,
     fontSize: 11,
@@ -2103,164 +1943,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: Spacing.md,
     marginBottom: 4,
-  },
-  stripeDrawer: {
-    backgroundColor: Drawer.background,
-    borderTopLeftRadius: Drawer.borderRadius,
-    borderTopRightRadius: Drawer.borderRadius,
-    maxHeight: "70%",
-    ...Shadows.light.level3,
-  },
-  stripeDefaultScroll: { maxHeight: 500 },
-  stripeDefaultContent: {
-    padding: 20,
-    alignItems: "center",
-    paddingBottom: 32,
-  },
-  stripeShieldIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.foamBlueSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  stripeDrawerTitle: {
-    fontFamily: Typography.display,
-    fontSize: 22,
-    color: Colors.light.textPrimary,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  stripeDrawerBody: {
-    fontFamily: Typography.body,
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  stripeFeatureList: {
-    width: "100%",
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.borderSubtle,
-    marginBottom: 20,
-  },
-  stripeFeatureRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.borderSubtle,
-  },
-  stripeFeatureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  stripeFeatureText: { flex: 1 },
-  stripeFeatureTitle: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: 13,
-    color: Colors.light.textPrimary,
-  },
-  stripeFeatureBody: {
-    fontFamily: Typography.body,
-    fontSize: 12,
-    color: Colors.light.textTertiary,
-    marginTop: 2,
-  },
-  stripeSetupButton: {
-    width: "100%",
-    height: 52,
-    backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    ...Shadows.light.level2,
-    marginBottom: 6,
-  },
-  stripeSetupButtonText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 15,
-    color: Colors.white,
-  },
-  stripePoweredBy: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.label,
-    color: Colors.light.textTertiary,
-    alignSelf: "flex-end",
-    marginBottom: 12,
-  },
-  stripeLaterButton: {
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stripeLaterText: {
-    fontFamily: Typography.body,
-    fontSize: 13,
-    color: Colors.light.textTertiary,
-  },
-  stripeSuccess: { padding: 32, alignItems: "center", gap: 12 },
-  stripeSuccessIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(22,163,74,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  stripeSuccessTitle: {
-    fontFamily: Typography.display,
-    fontSize: 22,
-    color: Colors.light.textPrimary,
-  },
-  stripeSuccessBody: {
-    fontFamily: Typography.body,
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-  },
-  stripeError: { padding: 32, alignItems: "center", gap: 12 },
-  stripeErrorIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(217,119,6,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  stripeErrorTitle: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 17,
-    color: Colors.light.textPrimary,
-  },
-  stripeErrorBody: {
-    fontFamily: Typography.body,
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-  },
-  stripeRetryButton: {
-    height: 48,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  stripeRetryText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 15,
-    color: Colors.white,
   },
 });

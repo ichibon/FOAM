@@ -411,11 +411,13 @@ function UnitCrewCard({
       <View style={cardStyles.crewRow}>
         <Text style={cardStyles.crewLabel}>CREW</Text>
         <View style={cardStyles.chipsRow}>
-          {allMembers.length === 0 ? (
+          {assignedMemberIds.size === 0 && allMembers.length > 0 ? (
             <View style={cardStyles.noCrewChip}>
               <LucideIcon name="AlertCircle" size={12} color={Colors.warningLight} />
               <Text style={cardStyles.noCrewText}>No crew assigned</Text>
             </View>
+          ) : allMembers.length === 0 ? (
+            <Text style={cardStyles.noCrewText}>No team members yet</Text>
           ) : (
             allMembers.map((member) => {
               const isAssigned = assignedMemberIds.has(member.id);

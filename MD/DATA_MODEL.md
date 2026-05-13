@@ -500,6 +500,8 @@ lng              decimal
 bay_count        integer DEFAULT 1
 accepts_walkins  boolean DEFAULT false
 hours            jsonb
+phone            text
+  -- Optional contact phone for this location; captured during onboarding.
 is_active        boolean DEFAULT true
 crew_member_ids  jsonb DEFAULT '[]'
   -- Array of team_member UUIDs assigned to this location.

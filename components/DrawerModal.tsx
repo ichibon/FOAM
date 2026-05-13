@@ -46,7 +46,7 @@ export function DrawerModal({ visible, onRequestClose, children }: DrawerModalPr
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, { dy, dx }) => dy > 4 && dy > Math.abs(dx),
       onPanResponderMove: (_, { dy }) => {
         if (dy > 0) panDelta.setValue(dy);

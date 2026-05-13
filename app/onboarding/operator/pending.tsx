@@ -156,10 +156,10 @@ export default function OnboardingPendingScreen() {
             style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
           />
           <View style={styles.checkCircle}>
-            <LucideIcon name="Clock" size={44} color={Colors.foamBlue} />
+            <LucideIcon name="CheckCircle2" size={44} color={Colors.foamBlue} />
           </View>
 
-          <Text style={styles.headline}>You're in the queue.</Text>
+          <Text style={styles.headline}>You're building something real.</Text>
           <Text style={styles.subheadline}>
             FOAM's team will review your application within{" "}
             <Text style={styles.subheadlineBold}>1–2 business days.</Text>

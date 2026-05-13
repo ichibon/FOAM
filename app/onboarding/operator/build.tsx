@@ -55,6 +55,17 @@ interface AddedLocation {
 
 const RADIUS_OPTIONS = [5, 10, 15, 20, 25, 30, 40, 50];
 
+const TIME_OPTIONS = [
+  "6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM",
+  "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM",
+  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM",
+  "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM",
+  "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM",
+  "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM",
+  "8:00 PM",
+];
+
 const DEFAULT_AVAILABILITY: DayAvailability[] = [
   { day: "Mon", key: "mon", enabled: true, open: "9:00 AM", close: "6:00 PM" },
   { day: "Tue", key: "tue", enabled: true, open: "9:00 AM", close: "6:00 PM" },
@@ -70,6 +81,25 @@ async function saveVanMeta(
   vanId: string,
   meta: { licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string }
 ) {
+  // Primary: persist to Supabase (business_asset_details — extended van metadata table)
+  try {
+    const { error } = await supabase.from("business_asset_details").upsert(
+      {
+        asset_id: vanId,
+        detailer_id: detailerId,
+        license_plate: meta.licensePlate,
+        home_base: meta.homeBase,
+        radius_miles: meta.radius,
+        availability: meta.availability,
+        equipment_notes: meta.notes,
+      },
+      { onConflict: "asset_id" }
+    );
+    if (!error) return;
+  } catch {
+    // Table not yet provisioned — fall through to AsyncStorage
+  }
+  // Fallback: device-local AsyncStorage when DB table not yet available
   try {
     await AsyncStorage.setItem(
       `foam_van_extra_${detailerId}_${vanId}`,
@@ -84,9 +114,39 @@ async function loadVanMeta(
   detailerId: string,
   vanId: string
 ): Promise<{ licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string } | null> {
+  // Primary: load from Supabase
+  try {
+    const { data } = await supabase
+      .from("business_asset_details")
+      .select("license_plate, home_base, radius_miles, availability, equipment_notes")
+      .eq("asset_id", vanId)
+      .maybeSingle();
+    if (data) {
+      return {
+        licensePlate: (data.license_plate as string) ?? "",
+        homeBase: (data.home_base as string) ?? "",
+        radius: (data.radius_miles as number) ?? 15,
+        availability: Array.isArray(data.availability)
+          ? (data.availability as DayAvailability[])
+          : DEFAULT_AVAILABILITY.map((d) => ({ ...d })),
+        notes: (data.equipment_notes as string) ?? "",
+      };
+    }
+  } catch {
+    // Table not yet provisioned — fall through to AsyncStorage
+  }
+  // Fallback: AsyncStorage
   try {
     const raw = await AsyncStorage.getItem(`foam_van_extra_${detailerId}_${vanId}`);
-    return raw ? (JSON.parse(raw) as { licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string }) : null;
+    return raw
+      ? (JSON.parse(raw) as {
+          licensePlate: string;
+          homeBase: string;
+          radius: number;
+          availability: DayAvailability[];
+          notes: string;
+        })
+      : null;
   } catch {
     return null;
   }
@@ -164,6 +224,14 @@ export default function BuildOperationScreen() {
   const [locSaving, setLocSaving] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
 
+  // Time picker state (null = no day expanded)
+  const [vanTimeDayIdx, setVanTimeDayIdx] = useState<number | null>(null);
+  const [locTimeDayIdx, setLocTimeDayIdx] = useState<number | null>(null);
+
+  // Team members for location crew chips
+  const [allTeamMembers, setAllTeamMembers] = useState<{ id: string; display_name: string; team_role: string }[]>([]);
+  const [locCrewAssignments, setLocCrewAssignments] = useState<Record<string, Set<string>>>({});
+
   // Stripe drawer state
   const [showStripeDrawer, setShowStripeDrawer] = useState(false);
   const [stripeState, setStripeState] = useState<StripeDrawerState>("default");
@@ -237,6 +305,19 @@ export default function BuildOperationScreen() {
         }));
         setVans(loadedVans);
         setLocations(loadedLocs);
+
+        // Load team members for location crew chips
+        try {
+          const { data: membersData } = await supabase
+            .from("team_members")
+            .select("id, display_name, team_role")
+            .eq("manager_id", detailerId)
+            .eq("is_active", true)
+            .order("display_name");
+          setAllTeamMembers(membersData ?? []);
+        } catch {
+          // no-op — crew chips will show empty during onboarding
+        }
       } catch (err) {
         console.warn("[Build] loadExistingUnits failed", err);
       }
@@ -539,6 +620,18 @@ export default function BuildOperationScreen() {
   function toggleLocDay(idx: number) {
     setLocHours((prev) =>
       prev.map((d, i) => (i === idx ? { ...d, enabled: !d.enabled } : d))
+    );
+  }
+
+  function setVanDayTime(idx: number, field: "open" | "close", time: string) {
+    setVanAvailability((prev) =>
+      prev.map((d, i) => (i === idx ? { ...d, [field]: time } : d))
+    );
+  }
+
+  function setLocDayTime(idx: number, field: "open" | "close", time: string) {
+    setLocHours((prev) =>
+      prev.map((d, i) => (i === idx ? { ...d, [field]: time } : d))
     );
   }
 
@@ -860,21 +953,97 @@ export default function BuildOperationScreen() {
 
                 <View style={styles.availabilityList}>
                   {vanAvailability.map((d, idx) => (
-                    <View key={d.key} style={styles.dayRow}>
-                      <View style={styles.dayRowLeft}>
-                        <Text style={styles.dayLabel}>{d.day}</Text>
-                        {d.enabled ? (
-                          <Text style={styles.dayTimeLabel}>{d.open} – {d.close}</Text>
-                        ) : (
-                          <Text style={styles.dayUnavailableLabel}>Unavailable</Text>
-                        )}
+                    <View key={d.key}>
+                      <View style={styles.dayRow}>
+                        <View style={styles.dayRowLeft}>
+                          <Text style={styles.dayLabel}>{d.day}</Text>
+                          {d.enabled ? (
+                            <TouchableOpacity
+                              onPress={() =>
+                                setVanTimeDayIdx(vanTimeDayIdx === idx ? null : idx)
+                              }
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.dayTimeLabel}>
+                                {d.open} – {d.close}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <Text style={styles.dayUnavailableLabel}>Unavailable</Text>
+                          )}
+                        </View>
+                        <Switch
+                          value={d.enabled}
+                          onValueChange={() => {
+                            toggleVanDay(idx);
+                            if (vanTimeDayIdx === idx) setVanTimeDayIdx(null);
+                          }}
+                          trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
+                          thumbColor={Colors.white}
+                        />
                       </View>
-                      <Switch
-                        value={d.enabled}
-                        onValueChange={() => toggleVanDay(idx)}
-                        trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
-                        thumbColor={Colors.white}
-                      />
+                      {vanTimeDayIdx === idx && d.enabled && (
+                        <View style={styles.timePicker}>
+                          <View style={styles.timePickerRow}>
+                            <Text style={styles.timePickerLabel}>Open</Text>
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              contentContainerStyle={styles.timePickerChips}
+                            >
+                              {TIME_OPTIONS.map((t) => (
+                                <TouchableOpacity
+                                  key={t}
+                                  style={[
+                                    styles.timeChip,
+                                    d.open === t && styles.timeChipActive,
+                                  ]}
+                                  onPress={() => setVanDayTime(idx, "open", t)}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.timeChipText,
+                                      d.open === t && styles.timeChipTextActive,
+                                    ]}
+                                  >
+                                    {t}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          </View>
+                          <View style={styles.timePickerRow}>
+                            <Text style={styles.timePickerLabel}>Close</Text>
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              contentContainerStyle={styles.timePickerChips}
+                            >
+                              {TIME_OPTIONS.map((t) => (
+                                <TouchableOpacity
+                                  key={t}
+                                  style={[
+                                    styles.timeChip,
+                                    d.close === t && styles.timeChipActive,
+                                  ]}
+                                  onPress={() => setVanDayTime(idx, "close", t)}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.timeChipText,
+                                      d.close === t && styles.timeChipTextActive,
+                                    ]}
+                                  >
+                                    {t}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        </View>
+                      )}
                     </View>
                   ))}
                 </View>
@@ -1032,21 +1201,97 @@ export default function BuildOperationScreen() {
 
                 <View style={styles.availabilityList}>
                   {locHours.map((d, idx) => (
-                    <View key={d.key} style={styles.dayRow}>
-                      <View style={styles.dayRowLeft}>
-                        <Text style={styles.dayLabel}>{d.day}</Text>
-                        {d.enabled ? (
-                          <Text style={styles.dayTimeLabel}>{d.open} – {d.close}</Text>
-                        ) : (
-                          <Text style={styles.dayUnavailableLabel}>Unavailable</Text>
-                        )}
+                    <View key={d.key}>
+                      <View style={styles.dayRow}>
+                        <View style={styles.dayRowLeft}>
+                          <Text style={styles.dayLabel}>{d.day}</Text>
+                          {d.enabled ? (
+                            <TouchableOpacity
+                              onPress={() =>
+                                setLocTimeDayIdx(locTimeDayIdx === idx ? null : idx)
+                              }
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.dayTimeLabel}>
+                                {d.open} – {d.close}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <Text style={styles.dayUnavailableLabel}>Unavailable</Text>
+                          )}
+                        </View>
+                        <Switch
+                          value={d.enabled}
+                          onValueChange={() => {
+                            toggleLocDay(idx);
+                            if (locTimeDayIdx === idx) setLocTimeDayIdx(null);
+                          }}
+                          trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
+                          thumbColor={Colors.white}
+                        />
                       </View>
-                      <Switch
-                        value={d.enabled}
-                        onValueChange={() => toggleLocDay(idx)}
-                        trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
-                        thumbColor={Colors.white}
-                      />
+                      {locTimeDayIdx === idx && d.enabled && (
+                        <View style={styles.timePicker}>
+                          <View style={styles.timePickerRow}>
+                            <Text style={styles.timePickerLabel}>Open</Text>
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              contentContainerStyle={styles.timePickerChips}
+                            >
+                              {TIME_OPTIONS.map((t) => (
+                                <TouchableOpacity
+                                  key={t}
+                                  style={[
+                                    styles.timeChip,
+                                    d.open === t && styles.timeChipActive,
+                                  ]}
+                                  onPress={() => setLocDayTime(idx, "open", t)}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.timeChipText,
+                                      d.open === t && styles.timeChipTextActive,
+                                    ]}
+                                  >
+                                    {t}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          </View>
+                          <View style={styles.timePickerRow}>
+                            <Text style={styles.timePickerLabel}>Close</Text>
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              contentContainerStyle={styles.timePickerChips}
+                            >
+                              {TIME_OPTIONS.map((t) => (
+                                <TouchableOpacity
+                                  key={t}
+                                  style={[
+                                    styles.timeChip,
+                                    d.close === t && styles.timeChipActive,
+                                  ]}
+                                  onPress={() => setLocDayTime(idx, "close", t)}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.timeChipText,
+                                      d.close === t && styles.timeChipTextActive,
+                                    ]}
+                                  >
+                                    {t}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        </View>
+                      )}
                     </View>
                   ))}
                 </View>
@@ -1067,6 +1312,75 @@ export default function BuildOperationScreen() {
                   />
                   <Text style={styles.inputHint}>Displayed to customers on your location profile.</Text>
                 </View>
+
+                <View style={styles.sectionDivider} />
+                <Text style={styles.sectionMiniLabel}>CREW AT THIS LOCATION</Text>
+
+                {allTeamMembers.length === 0 ? (
+                  <View style={styles.locCrewEmptyCard}>
+                    <LucideIcon name="Users" size={16} color={Colors.foamBlue} />
+                    <Text style={styles.locCrewEmptyText}>
+                      No crew yet. Use{" "}
+                      <Text style={styles.locCrewEmptyBold}>Assign Crew</Text> on the next
+                      step to invite your team.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.locCrewChipsSection}>
+                    <Text style={styles.locCrewHint}>
+                      Tap a chip to assign crew to this location.
+                    </Text>
+                    <View style={styles.locCrewChipsRow}>
+                      {allTeamMembers.map((member) => {
+                        const locId = editingLocId ?? "_new";
+                        const isAssigned =
+                          locCrewAssignments[locId]?.has(member.id) ?? false;
+                        return (
+                          <TouchableOpacity
+                            key={member.id}
+                            style={[
+                              styles.locCrewChip,
+                              isAssigned && styles.locCrewChipAssigned,
+                            ]}
+                            onPress={() => {
+                              setLocCrewAssignments((prev) => {
+                                const next = { ...prev };
+                                const updated = new Set(next[locId] ?? []);
+                                if (updated.has(member.id)) updated.delete(member.id);
+                                else updated.add(member.id);
+                                next[locId] = updated;
+                                return next;
+                              });
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            {isAssigned && (
+                              <LucideIcon name="Check" size={11} color={Colors.foamBlue} />
+                            )}
+                            <Text
+                              style={[
+                                styles.locCrewChipText,
+                                isAssigned && styles.locCrewChipTextAssigned,
+                              ]}
+                            >
+                              {member.display_name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      <TouchableOpacity
+                        style={styles.locCrewAddButton}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setShowLocDrawer(false);
+                          router.push("/onboarding/operator/assign-crew");
+                        }}
+                      >
+                        <LucideIcon name="Plus" size={15} color={Colors.foamBlue} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
             </ScrollView>
 
@@ -1591,11 +1905,121 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: 14,
     color: Colors.foamBlue,
+    textDecorationLine: "underline" as const,
   },
   dayUnavailableLabel: {
     fontFamily: Typography.body,
     fontSize: 14,
     color: Colors.light.textTertiary,
+  },
+  timePicker: {
+    backgroundColor: Colors.foamLightBlue,
+    borderRadius: Radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 6,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(51,157,199,0.18)",
+  },
+  timePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 8,
+  },
+  timePickerLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 11,
+    color: Colors.foamBlue,
+    width: 36,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+  },
+  timePickerChips: {
+    flexDirection: "row",
+    gap: 6,
+    paddingRight: 8,
+  },
+  timeChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.surface,
+  },
+  timeChipActive: {
+    backgroundColor: Colors.foamBlue,
+    borderColor: Colors.foamBlue,
+  },
+  timeChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+  },
+  timeChipTextActive: { color: Colors.white },
+  locCrewEmptyCard: {
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: Colors.foamLightBlue,
+    borderRadius: Radius.sm,
+    padding: 14,
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(51,157,199,0.18)",
+  },
+  locCrewEmptyText: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 19,
+  },
+  locCrewEmptyBold: { fontFamily: Typography.bodySemiBold, color: Colors.foamBlue },
+  locCrewChipsSection: { gap: 8 },
+  locCrewHint: {
+    fontFamily: Typography.body,
+    fontSize: 12,
+    color: Colors.light.textTertiary,
+  },
+  locCrewChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
+  locCrewChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.surface,
+  },
+  locCrewChipAssigned: {
+    backgroundColor: Colors.foamBlueSubtle,
+    borderColor: Colors.foamBlue,
+  },
+  locCrewChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  locCrewChipTextAssigned: { color: Colors.foamBlue },
+  locCrewAddButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
   },
   baysCard: {
     backgroundColor: Colors.light.surface,

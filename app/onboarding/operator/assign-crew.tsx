@@ -368,6 +368,7 @@ export default function AssignCrewScreen() {
               return (
                 <UnitCrewCard
                   key={van.id}
+                  unitId={van.id}
                   icon={getUnitIcon(van.asset_type)}
                   name={van.name}
                   meta={`${assetTypeLabel(van.asset_type)} · Mobile service`}
@@ -384,6 +385,7 @@ export default function AssignCrewScreen() {
               return (
                 <UnitCrewCard
                   key={loc.id}
+                  unitId={loc.id}
                   icon="Building2"
                   name={loc.name}
                   meta={[
@@ -716,6 +718,7 @@ export default function AssignCrewScreen() {
 }
 
 interface UnitCrewCardProps {
+  unitId: string;
   icon: string;
   name: string;
   meta: string;
@@ -727,6 +730,7 @@ interface UnitCrewCardProps {
 }
 
 function UnitCrewCard({
+  unitId,
   icon,
   name,
   meta,
@@ -763,7 +767,7 @@ function UnitCrewCard({
           ) : (
             allMembers.map((member) => {
               const isAssigned = assignedMemberIds.has(member.id);
-              const isToggling = togglingId === `${name}:${member.id}`;
+              const isToggling = togglingId === `${unitId}:${member.id}`;
               return (
                 <TouchableOpacity
                   key={member.id}

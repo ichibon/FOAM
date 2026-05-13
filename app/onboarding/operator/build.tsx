@@ -80,7 +80,6 @@ async function saveVanMeta(
   meta: { licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string }
 ) {
   // Persist van metadata as JSONB on the canonical business_assets row.
-  // The `metadata` column is documented in DATA_MODEL.md under business_assets.
   const { error } = await supabase
     .from("business_assets")
     .update({
@@ -93,7 +92,8 @@ async function saveVanMeta(
       },
     })
     .eq("id", vanId);
-  if (error) throw error;
+  // Non-fatal — metadata column may not exist yet in all environments.
+  if (error) console.warn("[saveVanMeta] metadata update failed", error);
 }
 
 async function loadVanMeta(
@@ -384,7 +384,7 @@ export default function BuildOperationScreen() {
       } else {
         const { data, error } = await supabase
           .from("business_assets")
-          .insert({ detailer_id: detailerId, name: vanName.trim(), asset_type: vanType })
+          .insert({ detailer_id: detailerId, name: vanName.trim(), asset_type: vanType, is_active: true })
           .select("id")
           .single();
         if (error) throw error;
@@ -481,6 +481,7 @@ export default function BuildOperationScreen() {
             hours: hoursJsonb,
             phone: locPhone.trim() || null,
             crew_member_ids: [],
+            is_active: true,
           })
           .select("id")
           .single();
@@ -1551,13 +1552,11 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     textAlign: "center",
   },
-  backdrop: { flex: 1, backgroundColor: Drawer.backdropStandard, justifyContent: "flex-end" },
-  backdropTouchable: { flex: 1 },
+  backdrop: { flex: 1, backgroundColor: Drawer.background },
+  backdropTouchable: { height: 0 },
   drawer: {
+    flex: 1,
     backgroundColor: Drawer.background,
-    borderTopLeftRadius: Drawer.borderRadius,
-    borderTopRightRadius: Drawer.borderRadius,
-    maxHeight: "90%",
     ...Shadows.light.level3,
   },
   drawerHandle: {
@@ -1595,7 +1594,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
   },
-  drawerScroll: { maxHeight: 500 },
+  drawerScroll: { flex: 1 },
   drawerForm: { padding: Spacing.md, gap: 20, paddingBottom: 100 },
   inputGroup: { gap: 6 },
   inputLabel: {

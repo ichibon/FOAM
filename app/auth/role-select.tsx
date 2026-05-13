@@ -21,24 +21,22 @@ const roles: {
   title: string;
   description: string;
   icon: LucideIconName;
-  featured?: boolean;
 }[] = [
   {
     role: "customer",
-    title: "Book a detail",
+    title: "I need my car cleaned",
     description: "Find detailers, book, and pay.",
     icon: "Car",
   },
   {
     role: "operator",
-    title: "Grow my business",
+    title: "I operate a business",
     description: "Manage bookings, crew, and payments.",
     icon: "Briefcase",
-    featured: true,
   },
   {
     role: "team_member",
-    title: "Join a crew",
+    title: "I'm part of a team",
     description: "See your jobs and track your earnings.",
     icon: "Users",
   },
@@ -75,9 +73,12 @@ export default function RoleSelectScreen() {
       } else if (role === "operator") {
         const { error: profileError } = await supabase
           .from("detailer_profiles")
-          .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+          .upsert(
+            { user_id: user.id, operation_type: "mobile" },
+            { onConflict: "user_id", ignoreDuplicates: false }
+          );
         if (profileError) throw profileError;
-        router.replace("/onboarding/operator/type");
+        router.replace("/onboarding/operator/build");
       } else if (role === "team_member") {
         router.replace("/onboarding/crew/invite");
       }
@@ -103,25 +104,17 @@ export default function RoleSelectScreen() {
           {roles.map((item) => (
             <TouchableOpacity
               key={item.role}
-              style={[styles.roleCard, item.featured && styles.roleCardFeatured]}
+              style={styles.roleCard}
               onPress={() => handleRoleSelect(item.role)}
               disabled={loading}
               activeOpacity={0.85}
             >
-              {item.featured && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>Most popular</Text>
-                </View>
-              )}
-
               <View style={styles.iconCircle}>
                 <LucideIcon name={item.icon} size={28} color={Colors.foamBlue} />
               </View>
 
               <View style={styles.roleText}>
-                <Text style={[styles.roleTitle, item.featured && styles.roleTitleFeatured]}>
-                  {item.title}
-                </Text>
+                <Text style={styles.roleTitle}>{item.title}</Text>
                 <Text style={styles.roleDescription}>{item.description}</Text>
               </View>
 
@@ -133,7 +126,6 @@ export default function RoleSelectScreen() {
         {writeError && (
           <Text style={styles.writeError}>{writeError}</Text>
         )}
-        <Text style={styles.footnote}>Not sure? You can always change this later.</Text>
       </ScrollView>
 
       {loading && (

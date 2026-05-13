@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Locations & Vans</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: {
+                            primary: '#FAFAFA',
+                            secondary: '#F4F4F5',
+                            surface: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                            disabled: '#D4D4D4',
+                        },
+                        brand: {
+                            primary: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51,157,199,0.10)',
+                            card2: '#6BB8D4',
+                            card3: '#E1F0F7',
+                        },
+                        semantic: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                            info: '#2563EB',
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif'],
+                    },
+                    spacing: {
+                        'screen-w': '375px',
+                        'screen-h': '840px',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 400ms ease-out forwards',
+                        'fade-in': 'fadeIn 300ms ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { margin: 0; padding: 0; background-color: #FAFAFA; overscroll-behavior-y: none; }
+    </style>
+</head>
+<body class="bg-background-primary flex items-center justify-center min-h-[100dvh] antialiased m-0 p-0">
+
+    <main id="main-container" class="w-full max-w-[375px] h-[840px] max-h-[100dvh] bg-background-primary relative flex flex-col overflow-hidden mx-auto shadow-[0_0_40px_rgba(0,0,0,0.05)] sm:rounded-[40px] sm:my-8 sm:h-[840px] sm:border-[8px] sm:border-gray-900">
+        
+        <header id="header" class="w-full h-[64px] flex-shrink-0 relative z-10 bg-background-primary border-b border-border-subtle flex items-center justify-center px-[16px] animate-fade-in">
+            <button class="w-[44px] h-[44px] flex items-center justify-center absolute left-[8px] text-text-primary transition-transform active:scale-[0.95]">
+                <i data-lucide="chevron-left" class="w-[20px] h-[20px]"></i>
+            </button>
+            
+            <h1 class="font-inter text-[17px] font-[600] text-text-primary">
+                Locations & Vans
+            </h1>
+        </header>
+
+        <section id="operation_manager" class="w-full px-[16px] flex flex-col flex-grow overflow-y-auto pb-[32px] animate-slide-up bg-background-primary" style="animation-delay: 100ms;">
+            
+            <div id="units_section" class="w-full flex flex-col mt-[24px]">
+                <h2 class="font-inter text-[11px] font-[500] uppercase tracking-[0.5px] text-text-tertiary mb-[16px]">
+                    YOUR OPERATION
+                </h2>
+                
+                <div class="flex flex-col gap-[12px] w-full">
+                    
+                    <div id="van_card_1" class="w-full bg-background-surface rounded-[16px] p-[16px] border border-border-subtle shadow-level-1 flex items-start gap-[12px] transition-transform active:scale-[0.99] cursor-pointer relative">
+                        <div class="absolute top-[12px] right-[12px] px-[8px] py-[4px] bg-semantic-success/10 rounded-[6px]">
+                            <span class="font-inter text-[11px] font-[600] text-semantic-success uppercase tracking-[0.3px]">Active</span>
+                        </div>
+                        
+                        <div class="w-[44px] h-[44px] rounded-full bg-brand-subtle flex items-center justify-center flex-shrink-0 mt-[4px]">
+                            <i data-lucide="truck" class="w-[24px] h-[24px] text-brand-primary"></i>
+                        </div>
+                        
+                        <div class="flex-grow min-w-0 pr-[60px]">
+                            <h3 class="font-inter text-[15px] font-[600] text-text-primary leading-tight">
+                                Van 1
+                            </h3>
+                            <p class="font-inter text-[13px] font-[400] text-text-secondary leading-tight mt-[2px]">
+                                Buckhead Zone · 15 mi radius
+                            </p>
+                            <p class="font-inter text-[12px] font-[400] text-text-tertiary leading-tight mt-[2px]">
+                                Jordan K. assigned
+                            </p>
+                        </div>
+                        
+                        <div class="absolute bottom-[16px] right-[16px]">
+                            <i data-lucide="pencil-line" class="w-[18px] h-[18px] text-text-tertiary"></i>
+                        </div>
+                    </div>
+
+                    <div id="van_card_2" class="w-full bg-background-surface rounded-[16px] p-[16px] border border-border-subtle shadow-level-1 flex items-start gap-[12px] transition-transform active:scale-[0.99] cursor-pointer relative">
+                        <div class="absolute top-[12px] right-[12px] px-[8px] py-[4px] bg-semantic-warning/10 rounded-[6px]">
+                            <span class="font-inter text-[11px] font-[600] text-semantic-warning uppercase tracking-[0.3px]">Pending</span>
+                        </div>
+                        
+                        <div class="w-[44px] h-[44px] rounded-full bg-brand-subtle flex items-center justify-center flex-shrink-0 mt-[4px]">
+                            <i data-lucide="truck" class="w-[24px] h-[24px] text-brand-primary"></i>
+                        </div>
+                        
+                        <div class="flex-grow min-w-0 pr-[60px]">
+                            <h3 class="font-inter text-[15px] font-[600] text-text-primary leading-tight">
+                                Van 2
+                            </h3>
+                            <p class="font-inter text-[13px] font-[400] text-text-secondary leading-tight mt-[2px]">
+                                Midtown Zone · 12 mi radius
+                            </p>
+                            <p class="font-inter text-[12px] font-[400] text-text-tertiary leading-tight mt-[2px]">
+                                Marcus T. assigned
+                            </p>
+                        </div>
+                        
+                        <div class="absolute bottom-[16px] right-[16px]">
+                            <i data-lucide="pencil-line" class="w-[18px] h-[18px] text-text-tertiary"></i>
+                        </div>
+                    </div>
+
+                    <div class="w-full px-[16px] py-[12px] bg-semantic-warning/5 rounded-[12px] border border-semantic-warning/20 -mt-[4px]">
+                        <p class="font-inter text-[12px] font-[400] text-text-tertiary italic leading-[1.4]">
+                            Under FOAM review. Usually approved within 24 hours.
+                        </p>
+                    </div>
+
+                    <div id="location_card_1" class="w-full bg-background-surface rounded-[16px] p-[16px] border border-border-subtle shadow-level-1 flex items-start gap-[12px] transition-transform active:scale-[0.99] cursor-pointer relative mt-[4px]">
+                        <div class="absolute top-[12px] right-[12px] px-[8px] py-[4px] bg-semantic-success/10 rounded-[6px]">
+                            <span class="font-inter text-[11px] font-[600] text-semantic-success uppercase tracking-[0.3px]">Active</span>
+                        </div>
+                        
+                        <div class="w-[44px] h-[44px] rounded-full bg-brand-subtle flex items-center justify-center flex-shrink-0 mt-[4px]">
+                            <i data-lucide="building-2" class="w-[24px] h-[24px] text-brand-primary"></i>
+                        </div>
+                        
+                        <div class="flex-grow min-w-0 pr-[60px]">
+                            <h3 class="font-inter text-[15px] font-[600] text-text-primary leading-tight">
+                                Buckhead Shop
+                            </h3>
+                            <p class="font-inter text-[13px] font-[400] text-text-secondary leading-tight mt-[2px]">
+                                742 Peachtree Rd NE · 3 bays
+                            </p>
+                            <p class="font-inter text-[12px] font-[400] text-text-tertiary leading-tight mt-[2px]">
+                                Open 9AM – 6PM · Walk-ins on
+                            </p>
+                        </div>
+                        
+                        <div class="absolute bottom-[16px] right-[16px]">
+                            <i data-lucide="pencil-line" class="w-[18px] h-[18px] text-text-tertiary"></i>
+                        </div>
+                    </div>
+
+                    <div id="location_card_2" class="w-full bg-background-surface rounded-[16px] p-[16px] border border-border-subtle shadow-level-1 flex items-start gap-[12px] transition-transform active:scale-[0.99] cursor-pointer relative">
+                        <div class="absolute top-[12px] right-[12px] px-[8px] py-[4px] bg-text-tertiary/10 rounded-[6px]">
+                            <span class="font-inter text-[11px] font-[600] text-text-tertiary uppercase tracking-[0.3px]">Inactive</span>
+                        </div>
+                        
+                        <div class="w-[44px] h-[44px] rounded-full bg-brand-subtle flex items-center justify-center flex-shrink-0 mt-[4px]">
+                            <i data-lucide="building-2" class="w-[24px] h-[24px] text-brand-primary"></i>
+                        </div>
+                        
+                        <div class="flex-grow min-w-0 pr-[60px]">
+                            <h3 class="font-inter text-[15px] font-[600] text-text-primary leading-tight">
+                                Westside Garage
+                            </h3>
+                            <p class="font-inter text-[13px] font-[400] text-text-secondary leading-tight mt-[2px]">
+                                1450 Howell Mill Rd · 2 bays
+                            </p>
+                            <p class="font-inter text-[12px] font-[400] text-text-tertiary leading-tight mt-[2px]">
+                                Closed temporarily
+                            </p>
+                        </div>
+                        
+                        <div class="absolute bottom-[16px] right-[16px]">
+                            <i data-lucide="pencil-line" class="w-[18px] h-[18px] text-text-tertiary"></i>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="flex flex-col gap-[8px] mt-[24px] w-full">
+                    <button id="add_van_btn" class="w-full h-[44px] bg-background-surface border-[2px] border-brand-primary text-brand-primary font-inter text-[14px] font-[600] rounded-[8px] flex items-center justify-center gap-[8px] transition-transform active:scale-[0.98] hover:bg-brand-subtle">
+                        <i data-lucide="truck" class="w-[20px] h-[20px]"></i>
+                        + Add Van
+                    </button>
+
+                    <button id="add_location_btn" class="w-full h-[44px] bg-background-surface border-[2px] border-brand-primary text-brand-primary font-inter text-[14px] font-[600] rounded-[8px] flex items-center justify-center gap-[8px] transition-transform active:scale-[0.98] hover:bg-brand-subtle">
+                        <i data-lucide="building-2" class="w-[20px] h-[20px]"></i>
+                        + Add Location
+                    </button>
+                </div>
+
+                <div class="w-full text-center mt-[20px] px-[16px]">
+                    <p class="font-inter text-[12px] font-[400] text-text-tertiary leading-[1.5]">
+                        Each new unit requires FOAM review before going live.
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

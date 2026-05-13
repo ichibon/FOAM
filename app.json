@@ -23,7 +23,8 @@
         "NSCameraUsageDescription": "FOAM uses your camera to take before and after photos of detailing jobs.",
         "NSPhotoLibraryUsageDescription": "FOAM needs access to your photo library to upload job photos.",
         "NSLocationWhenInUseUsageDescription": "FOAM uses your location to find nearby detailers and navigate to job sites.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "FOAM uses your location to provide accurate detailer routing."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "FOAM uses your location to provide accurate detailer routing.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -41,8 +42,6 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ]
     },

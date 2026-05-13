@@ -1,0 +1,255 @@
+Here's everything Replit needs — implementation directions and the exact link.
+
+---
+
+**Component: Stripe Connect Bottom Drawer**
+**Screen:** Operator Onboarding — Step 2 (Build Your Operation)
+**Trigger:** Tap on "Connect your bank — get paid faster" button
+
+---
+
+## What to Build
+
+A bottom drawer (bottom sheet) component that slides up when the bank button is tapped. Built in React Native with Expo. Does not navigate away from the onboarding screen.
+
+---
+
+## Tech Stack
+- React Native (Expo)
+- `expo-web-browser` for opening the Stripe Connect URL
+- `expo-linking` for handling the deep link return
+- Reanimated 2 or `@gorhom/bottom-sheet` for the drawer animation
+- Supabase edge function for generating the Account Link
+
+---
+
+## The Stripe Link
+
+The button does **not** link to a static URL. It calls your Supabase edge function which generates a dynamic one-time Stripe Account Link on demand.
+
+**Edge function endpoint:**
+```
+POST https://yteffvegixoqvjoykwzx.supabase.co/functions/v1/stripe-connect-onboard
+```
+
+**Request headers:**
+```javascript
+{
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${supabaseSession.access_token}`
+}
+```
+
+**Request body:**
+```javascript
+{
+  detailer_id: currentUser.detailer_profile_id
+}
+```
+
+**Response:**
+```javascript
+{
+  url: 'https://connect.stripe.com/express/onboarding/...'
+  // one-time URL, expires after use
+}
+```
+
+The `url` from the response is what gets passed to `WebBrowser.openAuthSessionAsync`.
+
+---
+
+## Step-by-Step Implementation
+
+**Step 1 — Install dependencies**
+```bash
+npx expo install expo-web-browser expo-linking
+```
+
+If not already installed:
+```bash
+npx expo install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
+```
+
+---
+
+**Step 2 — Register deep link scheme in app.json**
+```json
+{
+  "expo": {
+    "scheme": "foamauto"
+  }
+}
+```
+
+---
+
+**Step 3 — Bottom drawer component logic**
+
+```javascript
+import * as WebBrowser from 'expo-web-browser'
+import * as Linking from 'expo-linking'
+import { supabase } from '../lib/supabase'
+
+const handleStripeConnect = async () => {
+  try {
+    // 1. Call edge function to get one-time Stripe Account Link
+    const { data: { session } } = await supabase.auth.getSession()
+
+    const response = await fetch(
+      'https://yteffvegixoqvjoykwzx.supabase.co/functions/v1/stripe-connect-onboard',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          detailer_id: session.user.detailer_profile_id
+        })
+      }
+    )
+
+    const { url } = await response.json()
+
+    // 2. Open Stripe onboarding in in-app browser
+    // Return URL is the deep link back into FOAM
+    const result = await WebBrowser.openAuthSessionAsync(
+      url,
+      Linking.createURL('stripe-return')
+      // resolves to foamauto://stripe-return
+    )
+
+    // 3. Handle return from Stripe
+    if (result.type === 'success') {
+      // Stripe onboarding completed
+      // Verify account status with Supabase
+      await verifyStripeAccount()
+      setDrawerState('success')
+      // Auto-dismiss after 2 seconds
+      setTimeout(() => {
+        closeDrawer()
+        setStripeConnected(true)
+      }, 2000)
+    } else {
+      // User cancelled or closed browser
+      // Drawer stays open, no state change
+    }
+
+  } catch (error) {
+    console.error('Stripe connect error:', error)
+    // Show error state in drawer
+    setDrawerState('error')
+  }
+}
+
+const verifyStripeAccount = async () => {
+  // Re-fetch detailer_profiles to confirm
+  // badge_verified = true and stripe_account_id is set
+  const { data } = await supabase
+    .from('detailer_profiles')
+    .select('badge_verified, stripe_account_id')
+    .eq('user_id', currentUser.id)
+    .single()
+
+  return data?.badge_verified === true
+}
+```
+
+---
+
+## Drawer States
+
+The drawer has three states managed by a single `drawerState` variable:
+
+```javascript
+// 'default' | 'success' | 'error'
+const [drawerState, setDrawerState] = useState('default')
+const [stripeConnected, setStripeConnected] = useState(false)
+```
+
+**default** — Info content + "Set up Stripe" CTA. Shown on open.
+
+**success** — Green checkmark + "You're connected." + bank name. Auto-dismisses after 2 seconds. On dismiss, bank button on parent screen transitions to green connected state.
+
+**error** — Brief error message + retry button. Copy: "Something went wrong. Tap to try again." Error icon in amber. Single "Try Again" button retries `handleStripeConnect`.
+
+---
+
+## Bank Button State on Parent Screen
+
+After successful connection the parent screen button updates:
+
+```javascript
+// Unconnected
+{
+  border: '1px solid #E4E4E7',
+  label: 'Connect your bank — get paid faster',
+  icon: 'bank',
+  iconColor: '#339DC7',
+  caption: 'Optional now — required before your first payout.'
+}
+
+// Connected
+{
+  border: '1px solid rgba(22,163,74,0.3)',
+  background: 'rgba(22,163,74,0.05)',
+  label: 'Chase ••••4492 connected',
+  // bank name pulled from detailer_profiles.stripe_account_id
+  // display name fetched from Stripe account object
+  icon: 'check-circle',
+  iconColor: '#16A34A',
+  caption: null // remove caption when connected
+}
+```
+
+---
+
+## Deep Link Handler
+
+In your root `App.js` or navigation setup, handle the return URL:
+
+```javascript
+import * as Linking from 'expo-linking'
+
+useEffect(() => {
+  const handleDeepLink = ({ url }) => {
+    const { path } = Linking.parse(url)
+    if (path === 'stripe-return') {
+      // WebBrowser.openAuthSessionAsync handles this automatically
+      // No additional action needed here
+      // The result.type === 'success' check in handleStripeConnect catches it
+    }
+    if (path === 'stripe-refresh') {
+      // Stripe wants to restart onboarding
+      // Re-trigger handleStripeConnect
+      handleStripeConnect()
+    }
+  }
+
+  const subscription = Linking.addEventListener('url', handleDeepLink)
+  return () => subscription.remove()
+}, [])
+```
+
+---
+
+## Error Cases to Handle
+
+| Scenario | Behavior |
+|----------|----------|
+| Edge function fails | Drawer shows error state — "Something went wrong. Try again." |
+| Stripe URL fetch fails | Same as above |
+| User closes browser without completing | Drawer returns to default state — no state change |
+| Stripe onboarding incomplete | `badge_verified` stays false — bank button stays unconnected |
+| Deep link not caught | `result.type` will be `'cancel'` — handle same as close |
+
+---
+
+## What Replit Does NOT Need to Build
+
+The edge function is already deployed at `yteffvegixoqvjoykwzx.supabase.co`. The Stripe Connect account creation logic, Account Link generation, and `badge_verified` webhook update are all live. Replit's job is purely the mobile UI and the `WebBrowser.openAuthSessionAsync` call.
+
+---
+
+That's everything. Hand this doc to Replit as-is and they have the endpoint, the auth pattern, the component logic, the state machine, the deep link handler, and the error cases. No back-and-forth needed.

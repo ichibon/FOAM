@@ -28,12 +28,11 @@ name = "Start application"
 author = "agent"
 
 [workflows.workflow.metadata]
-outputType = "webview"
+outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx expo start --web --port 5000"
-waitForPort = 5000
+args = "REACT_NATIVE_PACKAGER_HOSTNAME=c98a8a3f-9f87-4992-ad7e-b03159a74284-00-64vp29086pzv.picard.replit.dev npx expo start --lan --port 8080"
 
 [[workflows.workflow]]
 name = "Marketing Site"

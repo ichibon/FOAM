@@ -769,6 +769,7 @@ export default function BuildOperationScreen() {
             <KeyboardAvoidingView
               style={{ flex: 1 }}
               behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={0}
             >
             <ScrollView
               style={styles.drawerScroll}
@@ -992,7 +993,6 @@ export default function BuildOperationScreen() {
                 </View>
               </View>
             </ScrollView>
-            </KeyboardAvoidingView>
 
             {vanError && <Text style={styles.drawerError}>{vanError}</Text>}
 
@@ -1012,6 +1012,7 @@ export default function BuildOperationScreen() {
                 )}
               </TouchableOpacity>
             </View>
+            </KeyboardAvoidingView>
         </View>
       </DrawerModal>
 
@@ -1044,6 +1045,7 @@ export default function BuildOperationScreen() {
             <KeyboardAvoidingView
               style={{ flex: 1 }}
               behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={0}
             >
             <ScrollView
               style={styles.drawerScroll}
@@ -1311,7 +1313,6 @@ export default function BuildOperationScreen() {
                 )}
               </View>
             </ScrollView>
-            </KeyboardAvoidingView>
 
             {locError && <Text style={styles.drawerError}>{locError}</Text>}
 
@@ -1331,6 +1332,7 @@ export default function BuildOperationScreen() {
                 )}
               </TouchableOpacity>
             </View>
+            </KeyboardAvoidingView>
         </View>
       </DrawerModal>
 
@@ -1592,7 +1594,7 @@ const styles = StyleSheet.create({
     color: Colors.errorLight,
   },
   drawerScroll: { flex: 1 },
-  drawerForm: { padding: Spacing.md, gap: 20, paddingBottom: 100 },
+  drawerForm: { padding: Spacing.md, gap: 20, paddingBottom: 24 },
   inputGroup: { gap: 6 },
   inputLabel: {
     fontFamily: Typography.bodyMedium,
@@ -1920,10 +1922,6 @@ const styles = StyleSheet.create({
     marginLeft: 30,
   },
   drawerFooter: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: Colors.light.surface,
     padding: Spacing.md,
     paddingBottom: Platform.OS === "web" ? 16 : 32,

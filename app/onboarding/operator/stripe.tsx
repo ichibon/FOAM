@@ -148,7 +148,7 @@ export default function StripeScreen() {
       console.warn("[StripeOnboarding] onboarding_complete write failed", err);
     }
     await refreshAuth();
-    router.replace("/operator/pending");
+    router.replace("/onboarding/operator/pending");
   }
 
   function handleWebViewMessage(event: { nativeEvent: { data: string } }) {

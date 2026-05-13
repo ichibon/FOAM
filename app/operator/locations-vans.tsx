@@ -33,12 +33,14 @@ interface LocationSummary {
   created_at: string;
 }
 
+type ApprovalStatus = "pending" | "approved" | "rejected" | "suspended";
+
 export default function LocationsVansScreen() {
   const [vans, setVans] = useState<VanSummary[]>([]);
   const [locations, setLocations] = useState<LocationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [detailerId, setDetailerId] = useState<string | null>(null);
+  const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>("approved");
 
   const loadUnits = useCallback(async () => {
     setLoading(true);
@@ -50,22 +52,24 @@ export default function LocationsVansScreen() {
 
       const { data: profile } = await supabase
         .from("detailer_profiles")
-        .select("id")
+        .select("id, approval_status")
         .eq("user_id", user.id)
         .single();
       if (!profile) return;
-      setDetailerId(profile.id);
+      setApprovalStatus((profile.approval_status as ApprovalStatus) ?? "approved");
 
       const [{ data: assetsData }, { data: locsData }] = await Promise.all([
         supabase
           .from("business_assets")
           .select("id, name, asset_type, is_active, created_at")
           .eq("detailer_id", profile.id)
+          .order("is_active", { ascending: false })
           .order("created_at"),
         supabase
           .from("business_locations")
           .select("id, name, address, bay_count, accepts_walkins, is_active, created_at")
           .eq("detailer_id", profile.id)
+          .order("is_active", { ascending: false })
           .order("created_at"),
       ]);
 
@@ -82,6 +86,7 @@ export default function LocationsVansScreen() {
   }, [loadUnits]);
 
   async function handleToggleVan(van: VanSummary) {
+    if (approvalStatus === "pending") return;
     setTogglingId(van.id);
     try {
       const { error } = await supabase
@@ -100,6 +105,7 @@ export default function LocationsVansScreen() {
   }
 
   async function handleToggleLocation(loc: LocationSummary) {
+    if (approvalStatus === "pending") return;
     setTogglingId(loc.id);
     try {
       const { error } = await supabase
@@ -119,31 +125,19 @@ export default function LocationsVansScreen() {
 
   function assetTypeLabel(type: string) {
     switch (type) {
-      case "trailer":
-        return "Trailer";
-      case "truck":
-        return "Truck";
-      case "other":
-        return "Vehicle";
-      default:
-        return "Van";
+      case "trailer": return "Trailer";
+      case "truck": return "Truck";
+      case "other": return "Vehicle";
+      default: return "Van";
     }
   }
 
-  function assetTypeIcon(type: string) {
-    switch (type) {
-      case "trailer":
-      case "truck":
-        return "Truck";
-      default:
-        return "Truck";
-    }
+  function getUnitStatus(isActive: boolean): "pending" | "active" | "inactive" {
+    if (approvalStatus === "pending") return isActive ? "pending" : "inactive";
+    return isActive ? "active" : "inactive";
   }
 
-  const activeVans = vans.filter((v) => v.is_active);
-  const inactiveVans = vans.filter((v) => !v.is_active);
-  const activeLocs = locations.filter((l) => l.is_active);
-  const inactiveLocs = locations.filter((l) => !l.is_active);
+  const isPending = approvalStatus === "pending";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -158,6 +152,15 @@ export default function LocationsVansScreen() {
         <Text style={styles.headerTitle}>Locations & Vans</Text>
         <View style={styles.spacer} />
       </View>
+
+      {isPending && (
+        <View style={styles.pendingBanner}>
+          <LucideIcon name="Clock" size={15} color={Colors.warningLight} />
+          <Text style={styles.pendingBannerText}>
+            Your units are pending FOAM approval. Toggles are locked until approved.
+          </Text>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -197,66 +200,61 @@ export default function LocationsVansScreen() {
               />
             ) : (
               <View style={styles.unitList}>
-                {[...activeVans, ...inactiveVans].map((van) => (
-                  <View key={van.id} style={[styles.unitCard, !van.is_active && styles.unitCardInactive]}>
-                    <View style={styles.unitCardLeft}>
-                      <View
-                        style={[
-                          styles.unitIconCircle,
-                          !van.is_active && styles.unitIconCircleInactive,
-                        ]}
-                      >
-                        <LucideIcon
-                          name={assetTypeIcon(van.asset_type)}
-                          size={22}
-                          color={van.is_active ? Colors.foamBlue : Colors.light.textTertiary}
+                {vans.map((van) => {
+                  const unitStatus = getUnitStatus(van.is_active);
+                  return (
+                    <View
+                      key={van.id}
+                      style={[styles.unitCard, !van.is_active && styles.unitCardInactive]}
+                    >
+                      <View style={styles.unitCardLeft}>
+                        <View
+                          style={[
+                            styles.unitIconCircle,
+                            !van.is_active && styles.unitIconCircleInactive,
+                          ]}
+                        >
+                          <LucideIcon
+                            name="Truck"
+                            size={22}
+                            color={van.is_active ? Colors.foamBlue : Colors.light.textTertiary}
+                          />
+                        </View>
+                        <View style={styles.unitInfo}>
+                          <View style={styles.unitNameRow}>
+                            <Text
+                              style={[styles.unitName, !van.is_active && styles.unitNameInactive]}
+                              numberOfLines={1}
+                            >
+                              {van.name}
+                            </Text>
+                            <StatusBadge status={unitStatus} />
+                          </View>
+                          <Text style={styles.unitMeta}>{assetTypeLabel(van.asset_type)}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.unitCardActions}>
+                        <TouchableOpacity
+                          style={styles.editButton}
+                          onPress={() => router.push("/onboarding/operator/build")}
+                          activeOpacity={0.7}
+                        >
+                          <LucideIcon name="Pencil" size={16} color={Colors.light.textSecondary} />
+                        </TouchableOpacity>
+                        <Switch
+                          value={van.is_active}
+                          onValueChange={() => handleToggleVan(van)}
+                          disabled={togglingId === van.id || isPending}
+                          trackColor={{
+                            false: Colors.light.borderDefault,
+                            true: Colors.foamBlue,
+                          }}
+                          thumbColor={Colors.white}
                         />
                       </View>
-                      <View style={styles.unitInfo}>
-                        <View style={styles.unitNameRow}>
-                          <Text
-                            style={[
-                              styles.unitName,
-                              !van.is_active && styles.unitNameInactive,
-                            ]}
-                          >
-                            {van.name}
-                          </Text>
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              van.is_active ? styles.statusBadgeActive : styles.statusBadgeInactive,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusBadgeText,
-                                van.is_active
-                                  ? styles.statusBadgeTextActive
-                                  : styles.statusBadgeTextInactive,
-                              ]}
-                            >
-                              {van.is_active ? "Active" : "Inactive"}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={styles.unitMeta}>{assetTypeLabel(van.asset_type)}</Text>
-                      </View>
                     </View>
-                    <View style={styles.unitCardActions}>
-                      <Switch
-                        value={van.is_active}
-                        onValueChange={() => handleToggleVan(van)}
-                        disabled={togglingId === van.id}
-                        trackColor={{
-                          false: Colors.light.borderDefault,
-                          true: Colors.foamBlue,
-                        }}
-                        thumbColor={Colors.white}
-                      />
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
           </View>
@@ -289,73 +287,65 @@ export default function LocationsVansScreen() {
               />
             ) : (
               <View style={styles.unitList}>
-                {[...activeLocs, ...inactiveLocs].map((loc) => (
-                  <View
-                    key={loc.id}
-                    style={[styles.unitCard, !loc.is_active && styles.unitCardInactive]}
-                  >
-                    <View style={styles.unitCardLeft}>
-                      <View
-                        style={[
-                          styles.unitIconCircle,
-                          !loc.is_active && styles.unitIconCircleInactive,
-                        ]}
-                      >
-                        <LucideIcon
-                          name="Building2"
-                          size={22}
-                          color={loc.is_active ? Colors.foamBlue : Colors.light.textTertiary}
+                {locations.map((loc) => {
+                  const unitStatus = getUnitStatus(loc.is_active);
+                  return (
+                    <View
+                      key={loc.id}
+                      style={[styles.unitCard, !loc.is_active && styles.unitCardInactive]}
+                    >
+                      <View style={styles.unitCardLeft}>
+                        <View
+                          style={[
+                            styles.unitIconCircle,
+                            !loc.is_active && styles.unitIconCircleInactive,
+                          ]}
+                        >
+                          <LucideIcon
+                            name="Building2"
+                            size={22}
+                            color={loc.is_active ? Colors.foamBlue : Colors.light.textTertiary}
+                          />
+                        </View>
+                        <View style={styles.unitInfo}>
+                          <View style={styles.unitNameRow}>
+                            <Text
+                              style={[styles.unitName, !loc.is_active && styles.unitNameInactive]}
+                              numberOfLines={1}
+                            >
+                              {loc.name}
+                            </Text>
+                            <StatusBadge status={unitStatus} />
+                          </View>
+                          <Text style={styles.unitMeta} numberOfLines={1}>
+                            {loc.address.split(",")[0]}
+                            {loc.bay_count ? ` · ${loc.bay_count} ${loc.bay_count === 1 ? "bay" : "bays"}` : ""}
+                            {loc.accepts_walkins ? " · Walk-ins" : ""}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.unitCardActions}>
+                        <TouchableOpacity
+                          style={styles.editButton}
+                          onPress={() => router.push("/onboarding/operator/build")}
+                          activeOpacity={0.7}
+                        >
+                          <LucideIcon name="Pencil" size={16} color={Colors.light.textSecondary} />
+                        </TouchableOpacity>
+                        <Switch
+                          value={loc.is_active}
+                          onValueChange={() => handleToggleLocation(loc)}
+                          disabled={togglingId === loc.id || isPending}
+                          trackColor={{
+                            false: Colors.light.borderDefault,
+                            true: Colors.foamBlue,
+                          }}
+                          thumbColor={Colors.white}
                         />
                       </View>
-                      <View style={styles.unitInfo}>
-                        <View style={styles.unitNameRow}>
-                          <Text
-                            style={[
-                              styles.unitName,
-                              !loc.is_active && styles.unitNameInactive,
-                            ]}
-                          >
-                            {loc.name}
-                          </Text>
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              loc.is_active ? styles.statusBadgeActive : styles.statusBadgeInactive,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusBadgeText,
-                                loc.is_active
-                                  ? styles.statusBadgeTextActive
-                                  : styles.statusBadgeTextInactive,
-                              ]}
-                            >
-                              {loc.is_active ? "Active" : "Inactive"}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={styles.unitMeta} numberOfLines={1}>
-                          {loc.address.split(",")[0]} · {loc.bay_count}{" "}
-                          {loc.bay_count === 1 ? "bay" : "bays"}
-                          {loc.accepts_walkins ? " · Walk-ins on" : ""}
-                        </Text>
-                      </View>
                     </View>
-                    <View style={styles.unitCardActions}>
-                      <Switch
-                        value={loc.is_active}
-                        onValueChange={() => handleToggleLocation(loc)}
-                        disabled={togglingId === loc.id}
-                        trackColor={{
-                          false: Colors.light.borderDefault,
-                          true: Colors.foamBlue,
-                        }}
-                        thumbColor={Colors.white}
-                      />
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
           </View>
@@ -363,12 +353,35 @@ export default function LocationsVansScreen() {
           <View style={styles.hintCard}>
             <LucideIcon name="Info" size={15} color={Colors.foamBlue} />
             <Text style={styles.hintText}>
-              Toggle a unit off to temporarily hide it from bookings. It won't be deleted and can be reactivated anytime.
+              {isPending
+                ? "Your units are awaiting FOAM review. Once approved, you can toggle them on or off anytime."
+                : "Toggle a unit off to temporarily hide it from bookings. It won't be deleted and can be reactivated anytime."}
             </Text>
           </View>
         </ScrollView>
       )}
     </SafeAreaView>
+  );
+}
+
+function StatusBadge({ status }: { status: "pending" | "active" | "inactive" }) {
+  const badgeStyle =
+    status === "active"
+      ? styles.statusBadgeActive
+      : status === "pending"
+      ? styles.statusBadgePending
+      : styles.statusBadgeInactive;
+  const textStyle =
+    status === "active"
+      ? styles.statusBadgeTextActive
+      : status === "pending"
+      ? styles.statusBadgeTextPending
+      : styles.statusBadgeTextInactive;
+  const label = status === "active" ? "Active" : status === "pending" ? "Pending" : "Inactive";
+  return (
+    <View style={[styles.statusBadge, badgeStyle]}>
+      <Text style={[styles.statusBadgeText, textStyle]}>{label}</Text>
+    </View>
   );
 }
 
@@ -435,6 +448,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   spacer: { width: 44 },
+  pendingBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "rgba(217,119,6,0.08)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(217,119,6,0.18)",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+  },
+  pendingBannerText: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.warningLight,
+    lineHeight: 19,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
@@ -518,6 +548,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     flex: 1,
+    minWidth: 0,
   },
   unitIconCircle: {
     width: 44,
@@ -531,17 +562,18 @@ const styles = StyleSheet.create({
   unitIconCircleInactive: {
     backgroundColor: Colors.light.bgSecondary,
   },
-  unitInfo: { flex: 1 },
+  unitInfo: { flex: 1, minWidth: 0 },
   unitNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flexWrap: "wrap",
   },
   unitName: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 14,
     color: Colors.light.textPrimary,
+    flexShrink: 1,
   },
   unitNameInactive: { color: Colors.light.textTertiary },
   unitMeta: {
@@ -550,19 +582,37 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     marginTop: 3,
   },
-  unitCardActions: { flexShrink: 0, marginLeft: 8 },
+  unitCardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+    marginLeft: 4,
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.light.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+  },
   statusBadge: {
     borderRadius: Radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   statusBadgeActive: { backgroundColor: "rgba(22,163,74,0.10)" },
+  statusBadgePending: { backgroundColor: "rgba(217,119,6,0.10)" },
   statusBadgeInactive: { backgroundColor: Colors.light.bgSecondary },
   statusBadgeText: {
     fontFamily: Typography.bodyMedium,
     fontSize: 10,
   },
   statusBadgeTextActive: { color: Colors.successLight },
+  statusBadgeTextPending: { color: Colors.warningLight },
   statusBadgeTextInactive: { color: Colors.light.textTertiary },
   hintCard: {
     flexDirection: "row",

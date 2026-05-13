@@ -5,14 +5,21 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
+import { DrawerModal } from "@/components/DrawerModal";
 import { LucideIcon } from "@/components/LucideIcon";
+
+type InputMode = "phone" | "email";
+type InviteTab = "invite" | "code";
+type InviteRole = "team_member" | "manager";
 
 interface UnitVan {
   id: string;
@@ -25,6 +32,7 @@ interface UnitLocation {
   id: string;
   name: string;
   address: string;
+  bay_count: number;
   crew: CrewChip[];
 }
 
@@ -33,11 +41,31 @@ interface CrewChip {
   label: string;
 }
 
+const SHARE_CODE = "FOAM-K7X2";
+
 export default function AssignCrewScreen() {
   const [vans, setVans] = useState<UnitVan[]>([]);
   const [locations, setLocations] = useState<UnitLocation[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [continuing, setContinuing] = useState(false);
+  const [detailerId, setDetailerId] = useState<string | null>(null);
+
+  // Add crew drawer state
+  const [showAddCrewDrawer, setShowAddCrewDrawer] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<{
+    id: string;
+    type: "van" | "location";
+    name: string;
+  } | null>(null);
+  const [inviteTab, setInviteTab] = useState<InviteTab>("invite");
+  const [inputMode, setInputMode] = useState<InputMode>("phone");
+  const [currentInput, setCurrentInput] = useState("");
+  const [recipients, setRecipients] = useState<{ id: string; value: string; mode: InputMode }[]>([]);
+  const [inviteRole, setInviteRole] = useState<InviteRole>("team_member");
+  const [commission, setCommission] = useState("");
+  const [sending, setSending] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const loadUnits = useCallback(async () => {
     setLoadingUnits(true);
@@ -51,6 +79,7 @@ export default function AssignCrewScreen() {
         .eq("user_id", user.id)
         .single();
       if (!profile) return;
+      setDetailerId(profile.id);
 
       const [{ data: assetsData }, { data: locsData }] = await Promise.all([
         supabase
@@ -61,14 +90,22 @@ export default function AssignCrewScreen() {
           .order("created_at"),
         supabase
           .from("business_locations")
-          .select("id, name, address")
+          .select("id, name, address, bay_count")
           .eq("detailer_id", profile.id)
           .eq("is_active", true)
           .order("created_at"),
       ]);
 
       setVans((assetsData ?? []).map((a) => ({ ...a, crew: [] })));
-      setLocations((locsData ?? []).map((l) => ({ ...l, crew: [] })));
+      setLocations(
+        (locsData ?? []).map((l) => ({
+          id: l.id,
+          name: l.name,
+          address: (l.address as string) ?? "",
+          bay_count: (l.bay_count as number) ?? 0,
+          crew: [],
+        }))
+      );
     } catch (err) {
       console.warn("[AssignCrew] loadUnits failed", err);
     }
@@ -79,10 +116,68 @@ export default function AssignCrewScreen() {
     void loadUnits();
   }, [loadUnits]);
 
-  function handleAddCrewToUnit(unitId: string, unitType: "van" | "location") {
-    router.push(
-      `/onboarding/operator/add-team-member?unit_id=${unitId}&unit_type=${unitType}`
-    );
+  function openAddCrewDrawer(unitId: string, unitType: "van" | "location", unitName: string) {
+    setSelectedUnit({ id: unitId, type: unitType, name: unitName });
+    setInviteTab("invite");
+    setInputMode("phone");
+    setCurrentInput("");
+    setRecipients([]);
+    setInviteRole("team_member");
+    setCommission("");
+    setInviteError(null);
+    setCodeCopied(false);
+    setShowAddCrewDrawer(true);
+  }
+
+  function handleAddRecipient() {
+    const val = currentInput.trim();
+    if (!val) return;
+    setRecipients((prev) => [...prev, { id: Date.now().toString(), value: val, mode: inputMode }]);
+    setCurrentInput("");
+  }
+
+  function removeRecipient(id: string) {
+    setRecipients((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  async function handleSendInvite() {
+    const allRecipients = [
+      ...recipients,
+      ...(currentInput.trim() ? [{ id: "cur", value: currentInput.trim(), mode: inputMode }] : []),
+    ];
+    if (allRecipients.length === 0 || !detailerId || !selectedUnit) return;
+    setSending(true);
+    setInviteError(null);
+    try {
+      await supabase.from("operator_invites").insert(
+        allRecipients.map((r) => ({
+          detailer_id: detailerId,
+          contact: r.value,
+          contact_type: r.mode,
+          role: inviteRole,
+          commission_rate: commission ? parseFloat(commission) / 100 : null,
+          asset_id: selectedUnit.type === "van" ? selectedUnit.id : null,
+          location_id: selectedUnit.type === "location" ? selectedUnit.id : null,
+        }))
+      );
+      setShowAddCrewDrawer(false);
+    } catch (err) {
+      console.warn("[AssignCrew] handleSendInvite failed", err);
+      setInviteError("Invite couldn't be sent. Your team member can still join using the share code.");
+    }
+    setSending(false);
+  }
+
+  function handleCopyCode() {
+    try {
+      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+        void navigator.clipboard.writeText(SHARE_CODE);
+      }
+    } catch {
+      // no-op
+    }
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
   }
 
   async function handleContinue() {
@@ -93,16 +188,23 @@ export default function AssignCrewScreen() {
 
   function getUnitIcon(assetType: string): string {
     switch (assetType) {
-      case "trailer":
-        return "Package";
-      case "truck":
-        return "Truck";
-      default:
-        return "Truck";
+      case "trailer": return "Package";
+      case "truck": return "Truck";
+      default: return "Truck";
+    }
+  }
+
+  function assetTypeLabel(type: string): string {
+    switch (type) {
+      case "trailer": return "Trailer";
+      case "truck": return "Truck";
+      case "other": return "Vehicle";
+      default: return "Van";
     }
   }
 
   const totalUnits = vans.length + locations.length;
+  const canSend = recipients.length > 0 || currentInput.trim().length > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -147,8 +249,9 @@ export default function AssignCrewScreen() {
                 key={van.id}
                 icon={getUnitIcon(van.asset_type)}
                 name={van.name}
+                meta={`${assetTypeLabel(van.asset_type)} · Mobile service`}
                 crew={van.crew}
-                onAddCrew={() => handleAddCrewToUnit(van.id, "van")}
+                onAddCrew={() => openAddCrewDrawer(van.id, "van", van.name)}
               />
             ))}
             {locations.map((loc) => (
@@ -156,8 +259,14 @@ export default function AssignCrewScreen() {
                 key={loc.id}
                 icon="Building2"
                 name={loc.name}
+                meta={[
+                  loc.address.split(",")[0],
+                  loc.bay_count > 0 ? `${loc.bay_count} ${loc.bay_count === 1 ? "bay" : "bays"}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 crew={loc.crew}
-                onAddCrew={() => handleAddCrewToUnit(loc.id, "location")}
+                onAddCrew={() => openAddCrewDrawer(loc.id, "location", loc.name)}
               />
             ))}
           </View>
@@ -193,6 +302,274 @@ export default function AssignCrewScreen() {
           <Text style={styles.skipButtonText}>Assign crew later</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Inline Add Crew DrawerModal */}
+      <DrawerModal
+        visible={showAddCrewDrawer}
+        onRequestClose={() => setShowAddCrewDrawer(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={drawerStyles.drawerContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {selectedUnit && (
+              <View style={drawerStyles.unitBanner}>
+                <LucideIcon
+                  name={selectedUnit.type === "location" ? "Building2" : "Truck"}
+                  size={14}
+                  color={Colors.foamBlue}
+                />
+                <Text style={drawerStyles.unitBannerText}>
+                  Assigning crew to{" "}
+                  <Text style={drawerStyles.unitBannerBold}>{selectedUnit.name}</Text>
+                </Text>
+              </View>
+            )}
+
+            {/* Tabs */}
+            <View style={drawerStyles.tabBar}>
+              <TouchableOpacity
+                style={[drawerStyles.tab, inviteTab === "invite" && drawerStyles.tabActive]}
+                onPress={() => setInviteTab("invite")}
+                activeOpacity={0.8}
+              >
+                <LucideIcon
+                  name="Mail"
+                  size={15}
+                  color={inviteTab === "invite" ? Colors.foamBlue : Colors.light.textTertiary}
+                />
+                <Text
+                  style={[
+                    drawerStyles.tabText,
+                    inviteTab === "invite" && drawerStyles.tabTextActive,
+                  ]}
+                >
+                  Send Invite
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[drawerStyles.tab, inviteTab === "code" && drawerStyles.tabActive]}
+                onPress={() => setInviteTab("code")}
+                activeOpacity={0.8}
+              >
+                <LucideIcon
+                  name="Share2"
+                  size={15}
+                  color={inviteTab === "code" ? Colors.foamBlue : Colors.light.textTertiary}
+                />
+                <Text
+                  style={[
+                    drawerStyles.tabText,
+                    inviteTab === "code" && drawerStyles.tabTextActive,
+                  ]}
+                >
+                  Share Code
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {inviteTab === "invite" ? (
+              <View style={drawerStyles.section}>
+                {/* Mode Toggle */}
+                <View style={drawerStyles.modeToggleRow}>
+                  {(["phone", "email"] as InputMode[]).map((m) => (
+                    <TouchableOpacity
+                      key={m}
+                      style={[
+                        drawerStyles.modeChip,
+                        inputMode === m && drawerStyles.modeChipActive,
+                      ]}
+                      onPress={() => setInputMode(m)}
+                      activeOpacity={0.8}
+                    >
+                      <LucideIcon
+                        name={m === "phone" ? "Phone" : "Mail"}
+                        size={13}
+                        color={inputMode === m ? Colors.foamBlue : Colors.light.textTertiary}
+                      />
+                      <Text
+                        style={[
+                          drawerStyles.modeChipText,
+                          inputMode === m && drawerStyles.modeChipTextActive,
+                        ]}
+                      >
+                        {m === "phone" ? "Phone" : "Email"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Recipients */}
+                {recipients.length > 0 && (
+                  <View style={drawerStyles.recipientChips}>
+                    {recipients.map((r) => (
+                      <View key={r.id} style={drawerStyles.recipientChip}>
+                        <Text style={drawerStyles.recipientChipText}>{r.value}</Text>
+                        <TouchableOpacity onPress={() => removeRecipient(r.id)} hitSlop={8}>
+                          <LucideIcon name="X" size={12} color={Colors.foamBlue} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={drawerStyles.inputRow}>
+                  <TextInput
+                    style={drawerStyles.textInput}
+                    placeholder={
+                      inputMode === "phone" ? "+1 (555) 000-0000" : "name@example.com"
+                    }
+                    placeholderTextColor={Colors.light.textDisabled}
+                    value={currentInput}
+                    onChangeText={setCurrentInput}
+                    keyboardType={inputMode === "phone" ? "phone-pad" : "email-address"}
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    onSubmitEditing={handleAddRecipient}
+                  />
+                  <TouchableOpacity
+                    style={drawerStyles.addRecipientButton}
+                    onPress={handleAddRecipient}
+                    activeOpacity={0.8}
+                  >
+                    <LucideIcon name="Plus" size={18} color={Colors.foamBlue} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Role */}
+                <Text style={drawerStyles.fieldLabel}>ROLE</Text>
+                <View style={drawerStyles.roleCards}>
+                  {(
+                    [
+                      { id: "team_member" as InviteRole, label: "Team Member", desc: "Executes jobs, clocks in/out", icon: "User" },
+                      { id: "manager" as InviteRole, label: "Manager", desc: "Can manage crew & view reports", icon: "ShieldCheck" },
+                    ] as const
+                  ).map((r) => (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[drawerStyles.roleCard, inviteRole === r.id && drawerStyles.roleCardActive]}
+                      onPress={() => setInviteRole(r.id)}
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          drawerStyles.roleIconCircle,
+                          inviteRole === r.id && drawerStyles.roleIconCircleActive,
+                        ]}
+                      >
+                        <LucideIcon
+                          name={r.icon}
+                          size={18}
+                          color={inviteRole === r.id ? Colors.foamBlue : Colors.light.textTertiary}
+                        />
+                      </View>
+                      <View style={drawerStyles.roleTextBlock}>
+                        <Text
+                          style={[
+                            drawerStyles.roleLabel,
+                            inviteRole === r.id && drawerStyles.roleLabelActive,
+                          ]}
+                        >
+                          {r.label}
+                        </Text>
+                        <Text style={drawerStyles.roleDesc}>{r.desc}</Text>
+                      </View>
+                      {inviteRole === r.id && (
+                        <LucideIcon name="CheckCircle" size={18} color={Colors.foamBlue} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Commission */}
+                <Text style={drawerStyles.fieldLabel}>COMMISSION RATE (OPTIONAL)</Text>
+                <View style={drawerStyles.commissionRow}>
+                  <TextInput
+                    style={[drawerStyles.textInput, { flex: 1 }]}
+                    placeholder="e.g. 40"
+                    placeholderTextColor={Colors.light.textDisabled}
+                    value={commission}
+                    onChangeText={(v) => setCommission(v.replace(/[^0-9.]/g, ""))}
+                    keyboardType="decimal-pad"
+                  />
+                  <View style={drawerStyles.commissionSuffix}>
+                    <Text style={drawerStyles.commissionSuffixText}>%</Text>
+                  </View>
+                </View>
+
+                {inviteError && (
+                  <View style={drawerStyles.errorRow}>
+                    <LucideIcon name="AlertCircle" size={14} color={Colors.error} />
+                    <Text style={drawerStyles.errorText}>{inviteError}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[drawerStyles.sendButton, !canSend && drawerStyles.sendButtonDisabled]}
+                  onPress={handleSendInvite}
+                  disabled={!canSend || sending}
+                  activeOpacity={0.85}
+                >
+                  {sending ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <>
+                      <LucideIcon name="Send" size={16} color={Colors.white} />
+                      <Text style={drawerStyles.sendButtonText}>Send Invite</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={drawerStyles.section}>
+                <View style={drawerStyles.codeCard}>
+                  <Text style={drawerStyles.codeLabel}>YOUR TEAM CODE</Text>
+                  <Text style={drawerStyles.codeValue}>{SHARE_CODE}</Text>
+                  <TouchableOpacity
+                    style={[drawerStyles.copyButton, codeCopied && drawerStyles.copyButtonDone]}
+                    onPress={handleCopyCode}
+                    activeOpacity={0.85}
+                  >
+                    <LucideIcon
+                      name={codeCopied ? "Check" : "Copy"}
+                      size={16}
+                      color={codeCopied ? Colors.successLight : Colors.foamBlue}
+                    />
+                    <Text
+                      style={[
+                        drawerStyles.copyButtonText,
+                        codeCopied && drawerStyles.copyButtonTextDone,
+                      ]}
+                    >
+                      {codeCopied ? "Copied!" : "Copy Code"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={drawerStyles.codeInstructions}>
+                  Share this code with your team. They enter it during signup to join your operation automatically.
+                </Text>
+                {[
+                  { icon: "Download", text: "Team member downloads FOAM Crew app" },
+                  { icon: "KeyRound", text: "They enter this code at signup" },
+                  { icon: "CheckCircle", text: "They appear in your crew roster" },
+                ].map((step, i) => (
+                  <View key={i} style={drawerStyles.codeStep}>
+                    <View style={drawerStyles.codeStepIcon}>
+                      <LucideIcon name={step.icon} size={14} color={Colors.foamBlue} />
+                    </View>
+                    <Text style={drawerStyles.codeStepText}>{step.text}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </DrawerModal>
     </SafeAreaView>
   );
 }
@@ -200,18 +577,22 @@ export default function AssignCrewScreen() {
 interface UnitCrewCardProps {
   icon: string;
   name: string;
+  meta: string;
   crew: CrewChip[];
   onAddCrew: () => void;
 }
 
-function UnitCrewCard({ icon, name, crew, onAddCrew }: UnitCrewCardProps) {
+function UnitCrewCard({ icon, name, meta, crew, onAddCrew }: UnitCrewCardProps) {
   return (
     <View style={cardStyles.card}>
       <View style={cardStyles.cardHeader}>
         <View style={cardStyles.iconCircle}>
           <LucideIcon name={icon} size={22} color={Colors.foamBlue} />
         </View>
-        <Text style={cardStyles.unitName}>{name}</Text>
+        <View style={cardStyles.headerText}>
+          <Text style={cardStyles.unitName}>{name}</Text>
+          <Text style={cardStyles.unitMeta} numberOfLines={1}>{meta}</Text>
+        </View>
       </View>
 
       <View style={cardStyles.divider} />
@@ -240,6 +621,280 @@ function UnitCrewCard({ icon, name, crew, onAddCrew }: UnitCrewCardProps) {
   );
 }
 
+const drawerStyles = StyleSheet.create({
+  drawerContent: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === "web" ? 32 : 24,
+    gap: 16,
+  },
+  unitBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  unitBannerText: {
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.foamBlue,
+  },
+  unitBannerBold: { fontFamily: Typography.bodySemiBold },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.sm,
+    padding: 4,
+    gap: 2,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: Radius.xs,
+  },
+  tabActive: { backgroundColor: Colors.light.surface, ...Shadows.light.level1 },
+  tabText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.light.textTertiary,
+  },
+  tabTextActive: { color: Colors.foamBlue },
+  section: { gap: 14 },
+  modeToggleRow: { flexDirection: "row", gap: 8 },
+  modeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.surface,
+  },
+  modeChipActive: {
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  modeChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.light.textTertiary,
+  },
+  modeChipTextActive: { color: Colors.foamBlue },
+  recipientChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  recipientChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  recipientChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.foamBlue,
+  },
+  inputRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  textInput: {
+    flex: 1,
+    height: 46,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 14,
+    fontFamily: Typography.body,
+    fontSize: 14,
+    color: Colors.light.textPrimary,
+    backgroundColor: Colors.light.surface,
+  },
+  addRecipientButton: {
+    width: 46,
+    height: 46,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fieldLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.8,
+    marginBottom: -4,
+  },
+  roleCards: { gap: 10 },
+  roleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.surface,
+  },
+  roleCardActive: {
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  roleIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.light.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  roleIconCircleActive: { backgroundColor: "rgba(51,157,199,0.15)" },
+  roleTextBlock: { flex: 1 },
+  roleLabel: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 14,
+    color: Colors.light.textPrimary,
+  },
+  roleLabelActive: { color: Colors.foamBlue },
+  roleDesc: {
+    fontFamily: Typography.body,
+    fontSize: 12,
+    color: Colors.light.textTertiary,
+    marginTop: 2,
+  },
+  commissionRow: { flexDirection: "row", gap: 8 },
+  commissionSuffix: {
+    height: 46,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.light.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commissionSuffixText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 15,
+    color: Colors.light.textSecondary,
+  },
+  errorRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+    backgroundColor: "rgba(239,68,68,0.06)",
+    borderRadius: Radius.sm,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.18)",
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.error,
+    lineHeight: 18,
+  },
+  sendButton: {
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    ...Shadows.light.level2,
+  },
+  sendButtonDisabled: { opacity: 0.4 },
+  sendButtonText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyL,
+    color: Colors.white,
+  },
+  codeCard: {
+    backgroundColor: Colors.foamDarkTeal,
+    borderRadius: Radius.lg,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+  },
+  codeLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.label,
+    color: "rgba(255,255,255,0.55)",
+    letterSpacing: 1,
+  },
+  codeValue: {
+    fontFamily: Typography.display,
+    fontSize: 32,
+    color: Colors.white,
+    letterSpacing: 4,
+  },
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    backgroundColor: "rgba(51,157,199,0.15)",
+  },
+  copyButtonDone: {
+    borderColor: Colors.successLight,
+    backgroundColor: "rgba(22,163,74,0.12)",
+  },
+  copyButtonText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 14,
+    color: Colors.foamBlue,
+  },
+  copyButtonTextDone: { color: Colors.successLight },
+  codeInstructions: {
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  codeStep: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  codeStepIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  codeStepText: {
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    flex: 1,
+  },
+});
+
 const cardStyles = StyleSheet.create({
   card: {
     backgroundColor: Colors.light.surface,
@@ -262,12 +917,19 @@ const cardStyles = StyleSheet.create({
     backgroundColor: Colors.foamBlueSubtle,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
+  headerText: { flex: 1 },
   unitName: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 15,
     color: Colors.light.textPrimary,
-    flex: 1,
+  },
+  unitMeta: {
+    fontFamily: Typography.body,
+    fontSize: 12,
+    color: Colors.light.textTertiary,
+    marginTop: 2,
   },
   divider: { height: 1, backgroundColor: Colors.light.borderSubtle },
   crewRow: { padding: 16, gap: 10 },
@@ -276,7 +938,6 @@ const cardStyles = StyleSheet.create({
     fontSize: Typography.size.label,
     color: Colors.light.textTertiary,
     letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
   chipsRow: {
     flexDirection: "row",

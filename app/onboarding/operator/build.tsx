@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
@@ -63,6 +64,52 @@ const DEFAULT_AVAILABILITY: DayAvailability[] = [
   { day: "Sat", key: "sat", enabled: false, open: "9:00 AM", close: "6:00 PM" },
   { day: "Sun", key: "sun", enabled: false, open: "9:00 AM", close: "6:00 PM" },
 ];
+
+async function saveVanMeta(
+  detailerId: string,
+  vanId: string,
+  meta: { licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string }
+) {
+  try {
+    await AsyncStorage.setItem(
+      `foam_van_extra_${detailerId}_${vanId}`,
+      JSON.stringify(meta)
+    );
+  } catch {
+    // no-op
+  }
+}
+
+async function loadVanMeta(
+  detailerId: string,
+  vanId: string
+): Promise<{ licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string } | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`foam_van_extra_${detailerId}_${vanId}`);
+    return raw ? (JSON.parse(raw) as { licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+function hoursJsonbToAvailability(
+  hoursJsonb: Record<string, { open: string; close: string } | null> | null
+): DayAvailability[] {
+  if (!hoursJsonb) return DEFAULT_AVAILABILITY.map((d) => ({ ...d }));
+  return DEFAULT_AVAILABILITY.map((d) => {
+    const h = hoursJsonb[d.key];
+    if (!h) return { ...d, enabled: false };
+    const toAMPM = (hhmm: string) => {
+      const [hStr, mStr] = hhmm.split(":");
+      const h24 = parseInt(hStr, 10);
+      const m = parseInt(mStr, 10);
+      const ampm = h24 >= 12 ? "PM" : "AM";
+      const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
+      return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+    };
+    return { ...d, enabled: true, open: toAMPM(h.open), close: toAMPM(h.close) };
+  });
+}
 
 function availabilityToHoursJsonb(avail: DayAvailability[]) {
   const result: Record<string, { open: string; close: string } | null> = {};
@@ -143,6 +190,60 @@ export default function BuildOperationScreen() {
     return detailerIdRef.current;
   }
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const detailerId = await getDetailerProfileId();
+        if (!detailerId) return;
+        const [{ data: assetsData }, { data: locsData }] = await Promise.all([
+          supabase
+            .from("business_assets")
+            .select("id, name, asset_type")
+            .eq("detailer_id", detailerId)
+            .eq("is_active", true)
+            .order("created_at"),
+          supabase
+            .from("business_locations")
+            .select("id, name, address, bay_count, accepts_walkins, hours")
+            .eq("detailer_id", detailerId)
+            .eq("is_active", true)
+            .order("created_at"),
+        ]);
+        const loadedVans = await Promise.all(
+          (assetsData ?? []).map(async (a) => {
+            const meta = await loadVanMeta(detailerId, a.id);
+            return {
+              id: a.id,
+              name: a.name,
+              asset_type: a.asset_type as AssetType,
+              licensePlate: meta?.licensePlate ?? "",
+              homeBase: meta?.homeBase ?? "",
+              radius: meta?.radius ?? 15,
+              availability: meta?.availability ?? DEFAULT_AVAILABILITY.map((d) => ({ ...d })),
+              notes: meta?.notes ?? "",
+            };
+          })
+        );
+        const loadedLocs = (locsData ?? []).map((l) => ({
+          id: l.id,
+          name: l.name,
+          address: (l.address as string) ?? "",
+          bays: (l.bay_count as number) ?? 2,
+          walkIns: (l.accepts_walkins as boolean) ?? false,
+          hours: hoursJsonbToAvailability(
+            l.hours as Record<string, { open: string; close: string } | null> | null
+          ),
+          phone: "",
+        }));
+        setVans(loadedVans);
+        setLocations(loadedLocs);
+      } catch (err) {
+        console.warn("[Build] loadExistingUnits failed", err);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function resetVanForm() {
     setEditingVanId(null);
     setVanName("");
@@ -209,25 +310,25 @@ export default function BuildOperationScreen() {
       const detailerId = await getDetailerProfileId();
       if (!detailerId) throw new Error("Profile not found");
 
+      const vanMeta = {
+        licensePlate: vanLicensePlate.trim(),
+        homeBase: vanHomeBase.trim(),
+        radius: vanRadius,
+        availability: vanAvailability.map((d) => ({ ...d })),
+        notes: vanNotes.trim(),
+      };
+
       if (editingVanId) {
         const { error } = await supabase
           .from("business_assets")
           .update({ name: vanName.trim(), asset_type: vanType })
           .eq("id", editingVanId);
         if (error) throw error;
+        await saveVanMeta(detailerId, editingVanId, vanMeta);
         setVans((prev) =>
           prev.map((v) =>
             v.id === editingVanId
-              ? {
-                  ...v,
-                  name: vanName.trim(),
-                  asset_type: vanType,
-                  licensePlate: vanLicensePlate.trim(),
-                  homeBase: vanHomeBase.trim(),
-                  radius: vanRadius,
-                  availability: vanAvailability.map((d) => ({ ...d })),
-                  notes: vanNotes.trim(),
-                }
+              ? { ...v, name: vanName.trim(), asset_type: vanType, ...vanMeta }
               : v
           )
         );
@@ -238,18 +339,10 @@ export default function BuildOperationScreen() {
           .select("id")
           .single();
         if (error) throw error;
+        await saveVanMeta(detailerId, data.id, vanMeta);
         setVans((prev) => [
           ...prev,
-          {
-            id: data.id,
-            name: vanName.trim(),
-            asset_type: vanType,
-            licensePlate: vanLicensePlate.trim(),
-            homeBase: vanHomeBase.trim(),
-            radius: vanRadius,
-            availability: vanAvailability.map((d) => ({ ...d })),
-            notes: vanNotes.trim(),
-          },
+          { id: data.id, name: vanName.trim(), asset_type: vanType, ...vanMeta },
         ]);
       }
       setShowVanDrawer(false);

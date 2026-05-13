@@ -8,8 +8,6 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
-  Clipboard,
-  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -111,9 +109,11 @@ export default function AddTeamMemberScreen() {
 
   function handleCopyCode() {
     try {
-      Clipboard.setString(SHARE_CODE);
+      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+        void navigator.clipboard.writeText(SHARE_CODE);
+      }
     } catch {
-      // no-op on web
+      // no-op
     }
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);

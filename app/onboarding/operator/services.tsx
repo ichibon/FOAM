@@ -236,9 +236,7 @@ export default function ServicesScreen() {
         visible={sheetOpen}
         onRequestClose={() => setSheetOpen(false)}
       >
-        <View style={styles.backdrop}>
-          <TouchableOpacity style={styles.backdropTouch} onPress={() => setSheetOpen(false)} />
-          <View style={styles.sheet}>
+        <View style={styles.sheet}>
             <View style={styles.dragHandle} />
             <Text style={styles.sheetTitle}>New Service</Text>
 
@@ -369,7 +367,6 @@ export default function ServicesScreen() {
             </View>
             </KeyboardAvoidingView>
           </View>
-        </View>
       </DrawerModal>
     </SafeAreaView>
   );
@@ -522,14 +519,6 @@ const styles = StyleSheet.create({
     color: Colors.error,
     textAlign: "center",
     marginBottom: Spacing.xs,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: Drawer.backdropStandard,
-    justifyContent: "flex-end",
-  },
-  backdropTouch: {
-    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
     backgroundColor: Drawer.background,

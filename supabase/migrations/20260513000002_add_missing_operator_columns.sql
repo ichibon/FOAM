@@ -22,9 +22,9 @@
 --      columns — running this there is safe (IF NOT EXISTS)
 --      but will produce no visible change.
 --   4. Run order with other migrations:
---        20260512000000_add_missing_operator_columns.sql  ← THIS FILE (run first)
 --        20260513000000_fix_customer_profiles_rls.sql
---        20260513000001_fix_operator_tables_rls.sql       (run last)
+--        20260513000001_fix_operator_tables_rls.sql
+--        20260513000002_add_missing_operator_columns.sql  ← THIS FILE
 -- ============================================================
 
 

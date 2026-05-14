@@ -1,8 +1,31 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
+import * as ExpoCrypto from "expo-crypto";
 import { Platform } from "react-native";
 import "react-native-url-polyfill/auto";
+
+// Polyfill WebCrypto for Supabase PKCE sha256 support in React Native.
+if (typeof global.crypto === "undefined" || !global.crypto.subtle) {
+  (global as any).crypto = {
+    getRandomValues: <T extends ArrayBufferView>(array: T): T => {
+      const bytes = ExpoCrypto.getRandomBytes(array.byteLength);
+      new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
+      return array;
+    },
+    subtle: {
+      digest: async (_algorithm: string, data: ArrayBuffer): Promise<ArrayBuffer> => {
+        const hex = await ExpoCrypto.digestStringAsync(
+          ExpoCrypto.CryptoDigestAlgorithm.SHA256,
+          Buffer.from(data).toString("utf8"),
+          { encoding: ExpoCrypto.CryptoEncoding.HEX }
+        );
+        const bytes = (hex.match(/.{1,2}/g) ?? []).map((b) => parseInt(b, 16));
+        return new Uint8Array(bytes).buffer;
+      },
+    },
+  };
+}
 
 export type UserRole = "customer" | "operator" | "manager" | "team_member";
 

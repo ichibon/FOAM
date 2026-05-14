@@ -22,9 +22,9 @@
 --      columns — running this there is safe (IF NOT EXISTS)
 --      but will produce no visible change.
 --   4. Run order with other migrations:
---        20260513000000_fix_customer_profiles_rls.sql  (any order)
---        20260513000002_add_missing_operator_columns.sql  ← THIS FILE
---        20260513000001_fix_operator_tables_rls.sql  (run after this)
+--        20260512000000_add_missing_operator_columns.sql  ← THIS FILE (run first)
+--        20260513000000_fix_customer_profiles_rls.sql
+--        20260513000001_fix_operator_tables_rls.sql       (run last)
 -- ============================================================
 
 
@@ -35,7 +35,6 @@
 
 ALTER TABLE public.business_assets
   ADD COLUMN IF NOT EXISTS asset_type text
-    NOT NULL
     DEFAULT 'van'
     CHECK (asset_type IN ('van', 'trailer', 'truck', 'other'));
 
@@ -49,7 +48,6 @@ ALTER TABLE public.business_assets
 
 ALTER TABLE public.business_locations
   ADD COLUMN IF NOT EXISTS crew_member_ids uuid[]
-    NOT NULL
     DEFAULT '{}';
 
 
@@ -63,5 +61,5 @@ ALTER TABLE public.business_locations
 --   ORDER BY table_name, column_name;
 --
 -- Expected rows:
---   business_assets    | asset_type      | text  | 'van'  | NO
---   business_locations | crew_member_ids | ARRAY | '{}'   | NO
+--   business_assets    | asset_type      | text  | 'van'  | YES
+--   business_locations | crew_member_ids | ARRAY | '{}'   | YES

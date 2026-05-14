@@ -66,24 +66,48 @@ export default function SignupScreen() {
   }, [role]);
 
   async function handleGoogle() {
+    if (!role) return;
     setError(null);
+    setLoading(true);
     try {
       await signInWithGoogle();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Sign-in did not complete. Please try again.");
+        setLoading(false);
+        return;
+      }
+      const displayName = String(user.user_metadata?.full_name ?? "");
+      const ok = await writeRoleAndNavigate(user.id, displayName);
+      if (!ok) setLoading(false);
     } catch (err: unknown) {
       const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
       if (msg !== "BROWSER_CLOSED") setError(msg);
+      setLoading(false);
     }
   }
 
   async function handleApple() {
+    if (!role) return;
     setError(null);
+    setLoading(true);
     try {
       await signInWithApple();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Sign-in did not complete. Please try again.");
+        setLoading(false);
+        return;
+      }
+      const displayName = String(user.user_metadata?.full_name ?? "");
+      const ok = await writeRoleAndNavigate(user.id, displayName);
+      if (!ok) setLoading(false);
     } catch (err: unknown) {
       const code = toErrorCode(err);
       if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
         setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));
       }
+      setLoading(false);
     }
   }
 

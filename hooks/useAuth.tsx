@@ -196,25 +196,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const c = client;
 
     c.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
-      setSession(s);
       if (s) {
+        // loading starts as true in initial state — keep it true while fetchUserProfile runs.
+        setSession(s);
         fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
       } else {
         setLoading(false);
+        setSession(s);
       }
     });
 
     const { data: { subscription } } = c.auth.onAuthStateChange(
       (_event: string, s: Session | null) => {
-        setSession(s);
         if (s) {
+          // CRITICAL: set loading=true BEFORE setSession so layout never sees
+          // {session, role=null, loading=false} (would route to role-select).
           setLoading(true);
+          setSession(s);
           fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
         } else {
+          setLoading(false);
+          setSession(s);
           setRole(null);
           setOnboardingComplete(false);
           setPendingApproval(false);
-          setLoading(false);
         }
       }
     );

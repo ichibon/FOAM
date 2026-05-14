@@ -83,9 +83,11 @@ export default function SignupScreen() {
         setLoading(false);
         return;
       }
-      // Session established. onAuthStateChange already triggered fetchUserProfile,
-      // which will consume the pending role key and set auth state. _layout.tsx
-      // will navigate once auth settles — no need to call writeRoleAndNavigate here.
+      // Force a profile refresh as a safety net — onAuthStateChange may not fire
+      // if the session is unchanged (re-attempt with valid session). refreshAuth
+      // triggers fetchUserProfile which consumes the pending role key from AsyncStorage.
+      // Race-free: handleGoogle doesn't write to DB or remove the key directly.
+      await refreshAuth();
       setLoading(false);
     } catch (err: unknown) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
@@ -108,8 +110,9 @@ export default function SignupScreen() {
         setLoading(false);
         return;
       }
-      // Session established. Let fetchUserProfile (via onAuthStateChange) consume
-      // the pending role key. _layout.tsx will navigate once auth settles.
+      // Safety net: refreshAuth triggers fetchUserProfile which consumes the
+      // pending role key. Covers the case where onAuthStateChange didn't fire.
+      await refreshAuth();
       setLoading(false);
     } catch (err: unknown) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}

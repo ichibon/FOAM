@@ -11,13 +11,34 @@ Deno.serve(async (req) => {
   if (cors) return cors
 
   try {
-    const { operator_id, email, business_name, country = 'US' } = await req.json()
+    const body = await req.json()
+
+    const supabase = getSupabase()
+
+    // Accept either user_id (from app) or operator_id + email (legacy)
+    let operator_id: string = body.operator_id
+    let email: string = body.email
+    let business_name: string = body.business_name
+    const country: string = body.country ?? 'US'
+
+    if (body.user_id && !operator_id) {
+      const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(body.user_id)
+      if (userError || !user) return errorResponse('User not found', 404)
+      email = email ?? user.email ?? ''
+
+      const { data: prof } = await supabase
+        .from('detailer_profiles')
+        .select('id, business_name')
+        .eq('user_id', body.user_id)
+        .single()
+      if (!prof) return errorResponse('Operator profile not found', 404)
+      operator_id = prof.id
+      business_name = business_name ?? prof.business_name
+    }
 
     if (!operator_id || !email) {
       return errorResponse('operator_id and email are required')
     }
-
-    const supabase = getSupabase()
 
     // Check if operator already has a Connect account
     const { data: profile } = await supabase

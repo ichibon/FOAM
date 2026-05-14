@@ -1,518 +1,445 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
+  Animated,
+  Dimensions,
   Platform,
-  KeyboardAvoidingView,
-  ScrollView,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
-import {
-  signInWithGoogle,
-  signInWithApple,
-  signInWithEmail,
-  signUpWithEmail,
-  resetPassword,
-} from "@/lib/auth";
+import { Colors, Typography, Spacing, Radius } from "@/constants/design";
+import { signInWithGoogle, signInWithApple } from "@/lib/auth";
 import * as AppleAuthentication from "expo-apple-authentication";
-import { LucideIcon } from "@/components/LucideIcon";
 
-type AuthMode = "login" | "signup";
+const nd = Platform.OS !== "web";
+const { height: SCREEN_H } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const float1 = useRef(new Animated.Value(0)).current;
+  const float2 = useRef(new Animated.Value(0)).current;
+  const float3 = useRef(new Animated.Value(0)).current;
 
-  function switchMode(next: AuthMode) {
-    setMode(next);
-    setError(null);
-  }
+  const card1BaseY = useRef(new Animated.Value(30)).current;
+  const card2BaseY = useRef(new Animated.Value(10)).current;
+  const card3BaseY = useRef(new Animated.Value(-20)).current;
 
-  async function handleForgotPassword() {
-    if (!email.trim()) {
-      setError("Enter your email above, then tap Forgot Password.");
-      return;
+  const sheetY = useRef(new Animated.Value(SCREEN_H * 0.5)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    function makeFloat(val: Animated.Value, duration: number, delay = 0) {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(val, {
+            toValue: -10,
+            duration: duration / 2,
+            delay,
+            useNativeDriver: nd,
+          }),
+          Animated.timing(val, {
+            toValue: 0,
+            duration: duration / 2,
+            useNativeDriver: nd,
+          }),
+        ])
+      );
     }
-    setLoading(true);
-    try {
-      await resetPassword(email.trim());
-      Alert.alert("Check your email", "We sent a password reset link to " + email.trim());
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to send reset email.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function handleSubmit() {
-    setError(null);
+    const f1 = makeFloat(float1, 6000);
+    const f2 = makeFloat(float2, 8000);
+    const f3 = makeFloat(float3, 7000, 1000);
+    f1.start();
+    f2.start();
+    f3.start();
 
-    if (mode === "login") {
-      if (!email.trim() || !password) {
-        setError("Please enter your email and password.");
-        return;
-      }
-      setLoading(true);
-      try {
-        await signInWithEmail(email.trim(), password);
-      } catch (err: any) {
-        setError(err?.message ?? "Login failed. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      if (!fullName.trim() || !email.trim() || !password) {
-        setError("Please fill in all fields.");
-        return;
-      }
-      if (password.length < 8) {
-        setError("Password must be at least 8 characters.");
-        return;
-      }
-      setLoading(true);
-      try {
-        const { needsConfirmation } = await signUpWithEmail(email.trim(), password, fullName.trim());
-        if (needsConfirmation) {
-          setError("Check your email and click the confirmation link to continue.");
-          return;
-        }
-        router.replace("/auth/role-select");
-      } catch (err: any) {
-        setError(err?.message ?? "Sign up failed. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-  }
+    Animated.timing(sheetY, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: nd,
+    }).start();
 
-  async function handleGoogleSignIn() {
-    setError(null);
-    setOauthLoading("google");
+    Animated.timing(contentOpacity, {
+      toValue: 1,
+      duration: 300,
+      delay: 250,
+      useNativeDriver: nd,
+    }).start();
+
+    return () => {
+      f1.stop();
+      f2.stop();
+      f3.stop();
+    };
+  }, []);
+
+  async function handleGoogle() {
     try {
       await signInWithGoogle();
-    } catch (err: any) {
-      if (err?.message !== "BROWSER_CLOSED") {
-        setError(err?.message ?? "Google sign in failed. Please try again.");
-      }
-    } finally {
-      setOauthLoading(null);
-    }
+    } catch {}
   }
 
-  async function handleAppleSignIn() {
-    setError(null);
-    setOauthLoading("apple");
+  async function handleApple() {
     try {
       await signInWithApple();
-    } catch (err: any) {
-      const code = err?.code ?? "";
-      if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
-        setError(err?.message ?? "Apple sign in failed. Please try again.");
-      }
-    } finally {
-      setOauthLoading(null);
-    }
+    } catch {}
   }
 
-  const anyLoading = loading || oauthLoading !== null;
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <View style={styles.illustrationArea}>
+        <View style={styles.glow} />
+
+        <Animated.View
+          style={[
+            styles.cardBase,
+            styles.card3,
+            {
+              transform: [
+                { rotate: "-12deg" },
+                { translateX: -30 },
+                { translateY: Animated.add(card3BaseY, float3) },
+              ],
+            },
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.cardBase,
+            styles.card2,
+            {
+              transform: [
+                { rotate: "6deg" },
+                { translateX: 40 },
+                { translateY: Animated.add(card2BaseY, float2) },
+              ],
+            },
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.cardBase,
+            styles.card1,
+            {
+              transform: [
+                { rotate: "-3deg" },
+                { translateX: -10 },
+                { translateY: Animated.add(card1BaseY, float1) },
+              ],
+            },
+          ]}
         >
-          <View style={styles.brandBlock}>
-            <Text style={styles.wordmark}>FOAM</Text>
-            <Text style={styles.tagline}>The operating system for clean cars.</Text>
+          <View style={styles.cardDot} />
+          <View style={styles.cardLines}>
+            <View style={[styles.cardLine, { width: "75%" }]} />
+            <View style={[styles.cardLine, { width: "50%", opacity: 0.65 }]} />
           </View>
+        </Animated.View>
+      </View>
 
-          <View style={styles.card}>
-            <View style={styles.toggle}>
-              <TouchableOpacity
-                style={[styles.toggleTab, mode === "login" && styles.toggleTabActive]}
-                onPress={() => switchMode("login")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.toggleTabText, mode === "login" && styles.toggleTabTextActive]}>
-                  Log In
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleTab, mode === "signup" && styles.toggleTabActive]}
-                onPress={() => switchMode("signup")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.toggleTabText, mode === "signup" && styles.toggleTabTextActive]}>
-                  Sign Up
-                </Text>
-              </TouchableOpacity>
-            </View>
+      <Animated.View
+        style={[styles.sheet, { transform: [{ translateY: sheetY }] }]}
+      >
+        <View style={styles.handleRow}>
+          <View style={styles.handle} />
+        </View>
 
-            {error && (
-              <View style={styles.errorBox}>
-                <LucideIcon name="AlertCircle" size={14} color={Colors.errorLight} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {/* OAuth buttons */}
-            <View style={styles.oauthGroup}>
-              <TouchableOpacity
-                style={[styles.oauthButton, anyLoading && styles.oauthButtonDisabled]}
-                onPress={handleGoogleSignIn}
-                disabled={anyLoading}
-                activeOpacity={0.85}
-              >
-                {oauthLoading === "google" ? (
-                  <ActivityIndicator size="small" color={Colors.light.textPrimary} />
-                ) : (
-                  <>
-                    <Text style={styles.googleG}>G</Text>
-                    <Text style={styles.oauthButtonText}>Continue with Google</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {Platform.OS === "ios" && (
-                oauthLoading === "apple" ? (
-                  <View style={styles.appleLoadingContainer}>
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  </View>
-                ) : (
-                  <AppleAuthentication.AppleAuthenticationButton
-                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={Radius.md}
-                    style={[styles.appleNativeButton, anyLoading && styles.oauthButtonDisabled]}
-                    onPress={anyLoading ? undefined : handleAppleSignIn}
-                  />
-                )
-              )}
-            </View>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.form}>
-              {mode === "signup" && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Full name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={fullName}
-                    onChangeText={setFullName}
-                    placeholder="Marcus Thompson"
-                    placeholderTextColor={Colors.light.textTertiary}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                </View>
-              )}
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={Colors.light.textTertiary}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Password</Text>
-                  {mode === "login" && (
-                    <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
-                      <Text style={styles.forgotText}>Forgot password?</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <View style={styles.passwordRow}>
-                  <TextInput
-                    style={[styles.input, styles.passwordInput]}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder={mode === "signup" ? "8+ characters" : "••••••••"}
-                    placeholderTextColor={Colors.light.textTertiary}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowPassword((v) => !v)}
-                    activeOpacity={0.7}
-                  >
-                    <LucideIcon
-                      name={showPassword ? "EyeOff" : "Eye"}
-                      size={20}
-                      color={Colors.light.textTertiary}
-                    />
-                  </TouchableOpacity>
-                </View>
-                {mode === "signup" && password.length > 0 && password.length < 8 && (
-                  <Text style={styles.passwordHint}>
-                    Password must be at least 8 characters ({8 - password.length} more needed)
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.submitButton, anyLoading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={anyLoading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {mode === "login" ? "Log In" : "Create Account"}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.terms}>
-              By continuing, you agree to our Terms and Privacy Policy.
+        <Animated.View style={{ opacity: contentOpacity, flex: 1 }}>
+          <View style={styles.valueProp}>
+            <Text style={styles.headline}>Your car deserves{"\n"}better.</Text>
+            <Text style={styles.subheadline}>
+              Find the best mobile detailers near you and book in seconds.
             </Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+          <View style={styles.primaryActions}>
+            <TouchableOpacity
+              style={styles.getStartedBtn}
+              onPress={() => router.push("/auth/role-select")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.getStartedText}>Get Started</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.loginBtn}
+              onPress={() => router.push("/auth/login")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.loginText}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.ssoActions}>
+            {Platform.OS === "ios" && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={
+                  AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                }
+                buttonStyle={
+                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={Radius.sm}
+                style={styles.appleBtn}
+                onPress={handleApple}
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.googleBtn}
+              onPress={handleGoogle}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.googleG}>G</Text>
+              <Text style={styles.googleText}>Continue with Google</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        <Text style={styles.terms}>
+          By continuing, you agree to our Terms and Privacy Policy.
+        </Text>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.light.bgPrimary },
-  flex: { flex: 1 },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 48,
-    paddingBottom: Platform.OS === "web" ? 32 : 0,
-    justifyContent: "center",
+  root: {
+    flex: 1,
+    backgroundColor: Colors.light.bgPrimary,
   },
-  brandBlock: {
+
+  illustrationArea: {
+    flex: 1,
     alignItems: "center",
-    marginBottom: 40,
+    justifyContent: "center",
+    overflow: "hidden",
   },
-  wordmark: {
-    fontFamily: Typography.display,
-    fontSize: 40,
-    color: Colors.light.textPrimary,
-    letterSpacing: -1,
-    lineHeight: 48,
-    marginBottom: 6,
+
+  glow: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(51,157,199,0.10)",
   },
-  tagline: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyS,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
+
+  cardBase: {
+    position: "absolute",
+    borderRadius: 24,
   },
-  card: {
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.xl,
-    padding: Spacing.md,
+
+  card3: {
+    width: 180,
+    height: 240,
+    backgroundColor: Colors.foamLightBlue,
     borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    ...Shadows.light.level2,
+    borderColor: "rgba(255,255,255,0.4)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  toggle: {
-    flexDirection: "row",
-    backgroundColor: Colors.light.bgSecondary,
-    borderRadius: Radius.md,
-    padding: 3,
+
+  card2: {
+    width: 190,
+    height: 260,
+    backgroundColor: "#6BB8D4",
+    opacity: 0.9,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  card1: {
+    width: 200,
+    height: 280,
+    backgroundColor: Colors.foamBlue,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    shadowColor: Colors.foamBlue,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.30,
+    shadowRadius: 24,
+    elevation: 8,
+    justifyContent: "space-between",
+    padding: 24,
+  },
+
+  cardDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.20)",
+  },
+
+  cardLines: {
+    gap: 10,
+  },
+
+  cardLine: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.30)",
+  },
+
+  sheet: {
+    backgroundColor: Colors.light.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 8,
+    minHeight: SCREEN_H * 0.44,
+  },
+
+  handleRow: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.light.borderSubtle,
+  },
+
+  valueProp: {
+    paddingTop: Spacing.mdLg,
+    paddingBottom: Spacing.lg,
+  },
+
+  headline: {
+    fontFamily: Typography.display,
+    fontSize: 32,
+    color: Colors.light.textPrimary,
+    lineHeight: 36,
+    marginBottom: 10,
+  },
+
+  subheadline: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyL,
+    color: Colors.light.textSecondary,
+    lineHeight: 24,
+  },
+
+  primaryActions: {
+    gap: Spacing.mdSm,
     marginBottom: Spacing.md,
   },
-  toggleTab: {
-    flex: 1,
-    height: 36,
+
+  getStartedBtn: {
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.sm,
   },
-  toggleTabActive: {
-    backgroundColor: Colors.light.surface,
-    ...Shadows.light.level1,
-  },
-  toggleTabText: {
-    fontFamily: Typography.bodyMedium,
+
+  getStartedText: {
+    fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
+    color: Colors.white,
+  },
+
+  loginBtn: {
+    height: 48,
+    backgroundColor: Colors.transparent,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loginText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+  },
+
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.light.borderSubtle,
+  },
+
+  dividerLabel: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
     color: Colors.light.textTertiary,
   },
-  toggleTabTextActive: {
-    color: Colors.light.textPrimary,
-    fontFamily: Typography.bodySemiBold,
-  },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    backgroundColor: "rgba(220,38,38,0.07)",
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: "rgba(220,38,38,0.18)",
-  },
-  errorText: {
-    flex: 1,
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyS,
-    color: Colors.errorLight,
-    lineHeight: 18,
-  },
-  oauthGroup: {
+
+  ssoActions: {
     gap: Spacing.sm,
-    marginBottom: Spacing.sm,
   },
-  oauthButton: {
-    height: 50,
+
+  appleBtn: {
+    width: "100%",
+    height: 48,
+  },
+
+  googleBtn: {
+    height: 48,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    backgroundColor: Colors.light.bgPrimary,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
   },
-  oauthButtonDisabled: { opacity: 0.55 },
+
   googleG: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 17,
     color: "#4285F4",
     lineHeight: 20,
   },
-  oauthButtonText: {
+
+  googleText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textPrimary,
   },
-  appleNativeButton: {
-    width: "100%",
-    height: 52,
-  },
-  appleLoadingContainer: {
-    width: "100%",
-    height: 52,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.black,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.light.borderSubtle,
-  },
-  dividerText: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
-  },
-  form: { gap: Spacing.sm, marginBottom: Spacing.md },
-  inputGroup: { gap: 5 },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  label: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textSecondary,
-  },
-  forgotText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.caption,
-    color: Colors.foamBlue,
-  },
-  input: {
-    height: 50,
-    backgroundColor: Colors.light.bgPrimary,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-  },
-  passwordRow: { position: "relative" },
-  passwordInput: { paddingRight: 48 },
-  eyeButton: {
-    position: "absolute",
-    right: 4,
-    top: 4,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  submitButton: {
-    height: 50,
-    backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-    ...Shadows.light.level2,
-  },
-  submitButtonDisabled: { opacity: 0.55 },
-  submitButtonText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.bodyM,
-    color: Colors.white,
-  },
-  passwordHint: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.warningLight,
-    marginTop: 4,
-    marginLeft: 2,
-  },
+
   terms: {
     fontFamily: Typography.body,
     fontSize: Typography.size.label,
     color: Colors.light.textTertiary,
     textAlign: "center",
     lineHeight: 16,
+    paddingTop: Spacing.md,
   },
 });

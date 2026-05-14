@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { DrawerModal } from "@/components/DrawerModal";
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { DrawerFooter } from "@/components/DrawerFooter";
 import { EmptyState } from "@/components/EmptyState";
 import { LucideIcon } from "@/components/LucideIcon";
 
@@ -236,7 +238,7 @@ export default function ServicesScreen() {
         visible={sheetOpen}
         onRequestClose={() => setSheetOpen(false)}
       >
-        <Text style={styles.sheetTitle}>New Service</Text>
+        <DrawerHeader title="New Service" />
 
             <KeyboardAvoidingView
               style={{ flex: 1 }}
@@ -353,7 +355,7 @@ export default function ServicesScreen() {
               </View>
             </ScrollView>
 
-            <View style={styles.sheetFooter}>
+            <DrawerFooter>
               <TouchableOpacity
                 style={[styles.sheetCta, (!newName.trim() || !newPrice.trim()) && styles.buttonDisabled]}
                 onPress={addService}
@@ -362,7 +364,7 @@ export default function ServicesScreen() {
               >
                 <Text style={styles.sheetCtaText}>Add Service</Text>
               </TouchableOpacity>
-            </View>
+            </DrawerFooter>
             </KeyboardAvoidingView>
       </DrawerModal>
     </SafeAreaView>
@@ -517,15 +519,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: Spacing.xs,
   },
-  sheetTitle: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 17,
-    color: Colors.light.textPrimary,
-    textAlign: "center",
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.borderSubtle,
-  },
   sheetScroll: { flex: 1 },
   sheetContent: {
     padding: Spacing.md,
@@ -629,13 +622,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.borderDefault,
     textAlign: "right",
-  },
-  sheetFooter: {
-    backgroundColor: Colors.light.surface,
-    padding: Spacing.md,
-    paddingBottom: Platform.OS === "web" ? 16 : 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.borderSubtle,
   },
   sheetCta: {
     height: 48,

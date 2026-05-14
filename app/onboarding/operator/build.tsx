@@ -18,6 +18,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { DrawerModal } from "@/components/DrawerModal";
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { DrawerFooter } from "@/components/DrawerFooter";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type AssetType = "van" | "trailer" | "truck" | "other";
@@ -746,25 +748,17 @@ export default function BuildOperationScreen() {
         onRequestClose={closeVanDrawer}
       >
         <View style={styles.drawer}>
-            <View style={styles.drawerHeaderRow}>
-              <TouchableOpacity
-                onPress={closeVanDrawer}
-                style={styles.drawerCloseBtn}
-                activeOpacity={0.7}
-              >
-                <LucideIcon name="X" size={18} color={Colors.light.textSecondary} />
-              </TouchableOpacity>
-              {editingVanId ? (
-                <>
-                  <Text style={styles.drawerTitle}>Edit Van</Text>
+            <DrawerHeader
+              title={editingVanId ? "Edit Van" : "Add a Van"}
+              onClose={closeVanDrawer}
+              rightAction={
+                editingVanId ? (
                   <TouchableOpacity onPress={handleDeleteVan} activeOpacity={0.7}>
                     <Text style={styles.deleteText}>Delete Van</Text>
                   </TouchableOpacity>
-                </>
-              ) : (
-                <Text style={styles.drawerTitle}>Add a Van</Text>
-              )}
-            </View>
+                ) : undefined
+              }
+            />
 
             <KeyboardAvoidingView
               style={{ flex: 1 }}
@@ -996,7 +990,7 @@ export default function BuildOperationScreen() {
 
             {vanError && <Text style={styles.drawerError}>{vanError}</Text>}
 
-            <View style={styles.drawerFooter}>
+            <DrawerFooter>
               <TouchableOpacity
                 style={[styles.drawerButton, (!vanSaveEnabled || vanSaving) && styles.buttonDisabled]}
                 onPress={handleSaveVan}
@@ -1011,7 +1005,7 @@ export default function BuildOperationScreen() {
                   </Text>
                 )}
               </TouchableOpacity>
-            </View>
+            </DrawerFooter>
             </KeyboardAvoidingView>
         </View>
       </DrawerModal>
@@ -1022,25 +1016,17 @@ export default function BuildOperationScreen() {
         onRequestClose={closeLocDrawer}
       >
         <View style={styles.drawer}>
-            <View style={styles.drawerHeaderRow}>
-              <TouchableOpacity
-                onPress={closeLocDrawer}
-                style={styles.drawerCloseBtn}
-                activeOpacity={0.7}
-              >
-                <LucideIcon name="X" size={18} color={Colors.light.textSecondary} />
-              </TouchableOpacity>
-              {editingLocId ? (
-                <>
-                  <Text style={styles.drawerTitle}>Edit Location</Text>
+            <DrawerHeader
+              title={editingLocId ? "Edit Location" : "Add a Location"}
+              onClose={closeLocDrawer}
+              rightAction={
+                editingLocId ? (
                   <TouchableOpacity onPress={handleDeleteLocation} activeOpacity={0.7}>
                     <Text style={styles.deleteText}>Delete Location</Text>
                   </TouchableOpacity>
-                </>
-              ) : (
-                <Text style={styles.drawerTitle}>Add a Location</Text>
-              )}
-            </View>
+                ) : undefined
+              }
+            />
 
             <KeyboardAvoidingView
               style={{ flex: 1 }}
@@ -1316,7 +1302,7 @@ export default function BuildOperationScreen() {
 
             {locError && <Text style={styles.drawerError}>{locError}</Text>}
 
-            <View style={styles.drawerFooter}>
+            <DrawerFooter>
               <TouchableOpacity
                 style={[styles.drawerButton, (!locSaveEnabled || locSaving) && styles.buttonDisabled]}
                 onPress={handleSaveLocation}
@@ -1331,7 +1317,7 @@ export default function BuildOperationScreen() {
                   </Text>
                 )}
               </TouchableOpacity>
-            </View>
+            </DrawerFooter>
             </KeyboardAvoidingView>
         </View>
       </DrawerModal>
@@ -1564,29 +1550,6 @@ const styles = StyleSheet.create({
   },
   drawer: {
     flex: 1,
-  },
-  drawerHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.md,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.borderSubtle,
-  },
-  drawerTitle: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 17,
-    color: Colors.light.textPrimary,
-  },
-  drawerCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.light.bgSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: Spacing.sm,
   },
   deleteText: {
     fontFamily: Typography.bodyMedium,
@@ -1920,13 +1883,6 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     marginTop: 8,
     marginLeft: 30,
-  },
-  drawerFooter: {
-    backgroundColor: Colors.light.surface,
-    padding: Spacing.md,
-    paddingBottom: Platform.OS === "web" ? 16 : 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.borderSubtle,
   },
   drawerButton: {
     height: 48,

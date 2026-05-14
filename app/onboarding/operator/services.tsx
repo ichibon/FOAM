@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Switch,
@@ -241,6 +242,11 @@ export default function ServicesScreen() {
             <View style={styles.dragHandle} />
             <Text style={styles.sheetTitle}>New Service</Text>
 
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={0}
+            >
             <ScrollView
               style={styles.sheetScroll}
               contentContainerStyle={styles.sheetContent}
@@ -361,6 +367,7 @@ export default function ServicesScreen() {
                 <Text style={styles.sheetCtaText}>Add Service</Text>
               </TouchableOpacity>
             </View>
+            </KeyboardAvoidingView>
           </View>
         </View>
       </DrawerModal>
@@ -522,13 +529,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   backdropTouch: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
     backgroundColor: Drawer.background,
     borderTopLeftRadius: Drawer.borderRadius,
     borderTopRightRadius: Drawer.borderRadius,
-    maxHeight: "85%",
+    flex: 1,
     ...Shadows.light.level3,
   },
   dragHandle: {
@@ -549,11 +556,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
   },
-  sheetScroll: { maxHeight: 500 },
+  sheetScroll: { flex: 1 },
   sheetContent: {
     padding: Spacing.md,
     gap: 24,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   sheetInputGroup: { gap: 6 },
   labelRow: {
@@ -654,10 +661,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   sheetFooter: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: Colors.light.surface,
     padding: Spacing.md,
     paddingBottom: Platform.OS === "web" ? 16 : 32,

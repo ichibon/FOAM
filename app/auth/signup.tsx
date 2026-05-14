@@ -10,13 +10,29 @@ import {
   KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
-import { supabase } from "@/lib/supabase";
+import { supabase, UserRole } from "@/lib/supabase";
+import { signInWithGoogle, signInWithApple } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
+function onboardingEntryFor(role: UserRole): string {
+  switch (role) {
+    case "customer": return "/onboarding/customer/vehicle";
+    case "operator": return "/onboarding/operator/build";
+    case "team_member": return "/onboarding/crew/invite";
+    default: return "/auth/role-select";
+  }
+}
+
 export default function SignupScreen() {
+  const { role: roleParam } = useLocalSearchParams<{ role: string }>();
+  const role = (roleParam as UserRole) ?? null;
+  const { refreshAuth } = useAuth();
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,8 +40,31 @@ export default function SignupScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  async function handleGoogle() {
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      if (err?.message !== "BROWSER_CLOSED") {
+        setError(err?.message ?? "Google sign-in failed. Please try again.");
+      }
+    }
+  }
+
+  async function handleApple() {
+    setError(null);
+    try {
+      await signInWithApple();
+    } catch (err: any) {
+      const code = err?.code ?? "";
+      if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
+        setError(err?.message ?? "Apple sign-in failed. Please try again.");
+      }
+    }
+  }
+
   async function handleSignup() {
-    if (!fullName || !email || !password) {
+    if (!fullName.trim() || !email.trim() || !password) {
       setError("Please fill in all fields.");
       return;
     }
@@ -36,7 +75,7 @@ export default function SignupScreen() {
     setLoading(true);
     setError(null);
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
@@ -50,7 +89,41 @@ export default function SignupScreen() {
       return;
     }
 
-    router.replace("/auth/role-select");
+    const userId = signUpData.user?.id;
+    if (!userId) {
+      setError("Account created — please check your email to confirm.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: upsertError } = await supabase
+      .from("users")
+      .upsert(
+        { id: userId, role: role ?? "customer", display_name: fullName.trim() },
+        { onConflict: "id" }
+      );
+
+    if (upsertError) {
+      console.warn("[Signup] users upsert failed", upsertError);
+    }
+
+    if (role === "customer") {
+      await supabase
+        .from("customer_profiles")
+        .upsert({ user_id: userId }, { onConflict: "user_id", ignoreDuplicates: true });
+    } else if (role === "operator") {
+      await supabase
+        .from("detailer_profiles")
+        .upsert(
+          { user_id: userId, operation_type: "mobile" },
+          { onConflict: "user_id", ignoreDuplicates: false }
+        );
+    }
+
+    await refreshAuth();
+
+    const destination = role ? onboardingEntryFor(role) : "/auth/role-select";
+    router.replace(destination as Parameters<typeof router.replace>[0]);
     setLoading(false);
   }
 
@@ -65,7 +138,11 @@ export default function SignupScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
             <LucideIcon name="ChevronLeft" size={20} color={Colors.light.textPrimary} />
           </TouchableOpacity>
 
@@ -73,7 +150,10 @@ export default function SignupScreen() {
             <Text style={styles.heading}>Create your account</Text>
             <View style={styles.subRow}>
               <Text style={styles.subheading}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace("/auth/login")} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => router.replace("/auth/login")}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.subLink}>Log in</Text>
               </TouchableOpacity>
             </View>
@@ -84,6 +164,41 @@ export default function SignupScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
+
+          <View style={styles.ssoRow}>
+            {Platform.OS === "ios" && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={
+                  AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                }
+                buttonStyle={
+                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={Radius.sm}
+                style={styles.ssoHalf}
+                onPress={handleApple}
+              />
+            )}
+            <TouchableOpacity
+              style={[
+                styles.googleBtn,
+                Platform.OS !== "ios" && styles.ssoFull,
+              ]}
+              onPress={handleGoogle}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.googleG}>G</Text>
+              <Text style={styles.googleText}>
+                {Platform.OS === "ios" ? "Google" : "Continue with Google"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
@@ -139,10 +254,6 @@ export default function SignupScreen() {
               <Text style={styles.inputHint}>At least 8 characters</Text>
             </View>
           </View>
-
-          <View style={styles.trustRow}>
-            <Text style={styles.trustText}>We'll never sell your data. Ever.</Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -159,6 +270,7 @@ export default function SignupScreen() {
             <Text style={styles.primaryButtonText}>Create Account</Text>
           )}
         </TouchableOpacity>
+        <Text style={styles.trustText}>We'll never sell your data. Ever.</Text>
       </View>
     </SafeAreaView>
   );
@@ -174,7 +286,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xl2,
-    paddingBottom: 120,
+    paddingBottom: 32,
   },
   backButton: {
     width: 44,
@@ -185,13 +297,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   headerBlock: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   heading: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 20,
     color: Colors.light.textPrimary,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   subRow: {
     flexDirection: "row",
@@ -220,6 +332,57 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
+  },
+  ssoRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  ssoHalf: {
+    flex: 1,
+    height: 48,
+  },
+  googleBtn: {
+    flex: 1,
+    height: 48,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  ssoFull: {
+    flex: 1,
+  },
+  googleG: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 17,
+    color: "#4285F4",
+    lineHeight: 20,
+  },
+  googleText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.light.borderSubtle,
+  },
+  dividerLabel: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
   },
   form: { gap: Spacing.md },
   inputGroup: { gap: Spacing.xs },
@@ -257,20 +420,12 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     marginLeft: 4,
   },
-  trustRow: {
-    marginTop: Spacing.xl,
-    alignItems: "center",
-  },
-  trustText: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
-  },
   footer: {
     paddingHorizontal: Spacing.md,
-    paddingBottom: Platform.OS === "web" ? 24 : 0,
+    paddingBottom: Platform.OS === "web" ? 24 : 16,
     paddingTop: Spacing.md,
     backgroundColor: Colors.light.bgPrimary,
+    gap: Spacing.mdSm,
   },
   primaryButton: {
     height: 48,
@@ -284,5 +439,11 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
+  },
+  trustText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+    textAlign: "center",
   },
 });

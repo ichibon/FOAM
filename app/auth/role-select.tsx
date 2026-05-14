@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   ActivityIndicator,
   ScrollView,
 } from "react-native";
@@ -42,6 +41,15 @@ const roles: {
   },
 ];
 
+function onboardingEntryFor(role: UserRole): string {
+  switch (role) {
+    case "customer": return "/onboarding/customer/vehicle";
+    case "operator": return "/onboarding/operator/build";
+    case "team_member": return "/onboarding/crew/invite";
+    default: return "/onboarding/splash";
+  }
+}
+
 export default function RoleSelectScreen() {
   const [loading, setLoading] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
@@ -53,15 +61,16 @@ export default function RoleSelectScreen() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (!user) {
+        router.push(`/auth/signup?role=${role}`);
         setLoading(false);
         return;
       }
 
       const { error: roleError } = await supabase
         .from("users")
-        .update({ role })
-        .eq("id", user.id);
+        .upsert({ id: user.id, role }, { onConflict: "id" });
       if (roleError) throw roleError;
 
       if (role === "customer") {
@@ -85,8 +94,8 @@ export default function RoleSelectScreen() {
     } catch (err) {
       console.warn("[RoleSelect] write failed", err);
       setWriteError("Something went wrong. Please try again.");
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

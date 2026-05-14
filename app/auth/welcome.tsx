@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   Platform,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
@@ -160,71 +161,88 @@ export default function WelcomeScreen() {
           <View style={styles.handle} />
         </View>
 
-        <Animated.View style={{ opacity: contentOpacity, flex: 1 }}>
-          <View style={styles.valueProp}>
-            <Text style={styles.headline}>Your car deserves{"\n"}better.</Text>
-            <Text style={styles.subheadline}>
-              Find the best mobile detailers near you and book in seconds.
-            </Text>
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.sheetScroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Animated.View style={{ opacity: contentOpacity }}>
+            <View style={styles.valueProp}>
+              <Text
+                style={styles.headline}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                Your car deserves better.
+              </Text>
+              <Text style={styles.subheadline}>
+                Book the best detailers near you.
+              </Text>
+            </View>
 
-          <View style={styles.primaryActions}>
-            <TouchableOpacity
-              style={styles.getStartedBtn}
-              onPress={() => router.push("/auth/role-select")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.getStartedText}>Get Started</Text>
-            </TouchableOpacity>
+            <View style={styles.primaryActions}>
+              <TouchableOpacity
+                style={styles.getStartedBtn}
+                onPress={() => router.push("/auth/role-select")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.getStartedText}>Get Started</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.loginBtn}
-              onPress={() => router.push("/auth/login")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.loginText}>Log In</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={styles.loginBtn}
+                onPress={() => router.push("/auth/login")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.loginText}>Log In</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerLabel}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerLabel}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
-          {ssoError && (
-            <Text style={styles.ssoError}>{ssoError}</Text>
-          )}
-
-          <View style={styles.ssoActions}>
-            {Platform.OS === "ios" && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={
-                  AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
-                }
-                buttonStyle={
-                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
-                cornerRadius={Radius.sm}
-                style={styles.appleBtn}
-                onPress={handleApple}
-              />
+            {ssoError && (
+              <Text style={styles.ssoError}>{ssoError}</Text>
             )}
 
-            <TouchableOpacity
-              style={styles.googleBtn}
-              onPress={handleGoogle}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.googleG}>G</Text>
-              <Text style={styles.googleText}>Continue with Google</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+            <View style={styles.ssoRow}>
+              {Platform.OS === "ios" && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={
+                    AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                  }
+                  buttonStyle={
+                    AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={Radius.sm}
+                  style={styles.ssoHalf}
+                  onPress={handleApple}
+                />
+              )}
 
-        <Text style={styles.terms}>
-          By continuing, you agree to our Terms and Privacy Policy.
-        </Text>
+              <TouchableOpacity
+                style={[
+                  styles.googleBtn,
+                  Platform.OS !== "ios" && styles.ssoFull,
+                ]}
+                onPress={handleGoogle}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.googleG}>G</Text>
+                <Text style={styles.googleText}>
+                  {Platform.OS === "ios" ? "Google" : "Continue with Google"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
+          <Text style={styles.terms}>
+            By continuing, you agree to our Terms and Privacy Policy.
+          </Text>
+        </ScrollView>
       </Animated.View>
     </View>
   );
@@ -237,7 +255,7 @@ const styles = StyleSheet.create({
   },
 
   illustrationArea: {
-    flex: 1,
+    height: SCREEN_H * 0.42,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -316,17 +334,15 @@ const styles = StyleSheet.create({
   },
 
   sheet: {
+    flex: 1,
     backgroundColor: Colors.light.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.04,
     shadowRadius: 16,
     elevation: 8,
-    minHeight: SCREEN_H * 0.44,
   },
 
   handleRow: {
@@ -340,6 +356,13 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.light.borderSubtle,
+  },
+
+  sheetScroll: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 24,
+    flexGrow: 1,
+    justifyContent: "space-between",
   },
 
   valueProp: {
@@ -416,16 +439,18 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
   },
 
-  ssoActions: {
+  ssoRow: {
+    flexDirection: "row",
     gap: Spacing.sm,
   },
 
-  appleBtn: {
-    width: "100%",
+  ssoHalf: {
+    flex: 1,
     height: 48,
   },
 
   googleBtn: {
+    flex: 1,
     height: 48,
     backgroundColor: Colors.light.surface,
     borderRadius: Radius.sm,
@@ -434,7 +459,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
+  },
+
+  ssoFull: {
+    flex: 1,
   },
 
   googleG: {

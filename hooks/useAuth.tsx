@@ -65,7 +65,10 @@ async function fetchUserProfile(
     .single();
 
   if (!data) {
-    await client.auth.signOut();
+    const { error: authErr } = await client.auth.getUser();
+    if (authErr) {
+      await client.auth.signOut();
+    }
     setRole(null);
     setOnboardingComplete(false);
     setPendingApproval(false);

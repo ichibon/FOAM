@@ -71,19 +71,21 @@ export default function SignupScreen() {
     setError(null);
     setLoading(true);
     try {
-      // Store the role BEFORE SSO starts so onAuthStateChange can pick it up
-      // the moment exchangeCodeForSession establishes the session.
+      // Write role BEFORE SSO so fetchUserProfile (firing via onAuthStateChange
+      // inside exchangeCodeForSession) can consume it before _layout.tsx reacts.
       await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithGoogle();
-      // onAuthStateChange has already fired by now and written the role to the DB.
-      // Remove from storage in case it wasn't consumed, then do a safe upsert + navigate.
-      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
+      // signInWithGoogle() returns without throwing when the user closes the browser.
+      // Detect this silent-cancel by checking whether a session was established.
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("Sign-in did not complete. Please try again.");
+        // User cancelled — clean up and return silently (no error shown).
+        try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
         setLoading(false);
         return;
       }
+      // Session established. fetchUserProfile may still be in flight consuming the key.
+      // writeRoleAndNavigate is idempotent and also removes the key on success.
       const displayName = String(user.user_metadata?.full_name ?? "");
       const ok = await writeRoleAndNavigate(user.id, displayName);
       if (!ok) setLoading(false);
@@ -102,10 +104,9 @@ export default function SignupScreen() {
     try {
       await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithApple();
-      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("Sign-in did not complete. Please try again.");
+        try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
         setLoading(false);
         return;
       }
@@ -115,6 +116,7 @@ export default function SignupScreen() {
     } catch (err: unknown) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const code = toErrorCode(err);
+      // ERR_REQUEST_CANCELED / 1001 = user tapped Cancel — return silently
       if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
         setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));
       }
@@ -207,6 +209,9 @@ export default function SignupScreen() {
         return false;
       }
     }
+
+    // Ensure the pending-role key is removed regardless of which async path wrote the DB.
+    try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
 
     await refreshAuth();
 

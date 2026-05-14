@@ -14,9 +14,10 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase, UserRole } from "@/lib/supabase";
 import { signInWithGoogle, signInWithApple } from "@/lib/auth";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, PENDING_SSO_ROLE_KEY } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 const VALID_ROLES: UserRole[] = ["customer", "operator", "team_member"];
@@ -70,7 +71,13 @@ export default function SignupScreen() {
     setError(null);
     setLoading(true);
     try {
+      // Store the role BEFORE SSO starts so onAuthStateChange can pick it up
+      // the moment exchangeCodeForSession establishes the session.
+      await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithGoogle();
+      // onAuthStateChange has already fired by now and written the role to the DB.
+      // Remove from storage in case it wasn't consumed, then do a safe upsert + navigate.
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError("Sign-in did not complete. Please try again.");
@@ -81,6 +88,7 @@ export default function SignupScreen() {
       const ok = await writeRoleAndNavigate(user.id, displayName);
       if (!ok) setLoading(false);
     } catch (err: unknown) {
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
       if (msg !== "BROWSER_CLOSED") setError(msg);
       setLoading(false);
@@ -92,7 +100,9 @@ export default function SignupScreen() {
     setError(null);
     setLoading(true);
     try {
+      await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithApple();
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError("Sign-in did not complete. Please try again.");
@@ -103,6 +113,7 @@ export default function SignupScreen() {
       const ok = await writeRoleAndNavigate(user.id, displayName);
       if (!ok) setLoading(false);
     } catch (err: unknown) {
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const code = toErrorCode(err);
       if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
         setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));

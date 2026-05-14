@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
 import type { UserRole } from "@/lib/supabase";
+
+export const PENDING_SSO_ROLE_KEY = "foam_pending_sso_role";
+const VALID_SSO_ROLES: UserRole[] = ["customer", "operator", "team_member"];
 
 interface AuthContextType {
   session: Session | null;
@@ -68,7 +72,54 @@ async function fetchUserProfile(
     const { error: authErr } = await client.auth.getUser();
     if (authErr) {
       await client.auth.signOut();
+      setRole(null);
+      setOnboardingComplete(false);
+      setPendingApproval(false);
+      setLoading(false);
+      return;
     }
+
+    // No users row yet — check if we're mid-SSO-signup (role stored before OAuth started)
+    let pendingRole: string | null = null;
+    try { pendingRole = await AsyncStorage.getItem(PENDING_SSO_ROLE_KEY); } catch {}
+
+    if (pendingRole && VALID_SSO_ROLES.includes(pendingRole as UserRole)) {
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
+
+      await client.from("users").upsert(
+        { id: userId, role: pendingRole },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+
+      if (pendingRole === "customer") {
+        await client.from("customer_profiles").upsert(
+          { user_id: userId },
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+      } else if (pendingRole === "operator") {
+        await client.from("detailer_profiles").upsert(
+          { user_id: userId, operation_type: "mobile" },
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+      }
+
+      // Re-fetch the freshly written row and continue normally
+      const { data: freshData } = await client
+        .from("users")
+        .select("role, onboarding_complete")
+        .eq("id", userId)
+        .single();
+
+      if (freshData) {
+        const resolvedRole = (freshData.role as UserRole) ?? null;
+        setRole(resolvedRole);
+        setOnboardingComplete(freshData.onboarding_complete === true);
+        setPendingApproval(false);
+        setLoading(false);
+        return;
+      }
+    }
+
     setRole(null);
     setOnboardingComplete(false);
     setPendingApproval(false);

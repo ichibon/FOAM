@@ -71,24 +71,22 @@ export default function SignupScreen() {
     setError(null);
     setLoading(true);
     try {
-      // Write role BEFORE SSO so fetchUserProfile (firing via onAuthStateChange
-      // inside exchangeCodeForSession) can consume it before _layout.tsx reacts.
+      // Write role BEFORE SSO so fetchUserProfile (firing via onAuthStateChange)
+      // can consume it. Do NOT remove or overwrite the key after SSO — let
+      // fetchUserProfile be the sole consumer to avoid a race condition.
       await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithGoogle();
-      // signInWithGoogle() returns without throwing when the user closes the browser.
-      // Detect this silent-cancel by checking whether a session was established.
+      // Detect silent cancel (user closed browser without authenticating).
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // User cancelled — clean up and return silently (no error shown).
         try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
         setLoading(false);
         return;
       }
-      // Session established. fetchUserProfile may still be in flight consuming the key.
-      // writeRoleAndNavigate is idempotent and also removes the key on success.
-      const displayName = String(user.user_metadata?.full_name ?? "");
-      const ok = await writeRoleAndNavigate(user.id, displayName);
-      if (!ok) setLoading(false);
+      // Session established. onAuthStateChange already triggered fetchUserProfile,
+      // which will consume the pending role key and set auth state. _layout.tsx
+      // will navigate once auth settles — no need to call writeRoleAndNavigate here.
+      setLoading(false);
     } catch (err: unknown) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
@@ -110,9 +108,9 @@ export default function SignupScreen() {
         setLoading(false);
         return;
       }
-      const displayName = String(user.user_metadata?.full_name ?? "");
-      const ok = await writeRoleAndNavigate(user.id, displayName);
-      if (!ok) setLoading(false);
+      // Session established. Let fetchUserProfile (via onAuthStateChange) consume
+      // the pending role key. _layout.tsx will navigate once auth settles.
+      setLoading(false);
     } catch (err: unknown) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const code = toErrorCode(err);

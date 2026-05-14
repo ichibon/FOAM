@@ -1,16 +1,14 @@
-import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
-import { supabase, UserRole } from "@/lib/supabase";
+import type { UserRole } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type LucideIconName = "Car" | "Briefcase" | "Users";
@@ -41,61 +39,9 @@ const roles: {
   },
 ];
 
-function onboardingEntryFor(role: UserRole): string {
-  switch (role) {
-    case "customer": return "/onboarding/customer/vehicle";
-    case "operator": return "/onboarding/operator/build";
-    case "team_member": return "/onboarding/crew/invite";
-    default: return "/onboarding/splash";
-  }
-}
-
 export default function RoleSelectScreen() {
-  const [loading, setLoading] = useState(false);
-  const [writeError, setWriteError] = useState<string | null>(null);
-
-  async function handleRoleSelect(role: UserRole) {
-    setLoading(true);
-    setWriteError(null);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push(`/auth/signup?role=${role}`);
-        setLoading(false);
-        return;
-      }
-
-      const { error: roleError } = await supabase
-        .from("users")
-        .upsert({ id: user.id, role }, { onConflict: "id" });
-      if (roleError) throw roleError;
-
-      if (role === "customer") {
-        const { error: profileError } = await supabase
-          .from("customer_profiles")
-          .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
-        if (profileError) throw profileError;
-        router.replace("/onboarding/customer/vehicle");
-      } else if (role === "operator") {
-        const { error: profileError } = await supabase
-          .from("detailer_profiles")
-          .upsert(
-            { user_id: user.id, operation_type: "mobile" },
-            { onConflict: "user_id", ignoreDuplicates: false }
-          );
-        if (profileError) throw profileError;
-        router.replace("/onboarding/operator/build");
-      } else if (role === "team_member") {
-        router.replace("/onboarding/crew/invite");
-      }
-    } catch (err) {
-      console.warn("[RoleSelect] write failed", err);
-      setWriteError("Something went wrong. Please try again.");
-      setLoading(false);
-    }
+  function handleRoleSelect(role: UserRole) {
+    router.push(`/auth/signup?role=${role}`);
   }
 
   return (
@@ -106,7 +52,9 @@ export default function RoleSelectScreen() {
       >
         <View style={styles.headerBlock}>
           <Text style={styles.heading}>What brings you here?</Text>
-          <Text style={styles.subheading}>We'll build your experience around your answer.</Text>
+          <Text style={styles.subheading}>
+            We'll build your experience around your answer.
+          </Text>
         </View>
 
         <View style={styles.cards}>
@@ -115,7 +63,6 @@ export default function RoleSelectScreen() {
               key={item.role}
               style={styles.roleCard}
               onPress={() => handleRoleSelect(item.role)}
-              disabled={loading}
               activeOpacity={0.85}
             >
               <View style={styles.iconCircle}>
@@ -127,21 +74,15 @@ export default function RoleSelectScreen() {
                 <Text style={styles.roleDescription}>{item.description}</Text>
               </View>
 
-              <LucideIcon name="ChevronRight" size={20} color={Colors.light.textTertiary} />
+              <LucideIcon
+                name="ChevronRight"
+                size={20}
+                color={Colors.light.textTertiary}
+              />
             </TouchableOpacity>
           ))}
         </View>
-
-        {writeError && (
-          <Text style={styles.writeError}>{writeError}</Text>
-        )}
       </ScrollView>
-
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.foamBlue} />
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -185,7 +126,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,
-    position: "relative",
     ...Shadows.light.level1,
   },
   iconCircle: {
@@ -212,19 +152,5 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.light.textSecondary,
     lineHeight: 18,
-  },
-  writeError: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyS,
-    color: Colors.errorLight,
-    textAlign: "center",
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(250,250,250,0.8)",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

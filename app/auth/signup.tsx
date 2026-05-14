@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -19,18 +19,37 @@ import { signInWithGoogle, signInWithApple } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
+const VALID_ROLES: UserRole[] = ["customer", "operator", "team_member"];
+
 function onboardingEntryFor(role: UserRole): string {
   switch (role) {
     case "customer": return "/onboarding/customer/vehicle";
     case "operator": return "/onboarding/operator/build";
     case "team_member": return "/onboarding/crew/invite";
-    default: return "/auth/role-select";
   }
+}
+
+function toErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return String((err as Record<string, unknown>).message);
+  }
+  return fallback;
+}
+
+function toErrorCode(err: unknown): string {
+  if (typeof err === "object" && err !== null && "code" in err) {
+    return String((err as Record<string, unknown>).code);
+  }
+  return "";
 }
 
 export default function SignupScreen() {
   const { role: roleParam } = useLocalSearchParams<{ role: string }>();
-  const role = (roleParam as UserRole) ?? null;
+  const role = VALID_ROLES.includes(roleParam as UserRole)
+    ? (roleParam as UserRole)
+    : null;
+
   const { refreshAuth } = useAuth();
 
   const [fullName, setFullName] = useState("");
@@ -40,14 +59,19 @@ export default function SignupScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    if (!role) {
+      router.replace("/auth/role-select");
+    }
+  }, [role]);
+
   async function handleGoogle() {
     setError(null);
     try {
       await signInWithGoogle();
-    } catch (err: any) {
-      if (err?.message !== "BROWSER_CLOSED") {
-        setError(err?.message ?? "Google sign-in failed. Please try again.");
-      }
+    } catch (err: unknown) {
+      const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
+      if (msg !== "BROWSER_CLOSED") setError(msg);
     }
   }
 
@@ -55,32 +79,46 @@ export default function SignupScreen() {
     setError(null);
     try {
       await signInWithApple();
-    } catch (err: any) {
-      const code = err?.code ?? "";
+    } catch (err: unknown) {
+      const code = toErrorCode(err);
       if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
-        setError(err?.message ?? "Apple sign-in failed. Please try again.");
+        setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));
       }
     }
   }
 
   async function handleSignup() {
+    if (!role) {
+      router.replace("/auth/role-select");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const { data: { user: existingUser } } = await supabase.auth.getUser();
+
+    if (existingUser) {
+      await writeRoleAndNavigate(existingUser.id, existingUser.user_metadata?.full_name ?? "");
+      setLoading(false);
+      return;
+    }
+
     if (!fullName.trim() || !email.trim() || !password) {
       setError("Please fill in all fields.");
+      setLoading(false);
       return;
     }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      setLoading(false);
       return;
     }
-    setLoading(true);
-    setError(null);
 
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: {
-        data: { full_name: fullName.trim() },
-      },
+      options: { data: { full_name: fullName.trim() } },
     });
 
     if (signUpError) {
@@ -96,16 +134,20 @@ export default function SignupScreen() {
       return;
     }
 
+    await writeRoleAndNavigate(userId, fullName.trim());
+    setLoading(false);
+  }
+
+  async function writeRoleAndNavigate(userId: string, displayName: string) {
+    if (!role) return;
+
     const { error: upsertError } = await supabase
       .from("users")
       .upsert(
-        { id: userId, role: role ?? "customer", display_name: fullName.trim() },
+        { id: userId, role, display_name: displayName || undefined },
         { onConflict: "id" }
       );
-
-    if (upsertError) {
-      console.warn("[Signup] users upsert failed", upsertError);
-    }
+    if (upsertError) console.warn("[Signup] users upsert", upsertError);
 
     if (role === "customer") {
       await supabase
@@ -122,10 +164,12 @@ export default function SignupScreen() {
 
     await refreshAuth();
 
-    const destination = role ? onboardingEntryFor(role) : "/auth/role-select";
-    router.replace(destination as Parameters<typeof router.replace>[0]);
-    setLoading(false);
+    router.replace(
+      onboardingEntryFor(role) as Parameters<typeof router.replace>[0]
+    );
   }
+
+  if (!role) return null;
 
   return (
     <SafeAreaView style={styles.safeArea}>

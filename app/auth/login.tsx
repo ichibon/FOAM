@@ -18,6 +18,21 @@ import { supabase } from "@/lib/supabase";
 import { signInWithGoogle, signInWithApple } from "@/lib/auth";
 import { LucideIcon } from "@/components/LucideIcon";
 
+function toErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return String((err as Record<string, unknown>).message);
+  }
+  return fallback;
+}
+
+function toErrorCode(err: unknown): string {
+  if (typeof err === "object" && err !== null && "code" in err) {
+    return String((err as Record<string, unknown>).code);
+  }
+  return "";
+}
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,10 +44,9 @@ export default function LoginScreen() {
     setError(null);
     try {
       await signInWithGoogle();
-    } catch (err: any) {
-      if (err?.message !== "BROWSER_CLOSED") {
-        setError(err?.message ?? "Google sign-in failed. Please try again.");
-      }
+    } catch (err: unknown) {
+      const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
+      if (msg !== "BROWSER_CLOSED") setError(msg);
     }
   }
 
@@ -40,10 +54,10 @@ export default function LoginScreen() {
     setError(null);
     try {
       await signInWithApple();
-    } catch (err: any) {
-      const code = err?.code ?? "";
+    } catch (err: unknown) {
+      const code = toErrorCode(err);
       if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
-        setError(err?.message ?? "Apple sign-in failed. Please try again.");
+        setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));
       }
     }
   }

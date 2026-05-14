@@ -64,6 +64,15 @@ async function fetchUserProfile(
     .eq("id", userId)
     .single();
 
+  if (!data) {
+    await client.auth.signOut();
+    setRole(null);
+    setOnboardingComplete(false);
+    setPendingApproval(false);
+    setLoading(false);
+    return;
+  }
+
   const resolvedRole = (data?.role as UserRole) ?? null;
   const resolvedOnboarding = data?.onboarding_complete === true;
 

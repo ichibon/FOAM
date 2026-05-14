@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Switch,
@@ -739,15 +738,12 @@ export default function BuildOperationScreen() {
               }
             />
 
-            <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={0}
-            >
             <ScrollView
               style={styles.drawerScroll}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={{ paddingBottom: 32 }}
             >
               <View style={styles.drawerForm}>
                 <View style={styles.inputGroup}>
@@ -965,27 +961,26 @@ export default function BuildOperationScreen() {
                   <Text style={styles.inputHint}>Helps crew know what's available on this van.</Text>
                 </View>
               </View>
+
+              {vanError && <Text style={styles.drawerError}>{vanError}</Text>}
+
+              <DrawerFooter>
+                <TouchableOpacity
+                  style={[styles.drawerButton, (!vanSaveEnabled || vanSaving) && styles.buttonDisabled]}
+                  onPress={handleSaveVan}
+                  disabled={!vanSaveEnabled || vanSaving}
+                  activeOpacity={0.85}
+                >
+                  {vanSaving ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <Text style={styles.drawerButtonText}>
+                      {editingVanId ? "Save Changes" : "Save Van"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </DrawerFooter>
             </ScrollView>
-
-            {vanError && <Text style={styles.drawerError}>{vanError}</Text>}
-
-            <DrawerFooter>
-              <TouchableOpacity
-                style={[styles.drawerButton, (!vanSaveEnabled || vanSaving) && styles.buttonDisabled]}
-                onPress={handleSaveVan}
-                disabled={!vanSaveEnabled || vanSaving}
-                activeOpacity={0.85}
-              >
-                {vanSaving ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.drawerButtonText}>
-                    {editingVanId ? "Save Changes" : "Save Van"}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </DrawerFooter>
-            </KeyboardAvoidingView>
         </View>
       </DrawerModal>
 
@@ -1007,15 +1002,12 @@ export default function BuildOperationScreen() {
               }
             />
 
-            <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={0}
-            >
             <ScrollView
               style={styles.drawerScroll}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={{ paddingBottom: 32 }}
             >
               <View style={styles.drawerForm}>
                 <View style={styles.inputGroup}>
@@ -1277,27 +1269,26 @@ export default function BuildOperationScreen() {
                   </View>
                 )}
               </View>
+
+              {locError && <Text style={styles.drawerError}>{locError}</Text>}
+
+              <DrawerFooter>
+                <TouchableOpacity
+                  style={[styles.drawerButton, (!locSaveEnabled || locSaving) && styles.buttonDisabled]}
+                  onPress={handleSaveLocation}
+                  disabled={!locSaveEnabled || locSaving}
+                  activeOpacity={0.85}
+                >
+                  {locSaving ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <Text style={styles.drawerButtonText}>
+                      {editingLocId ? "Save Changes" : "Save Location"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </DrawerFooter>
             </ScrollView>
-
-            {locError && <Text style={styles.drawerError}>{locError}</Text>}
-
-            <DrawerFooter>
-              <TouchableOpacity
-                style={[styles.drawerButton, (!locSaveEnabled || locSaving) && styles.buttonDisabled]}
-                onPress={handleSaveLocation}
-                disabled={!locSaveEnabled || locSaving}
-                activeOpacity={0.85}
-              >
-                {locSaving ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.drawerButtonText}>
-                    {editingLocId ? "Save Changes" : "Save Location"}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </DrawerFooter>
-            </KeyboardAvoidingView>
         </View>
       </DrawerModal>
 

@@ -17,7 +17,7 @@ if (typeof global.crypto === "undefined" || !global.crypto.subtle) {
       digest: async (_algorithm: string, data: ArrayBuffer): Promise<ArrayBuffer> => {
         const hex = await ExpoCrypto.digestStringAsync(
           ExpoCrypto.CryptoDigestAlgorithm.SHA256,
-          Buffer.from(data).toString("utf8"),
+          new TextDecoder("utf-8").decode(new Uint8Array(data)),
           { encoding: ExpoCrypto.CryptoEncoding.HEX }
         );
         const bytes = (hex.match(/.{1,2}/g) ?? []).map((b) => parseInt(b, 16));

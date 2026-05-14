@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
 import { signInWithGoogle, signInWithApple } from "@/lib/auth";
@@ -18,6 +17,8 @@ const nd = Platform.OS !== "web";
 const { height: SCREEN_H } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
+  const [ssoError, setSsoError] = useState<string | null>(null);
+
   const float1 = useRef(new Animated.Value(0)).current;
   const float2 = useRef(new Animated.Value(0)).current;
   const float3 = useRef(new Animated.Value(0)).current;
@@ -76,15 +77,26 @@ export default function WelcomeScreen() {
   }, []);
 
   async function handleGoogle() {
+    setSsoError(null);
     try {
       await signInWithGoogle();
-    } catch {}
+    } catch (err: any) {
+      if (err?.message !== "BROWSER_CLOSED") {
+        setSsoError(err?.message ?? "Google sign-in failed. Please try again.");
+      }
+    }
   }
 
   async function handleApple() {
+    setSsoError(null);
     try {
       await signInWithApple();
-    } catch {}
+    } catch (err: any) {
+      const code = err?.code ?? "";
+      if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
+        setSsoError(err?.message ?? "Apple sign-in failed. Please try again.");
+      }
+    }
   }
 
   return (
@@ -179,6 +191,10 @@ export default function WelcomeScreen() {
             <Text style={styles.dividerLabel}>or</Text>
             <View style={styles.dividerLine} />
           </View>
+
+          {ssoError && (
+            <Text style={styles.ssoError}>{ssoError}</Text>
+          )}
 
           <View style={styles.ssoActions}>
             {Platform.OS === "ios" && (
@@ -432,6 +448,14 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textPrimary,
+  },
+
+  ssoError: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+    textAlign: "center",
+    marginBottom: Spacing.sm,
   },
 
   terms: {

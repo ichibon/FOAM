@@ -138,28 +138,39 @@ export default function SignupScreen() {
     setLoading(false);
   }
 
-  async function writeRoleAndNavigate(userId: string, displayName: string) {
-    if (!role) return;
+  async function writeRoleAndNavigate(userId: string, displayName: string): Promise<boolean> {
+    if (!role) return false;
 
-    const { error: upsertError } = await supabase
+    const { error: userError } = await supabase
       .from("users")
       .upsert(
         { id: userId, role, display_name: displayName || undefined },
         { onConflict: "id" }
       );
-    if (upsertError) console.warn("[Signup] users upsert", upsertError);
+    if (userError) {
+      setError("Failed to save your role. Please try again.");
+      return false;
+    }
 
     if (role === "customer") {
-      await supabase
+      const { error: profileError } = await supabase
         .from("customer_profiles")
         .upsert({ user_id: userId }, { onConflict: "user_id", ignoreDuplicates: true });
+      if (profileError) {
+        setError("Failed to create your profile. Please try again.");
+        return false;
+      }
     } else if (role === "operator") {
-      await supabase
+      const { error: profileError } = await supabase
         .from("detailer_profiles")
         .upsert(
           { user_id: userId, operation_type: "mobile" },
           { onConflict: "user_id", ignoreDuplicates: false }
         );
+      if (profileError) {
+        setError("Failed to create your profile. Please try again.");
+        return false;
+      }
     }
 
     await refreshAuth();
@@ -167,6 +178,7 @@ export default function SignupScreen() {
     router.replace(
       onboardingEntryFor(role) as Parameters<typeof router.replace>[0]
     );
+    return true;
   }
 
   if (!role) return null;

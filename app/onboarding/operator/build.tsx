@@ -686,27 +686,6 @@ export default function BuildOperationScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.getPaidSection}>
-              <Text style={styles.sectionLabel}>GET PAID</Text>
-              <TouchableOpacity
-                style={styles.bankButton}
-                onPress={() => router.push("/onboarding/operator/stripe")}
-                activeOpacity={0.85}
-              >
-                <View style={styles.bankButtonLeft}>
-                  <View style={styles.bankIconCircle}>
-                    <LucideIcon name="Landmark" size={20} color={Colors.foamBlue} />
-                  </View>
-                  <View style={styles.bankButtonTextBlock}>
-                    <Text style={styles.bankButtonLabel}>Connect your bank — get paid faster</Text>
-                    <Text style={styles.bankButtonCaption}>
-                      Optional now — required before your first payout.
-                    </Text>
-                  </View>
-                </View>
-                <LucideIcon name="ChevronRight" size={18} color={Colors.foamBlue} />
-              </TouchableOpacity>
-            </View>
           </View>
         )}
 
@@ -1483,42 +1462,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: 14,
     color: Colors.foamBlue,
-  },
-  getPaidSection: { marginBottom: 16 },
-  bankButton: {
-    height: 60,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginBottom: 6,
-    ...Shadows.light.level1,
-  },
-  bankButtonLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  bankIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.foamBlueSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bankButtonTextBlock: { flex: 1 },
-  bankButtonLabel: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 14,
-    color: Colors.foamBlue,
-    lineHeight: 18,
-  },
-  bankButtonCaption: {
-    fontFamily: Typography.body,
-    fontSize: 11,
-    color: Colors.light.textTertiary,
-    marginTop: 2,
   },
   footer: {
     paddingHorizontal: Spacing.md,

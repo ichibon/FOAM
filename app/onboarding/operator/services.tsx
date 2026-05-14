@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors, Typography, Spacing, Radius, Shadows, Drawer } from "@/constants/design";
+import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { DrawerModal } from "@/components/DrawerModal";
 import { EmptyState } from "@/components/EmptyState";
@@ -236,9 +236,7 @@ export default function ServicesScreen() {
         visible={sheetOpen}
         onRequestClose={() => setSheetOpen(false)}
       >
-        <View style={styles.sheet}>
-            <View style={styles.dragHandle} />
-            <Text style={styles.sheetTitle}>New Service</Text>
+        <Text style={styles.sheetTitle}>New Service</Text>
 
             <KeyboardAvoidingView
               style={{ flex: 1 }}
@@ -366,7 +364,6 @@ export default function ServicesScreen() {
               </TouchableOpacity>
             </View>
             </KeyboardAvoidingView>
-          </View>
       </DrawerModal>
     </SafeAreaView>
   );
@@ -519,22 +516,6 @@ const styles = StyleSheet.create({
     color: Colors.error,
     textAlign: "center",
     marginBottom: Spacing.xs,
-  },
-  sheet: {
-    backgroundColor: Drawer.background,
-    borderTopLeftRadius: Drawer.borderRadius,
-    borderTopRightRadius: Drawer.borderRadius,
-    flex: 1,
-    ...Shadows.light.level3,
-  },
-  dragHandle: {
-    width: Drawer.dragHandleWidth,
-    height: Drawer.dragHandleHeight,
-    borderRadius: 2,
-    backgroundColor: Drawer.dragHandleColor,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
   },
   sheetTitle: {
     fontFamily: Typography.bodySemiBold,

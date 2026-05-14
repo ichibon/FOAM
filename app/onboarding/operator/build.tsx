@@ -101,7 +101,7 @@ async function loadVanMeta(
 ): Promise<{ licensePlate: string; homeBase: string; radius: number; availability: DayAvailability[]; notes: string } | null> {
   const { data, error } = await supabase
     .from("business_assets")
-    .select("metadata")
+    .select("id")
     .eq("id", vanId)
     .maybeSingle();
   if (error) throw error;

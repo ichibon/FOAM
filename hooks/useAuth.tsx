@@ -88,7 +88,7 @@ async function fetchUserProfile(
 
       await client.from("users").upsert(
         { id: userId, role: pendingRole },
-        { onConflict: "id", ignoreDuplicates: true }
+        { onConflict: "id" }
       );
 
       if (pendingRole === "customer") {

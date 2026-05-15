@@ -352,6 +352,8 @@ export default function OperatorTodayScreen() {
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertSeverity, setAlertSeverity] = useState<"warning" | "error">("warning");
+  // Unresolved alert count derived from real booking signals (no_show + requested)
+  const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
 
   const isMorning = new Date().getHours() < 9;
 
@@ -498,8 +500,38 @@ export default function OperatorTodayScreen() {
       });
       setTeamMembers(members);
 
-      // ── 10. Alert visibility ──────────────────────────────────────────────
-      if (unassigned > 0) {
+      // ── 10. Unresolved alert signals from DB ────────────────────────────
+      // `no_show` = crew reported customer no-show (needs operator follow-up)
+      // `requested` = customer booked but operator has not yet confirmed
+      const { data: alertRows } = await supabase
+        .from("bookings")
+        .select("id, status")
+        .eq("detailer_id", detailerId)
+        .in("status", ["no_show", "requested"])
+        .gte("scheduled_at", todayStart)
+        .lte("scheduled_at", todayEnd);
+
+      const noShowCount  = ((alertRows ?? []) as Array<{ id: string; status: string }>)
+        .filter((r) => r.status === "no_show").length;
+      const pendingCount = ((alertRows ?? []) as Array<{ id: string; status: string }>)
+        .filter((r) => r.status === "requested").length;
+
+      const totalAlerts = noShowCount + pendingCount + (unassigned > 0 ? 1 : 0);
+      setUnresolvedAlertCount(totalAlerts);
+
+      if (noShowCount > 0) {
+        setAlertMessage(
+          `${noShowCount} no-show${noShowCount > 1 ? "s" : ""} need${noShowCount === 1 ? "s" : ""} follow-up`
+        );
+        setAlertSeverity("error");
+        setAlertVisible(true);
+      } else if (pendingCount > 0) {
+        setAlertMessage(
+          `${pendingCount} booking request${pendingCount > 1 ? "s" : ""} awaiting confirmation`
+        );
+        setAlertSeverity("warning");
+        setAlertVisible(true);
+      } else if (unassigned > 0) {
         setAlertMessage(
           `${unassigned} job${unassigned > 1 ? "s" : ""} still need${unassigned === 1 ? "s" : ""} to be assigned`
         );
@@ -586,7 +618,7 @@ export default function OperatorTodayScreen() {
           subtitle={subtitle}
           subtitleStyle={allAssigned ? styles.subtitleSuccess : styles.subtitleWarning}
           greetingLarge
-          alertCount={alertVisible ? stats.unassigned : 0}
+          alertCount={unresolvedAlertCount}
           onBellPress={() => router.push("/operator/alerts")}
         />
         <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -649,7 +681,7 @@ export default function OperatorTodayScreen() {
             ? { text: ` · ${stats.unassigned} unassigned`, style: styles.subtitleWarning }
             : undefined
         }
-        alertCount={alertVisible ? stats.unassigned : 0}
+        alertCount={unresolvedAlertCount}
         onBellPress={() => router.push("/operator/alerts")}
       />
 

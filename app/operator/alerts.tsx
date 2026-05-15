@@ -171,7 +171,7 @@ function AlertCardView({ card }: { card: AlertCard }) {
               style={[
                 styles.progressBarFill,
                 {
-                  width: `${card.progressPct ?? 0}%` as any,
+                  width: `${card.progressPct ?? 0}%` as `${number}%`,
                   backgroundColor: Colors.warningLight,
                 },
               ]}

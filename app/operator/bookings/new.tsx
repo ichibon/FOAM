@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
+import { AddServiceDrawer } from "@/components/AddServiceDrawer";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ export default function NewBookingScreen() {
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [addServiceVisible, setAddServiceVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -196,6 +198,39 @@ export default function NewBookingScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  async function reloadPackages() {
+    if (!detailerId) return;
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const { data } = await supabase
+        .from("service_packages")
+        .select("id,name,base_price,duration_mins,description")
+        .eq("detailer_id", detailerId)
+        .eq("is_active", true)
+        .order("display_order");
+      const rawPkgs: RawServicePackage[] = (data as RawServicePackage[] | null) ?? [];
+      setPackages(
+        rawPkgs.map((p) => ({
+          id: p.id,
+          name: p.name,
+          price: p.base_price,
+          durationMins: p.duration_mins,
+          description: p.description,
+        }))
+      );
+    } catch (err) {
+      console.warn("[NewBooking] reloadPackages error", err);
+    }
+  }
+
+  function handleServiceAdded(newPackageId: string) {
+    setAddServiceVisible(false);
+    reloadPackages().then(() => {
+      setSelectedPackageId(newPackageId);
+    });
+  }
 
   useEffect(() => {
     if (!customerSearch.trim()) {
@@ -610,9 +645,28 @@ export default function NewBookingScreen() {
           <SectionCard>
             <Text style={styles.cardSectionLabel}>SERVICE</Text>
             {packages.length === 0 ? (
-              <Text style={styles.hintText}>
-                No active packages. Add service packages in your Business settings.
-              </Text>
+              <View style={styles.noServicesBox}>
+                <View style={styles.noServicesIconCircle}>
+                  <Ionicons name="construct-outline" size={32} color={Colors.foamBlue} />
+                </View>
+                <Text style={styles.noServicesHeading}>No services yet.</Text>
+                <Text style={styles.noServicesBody}>
+                  Add your first service and start taking bookings.
+                </Text>
+                <TouchableOpacity
+                  style={styles.addServiceBtn}
+                  onPress={() => setAddServiceVisible(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.addServiceBtnText}>Add a Service</Text>
+                </TouchableOpacity>
+                <View style={styles.tipCard}>
+                  <Ionicons name="bulb-outline" size={14} color={Colors.foamBlue} />
+                  <Text style={styles.tipText}>
+                    Start with your most popular service. You can always add more.
+                  </Text>
+                </View>
+              </View>
             ) : (
               <View style={styles.packageList}>
                 {packages.map((pkg) => {
@@ -727,6 +781,15 @@ export default function NewBookingScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {detailerId ? (
+        <AddServiceDrawer
+          visible={addServiceVisible}
+          onRequestClose={() => setAddServiceVisible(false)}
+          detailerId={detailerId}
+          onAdded={handleServiceAdded}
+        />
+      ) : null}
 
       {/* ── CTA footer ── */}
       <View style={styles.ctaFooter}>
@@ -948,6 +1011,68 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.foamBlue,
     textDecorationLine: "underline",
+  },
+  noServicesBox: {
+    alignItems: "center",
+    paddingVertical: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  noServicesIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
+  },
+  noServicesHeading: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.h4,
+    color: Colors.light.textPrimary,
+    textAlign: "center",
+  },
+  noServicesBody: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    maxWidth: 260,
+    lineHeight: 21,
+  },
+  addServiceBtn: {
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xs,
+    alignSelf: "stretch",
+  },
+  addServiceBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.white,
+  },
+  tipCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.mdSm,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    padding: Spacing.mdSm,
+    alignSelf: "stretch",
+    marginTop: Spacing.xs,
+  },
+  tipText: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 19,
   },
   packageList: { gap: Spacing.sm },
   packageRow: {

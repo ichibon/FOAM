@@ -32,6 +32,7 @@ interface RawBookingRow {
   scheduled_at: string;
   crew_member_id: string | null;
   service_packages: { name: string } | null;
+  users: { full_name: string | null } | null;
   vehicles: { make: string | null; model: string | null } | null;
   booking_contacts: { full_name: string | null; vehicle_make: string | null; vehicle_model: string | null } | null;
 }
@@ -299,7 +300,7 @@ export default function BusinessScreen() {
           supabase
             .from("bookings")
             .select(
-              "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), vehicles(make,model), booking_contacts(full_name,vehicle_make,vehicle_model)"
+              "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), users(full_name), vehicles(make,model), booking_contacts(full_name,vehicle_make,vehicle_model)"
             )
             .eq("detailer_id", profileId)
             .gte("scheduled_at", start)
@@ -316,7 +317,7 @@ export default function BusinessScreen() {
             ? supabase
                 .from("bookings")
                 .select(
-                  "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), vehicles(make,model), booking_contacts(full_name,vehicle_make,vehicle_model)"
+                  "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), users(full_name), vehicles(make,model), booking_contacts(full_name,vehicle_make,vehicle_model)"
                 )
                 .eq("detailer_id", profileId)
                 .gte("scheduled_at", (() => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); })())
@@ -324,8 +325,6 @@ export default function BusinessScreen() {
                 .order("scheduled_at", { ascending: true })
             : Promise.resolve({ data: [], error: null }),
         ]);
-
-        if (bookingsRes.error) throw bookingsRes.error;
 
         const bookings = (bookingsRes.data as unknown as RawBookingRow[] | null) ?? [];
         const teamMembers = (teamRes.data as unknown as TeamMemberRow[] | null) ?? [];
@@ -387,7 +386,7 @@ export default function BusinessScreen() {
 
         const jobs: TodayJob[] = jobSource.map((b) => {
           const customerName =
-            b.booking_contacts?.full_name ?? "Customer";
+            b.users?.full_name ?? b.booking_contacts?.full_name ?? "Customer";
           const veh = b.vehicles;
           const contact = b.booking_contacts;
           const vehicleDesc = veh

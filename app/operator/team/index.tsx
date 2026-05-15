@@ -144,7 +144,7 @@ export default function TeamRosterScreen() {
         return;
       }
 
-      const pid: string = (profileData as unknown as { id: string }).id;
+      const pid: string = profileData.id;
       setProfileId(pid);
 
       const { start: todayStart, end: todayEnd } = todayBounds();
@@ -172,11 +172,7 @@ export default function TeamRosterScreen() {
           .lte("scheduled_at", weekEnd),
       ]);
 
-      if (membersRes.error) {
-        setMembers([]);
-        setScreenState("main");
-        return;
-      }
+      if (membersRes.error) throw membersRes.error;
 
       const rawMembers = (membersRes.data as RawMemberRow[] | null) ?? [];
       const todayBookings = (todayBookingsRes.data as RawBookingRow[] | null) ?? [];

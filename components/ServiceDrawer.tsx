@@ -132,13 +132,25 @@ export function ServiceDrawer({
         if (dbErr) throw dbErr;
         packageId = service!.id;
       } else {
+        const { data: maxRow } = await supabase
+          .from("service_packages")
+          .select("display_order")
+          .eq("detailer_id", detailerId)
+          .eq("is_active", true)
+          .order("display_order", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextOrder = maxRow
+          ? (maxRow as unknown as { display_order: number }).display_order + 1
+          : 0;
+
         const { data: newRow, error: dbErr } = await supabase
           .from("service_packages")
           .insert({
             ...payload,
             detailer_id: detailerId,
             is_active: true,
-            display_order: 0,
+            display_order: nextOrder,
           })
           .select("id")
           .single();

@@ -49,6 +49,7 @@ interface ServiceItem {
   description: string | null;
   vehiclePricing: boolean;
   pricing: VehiclePricingMap;
+  displayOrder: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ export default function ServicesScreen() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingService, setEditingService] = useState<ServiceDrawerService | undefined>(undefined);
@@ -122,6 +124,7 @@ export default function ServicesScreen() {
             description: r.description,
             vehiclePricing,
             pricing,
+            displayOrder: r.display_order,
           };
         })
       );
@@ -188,6 +191,52 @@ export default function ServicesScreen() {
     }
   }
 
+  async function moveService(index: number, direction: "up" | "down") {
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= services.length) return;
+    if (reordering) return;
+
+    // Swap the two items and renumber the entire list sequentially so that
+    // duplicate display_order values (from legacy data or concurrent adds) can
+    // never block a future reorder.
+    const reordered = [...services];
+    const temp = reordered[index];
+    reordered[index] = reordered[swapIndex];
+    reordered[swapIndex] = temp;
+
+    const withNewOrder = reordered.map((svc, i) => ({
+      ...svc,
+      displayOrder: i,
+    }));
+    setServices(withNewOrder);
+
+    setReordering(true);
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const updates = await Promise.all(
+        withNewOrder.map((svc) =>
+          supabase
+            .from("service_packages")
+            .update({ display_order: svc.displayOrder })
+            .eq("id", svc.id)
+        )
+      );
+      const firstErr = updates.find((r) => r.error)?.error;
+      if (firstErr) {
+        console.warn("[Services] reorder error", firstErr);
+        Alert.alert("Error", "Couldn't save the new order. Please try again.");
+        load();
+      }
+    } catch (err) {
+      console.warn("[Services] reorder error", err);
+      Alert.alert("Error", "Couldn't save the new order. Please try again.");
+      load();
+    } finally {
+      setReordering(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
@@ -237,9 +286,37 @@ export default function ServicesScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {services.map((svc) => (
+          {services.map((svc, idx) => (
             <View key={svc.id} style={[styles.card, styles.shadow]}>
               <View style={styles.cardTop}>
+                {/* Reorder handle */}
+                <View style={styles.reorderCol}>
+                  <TouchableOpacity
+                    style={[styles.reorderBtn, idx === 0 && styles.reorderBtnDisabled]}
+                    onPress={() => moveService(idx, "up")}
+                    activeOpacity={0.6}
+                    disabled={idx === 0 || reordering}
+                  >
+                    <Ionicons
+                      name="chevron-up"
+                      size={16}
+                      color={idx === 0 ? Colors.light.textDisabled : Colors.light.textSecondary}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.reorderBtn, idx === services.length - 1 && styles.reorderBtnDisabled]}
+                    onPress={() => moveService(idx, "down")}
+                    activeOpacity={0.6}
+                    disabled={idx === services.length - 1 || reordering}
+                  >
+                    <Ionicons
+                      name="chevron-down"
+                      size={16}
+                      color={idx === services.length - 1 ? Colors.light.textDisabled : Colors.light.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
                 <View style={styles.cardInfo}>
                   <Text style={styles.svcName}>{svc.name}</Text>
                   <Text style={styles.svcMeta}>
@@ -441,6 +518,25 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: Spacing.sm,
   },
+
+  reorderCol: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    paddingTop: 2,
+  },
+  reorderBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.light.bgSecondary,
+  },
+  reorderBtnDisabled: {
+    backgroundColor: "transparent",
+  },
+
   cardInfo: { flex: 1, gap: 4 },
   svcName: {
     fontFamily: Typography.bodySemiBold,

@@ -449,7 +449,7 @@ export default function OperatorBookingsScreen() {
       {screenState === "empty" ? (
         <View style={styles.centerFill}>
           <View style={styles.emptyIconCircle}>
-            <Ionicons name="book-outline" size={40} color={Colors.foamBlue} />
+            <Ionicons name="book" size={40} color={Colors.foamBlue} />
           </View>
           <Text style={styles.emptyHeadline}>Your first booking is out there.</Text>
           <Text style={styles.emptyBody}>Share your profile and let customers find you.</Text>

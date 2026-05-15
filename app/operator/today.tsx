@@ -629,7 +629,7 @@ export default function OperatorTodayScreen() {
         >
           <View style={styles.emptyContent}>
             <View style={styles.emptyIconCircle}>
-              <Ionicons name="calendar-outline" size={40} color={Colors.foamBlue} />
+              <Ionicons name="calendar-number-outline" size={40} color={Colors.foamBlue} />
             </View>
             <Text style={styles.emptyHeadline}>Wide open today.</Text>
             <Text style={styles.emptyBody}>

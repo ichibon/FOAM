@@ -47,6 +47,7 @@ interface CustomerOption {
   phone: string | null;
 }
 
+type CustomerMode = "search" | "create";
 type SubmitState = "idle" | "saving" | "success" | "error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,13 +56,11 @@ function buildScheduledAt(dateStr: string, timeStr: string): string | null {
   const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
   if (!dateMatch || !timeMatch) return null;
-
   let hours = parseInt(timeMatch[1], 10);
   const minutes = parseInt(timeMatch[2], 10);
   const ampm = timeMatch[3]?.toUpperCase();
   if (ampm === "PM" && hours < 12) hours += 12;
   if (ampm === "AM" && hours === 12) hours = 0;
-
   const d = new Date(
     parseInt(dateMatch[1], 10),
     parseInt(dateMatch[2], 10) - 1,
@@ -83,27 +82,18 @@ function FieldLabel({ children }: { children: string }) {
   return <Text style={styles.fieldLabel}>{children}</Text>;
 }
 
-function InputField({
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-}: {
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "phone-pad" | "numeric";
-}) {
+function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <TextInput
-      style={styles.textInput}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={Colors.light.textTertiary}
-      keyboardType={keyboardType ?? "default"}
-      autoCapitalize="none"
-    />
+    <View
+      style={[
+        styles.card,
+        Platform.OS === "web"
+          ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
+          : Shadows.light.level1,
+      ]}
+    >
+      {children}
+    </View>
   );
 }
 
@@ -119,9 +109,18 @@ export default function NewBookingScreen() {
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // Form state
+  // Customer mode: search existing or create new
+  const [customerMode, setCustomerMode] = useState<CustomerMode>("search");
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null);
+  const [showCustomerList, setShowCustomerList] = useState(false);
+
+  // Create new customer fields
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerEmail, setNewCustomerEmail] = useState("");
+
+  // Booking fields
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleYear, setVehicleYear] = useState("");
@@ -134,7 +133,6 @@ export default function NewBookingScreen() {
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showCustomerList, setShowCustomerList] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -164,7 +162,7 @@ export default function NewBookingScreen() {
           .from("bookings")
           .select("customer_id, users!bookings_customer_id_fkey(id,full_name,phone)")
           .eq("detailer_id", dId)
-          .limit(200),
+          .limit(300),
       ]);
 
       const rawPkgs: RawServicePackage[] = (pkgRes.data as RawServicePackage[] | null) ?? [];
@@ -178,7 +176,6 @@ export default function NewBookingScreen() {
         }))
       );
 
-      // Deduplicate customers by user id
       const seen = new Set<string>();
       const custs: CustomerOption[] = [];
       for (const row of (custRes.data as RawCustomerRow[] | null) ?? []) {
@@ -222,11 +219,69 @@ export default function NewBookingScreen() {
     setShowCustomerList(false);
   }
 
+  function switchToCreate() {
+    setCustomerMode("create");
+    setSelectedCustomer(null);
+    setCustomerSearch("");
+    setShowCustomerList(false);
+  }
+
+  function switchToSearch() {
+    setCustomerMode("search");
+    setNewCustomerName("");
+    setNewCustomerPhone("");
+    setNewCustomerEmail("");
+  }
+
+  // ── Resolve or create customer, then create booking ──────────────────────────
+  async function resolveCustomerId(): Promise<string | null> {
+    const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+    const supabase = getSupabase();
+
+    if (customerMode === "search") {
+      return selectedCustomer?.userId ?? null;
+    }
+
+    // Create new customer: insert into users table with role customer
+    const trimName = newCustomerName.trim();
+    const trimPhone = newCustomerPhone.trim();
+    const trimEmail = newCustomerEmail.trim();
+
+    if (!trimName) return null;
+
+    const insertPayload: Record<string, string> = {
+      full_name: trimName,
+      role: "customer",
+    };
+    if (trimPhone) insertPayload.phone = trimPhone;
+    if (trimEmail) insertPayload.email = trimEmail;
+
+    const { data: newUser, error: userError } = await supabase
+      .from("users")
+      .insert(insertPayload)
+      .select("id")
+      .single();
+
+    if (userError || !newUser) {
+      console.warn("[NewBooking] create customer error", userError);
+      throw new Error(
+        "Could not create customer account. They may need to sign up through the FOAM app first."
+      );
+    }
+    return (newUser as { id: string }).id;
+  }
+
   async function handleSubmit() {
     if (!detailerId) return;
 
-    if (!selectedCustomer) {
-      setErrorMsg("Please select a customer from the list.");
+    const isCreateMode = customerMode === "create";
+
+    if (!isCreateMode && !selectedCustomer) {
+      setErrorMsg("Please select a customer or create a new one.");
+      return;
+    }
+    if (isCreateMode && !newCustomerName.trim()) {
+      setErrorMsg("Please enter the customer's name.");
       return;
     }
     if (!selectedPackageId) {
@@ -251,17 +306,33 @@ export default function NewBookingScreen() {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
-      // Create or look up vehicle for this customer
+      let customerId: string | null = null;
+      try {
+        customerId = await resolveCustomerId();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to resolve customer.";
+        setErrorMsg(msg);
+        setSubmitState("error");
+        return;
+      }
+
+      if (!customerId) {
+        setErrorMsg(isCreateMode ? "Customer name is required." : "Please select a customer.");
+        setSubmitState("error");
+        return;
+      }
+
+      // Create vehicle record if make or model provided
       let vehicleId: string | null = null;
-      if (vehicleMake || vehicleModel) {
+      if (vehicleMake.trim() || vehicleModel.trim()) {
         const { data: vehicleData, error: vehicleError } = await supabase
           .from("vehicles")
           .insert({
-            customer_id: selectedCustomer.userId,
-            make: vehicleMake || null,
-            model: vehicleModel || null,
-            year: vehicleYear ? parseInt(vehicleYear, 10) : null,
-            color: vehicleColor || null,
+            customer_id: customerId,
+            make: vehicleMake.trim() || null,
+            model: vehicleModel.trim() || null,
+            year: vehicleYear.trim() ? parseInt(vehicleYear.trim(), 10) : null,
+            color: vehicleColor.trim() || null,
             is_default: false,
           })
           .select("id")
@@ -272,36 +343,33 @@ export default function NewBookingScreen() {
         }
       }
 
+      // Fallback: use existing default vehicle if any
       if (!vehicleId) {
-        // Try to use the customer's existing default vehicle
         const { data: existingVehicle } = await supabase
           .from("vehicles")
           .select("id")
-          .eq("customer_id", selectedCustomer.userId)
+          .eq("customer_id", customerId)
           .eq("is_default", true)
+          .limit(1)
           .single();
-        if (existingVehicle) {
-          vehicleId = (existingVehicle as { id: string }).id;
-        }
+        if (existingVehicle) vehicleId = (existingVehicle as { id: string }).id;
       }
 
       if (!vehicleId) {
-        setErrorMsg(
-          "Could not create vehicle. Please enter at least a make or model."
-        );
+        setErrorMsg("Please enter at least a vehicle make or model so a record can be created.");
         setSubmitState("error");
         return;
       }
 
       const { error: bookingError } = await supabase.from("bookings").insert({
-        customer_id: selectedCustomer.userId,
+        customer_id: customerId,
         detailer_id: detailerId,
         vehicle_id: vehicleId,
         package_id: selectedPackageId,
         status: "confirmed",
         scheduled_at: scheduledAt,
-        service_address: serviceAddress || null,
-        notes: notes || null,
+        service_address: serviceAddress.trim() || null,
+        notes: notes.trim() || null,
         tip_amount: 0,
         is_recurring: false,
       });
@@ -314,7 +382,7 @@ export default function NewBookingScreen() {
       }
 
       setSubmitState("success");
-      setTimeout(() => router.back(), 1200);
+      setTimeout(() => router.back(), 1400);
     } catch (err) {
       console.warn("[NewBooking] submit error", err);
       setErrorMsg("An unexpected error occurred. Please try again.");
@@ -323,17 +391,16 @@ export default function NewBookingScreen() {
   }
 
   const selectedPackage = packages.find((p) => p.id === selectedPackageId) ?? null;
+  const effectiveCustomerName =
+    customerMode === "search"
+      ? (selectedCustomer?.name ?? null)
+      : newCustomerName.trim() || null;
 
+  // ── Loading ───────────────────────────────────────────────────────────────────
   if (isLoadingData) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.navHeader}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={22} color={Colors.light.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>New Booking</Text>
-          <View style={styles.navSpacer} />
-        </View>
+        <NavHeader onBack={() => router.back()} />
         <View style={styles.centerFill}>
           <ActivityIndicator size="large" color={Colors.foamBlue} />
         </View>
@@ -341,15 +408,19 @@ export default function NewBookingScreen() {
     );
   }
 
+  // ── Success ───────────────────────────────────────────────────────────────────
   if (submitState === "success") {
     return (
       <SafeAreaView style={styles.container}>
+        <NavHeader onBack={() => router.back()} />
         <View style={styles.centerFill}>
           <View style={styles.successCircle}>
             <Ionicons name="checkmark" size={36} color={Colors.foamBlue} />
           </View>
           <Text style={styles.successHeadline}>Booking Created</Text>
-          <Text style={styles.successBody}>The booking has been added to your schedule.</Text>
+          <Text style={styles.successBody}>
+            The booking has been added to your schedule.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -357,18 +428,7 @@ export default function NewBookingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={22} color={Colors.light.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.navTitleRow}>
-          <Text style={styles.navTitle}>New Booking</Text>
-          <View style={styles.newBadge}>
-            <Text style={styles.newBadgeText}>NEW</Text>
-          </View>
-        </View>
-        <View style={styles.navSpacer} />
-      </View>
+      <NavHeader onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -379,110 +439,178 @@ export default function NewBookingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Customer */}
-          <View
-            style={[
-              styles.card,
-              Platform.OS === "web"
-                ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
-                : Shadows.light.level1,
-            ]}
-          >
-            <Text style={styles.cardSectionLabel}>CUSTOMER</Text>
-            <FieldLabel>Name or phone</FieldLabel>
-            <TextInput
-              style={styles.textInput}
-              value={customerSearch}
-              onChangeText={(v) => {
-                setCustomerSearch(v);
-                if (selectedCustomer && v !== selectedCustomer.name) {
-                  setSelectedCustomer(null);
-                }
-              }}
-              placeholder="Search existing customers…"
-              placeholderTextColor={Colors.light.textTertiary}
-              autoCapitalize="words"
-            />
-            {showCustomerList && (
-              <View style={styles.dropdownList}>
-                {filteredCustomers.map((c) => (
-                  <TouchableOpacity
-                    key={c.userId}
-                    style={styles.dropdownItem}
-                    onPress={() => selectCustomer(c)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={styles.dropdownItemName}>{c.name}</Text>
-                    {c.phone && (
-                      <Text style={styles.dropdownItemSub}>{c.phone}</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            {selectedCustomer && (
-              <View style={styles.selectedCustomerRow}>
-                <Ionicons name="checkmark-circle" size={16} color={Colors.successLight} />
-                <Text style={styles.selectedCustomerText}>{selectedCustomer.name}</Text>
-              </View>
-            )}
-            {customers.length === 0 && !isLoadingData && (
-              <Text style={styles.hintText}>
-                Customers appear here once they have booked with you.
-              </Text>
-            )}
-          </View>
 
-          {/* Vehicle */}
-          <View
-            style={[
-              styles.card,
-              Platform.OS === "web"
-                ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
-                : Shadows.light.level1,
-            ]}
-          >
+          {/* ── Customer section ── */}
+          <SectionCard>
+            <Text style={styles.cardSectionLabel}>CUSTOMER</Text>
+
+            {/* Mode toggle */}
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity
+                style={[styles.modeTab, customerMode === "search" && styles.modeTabActive]}
+                onPress={switchToSearch}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.modeTabText, customerMode === "search" && styles.modeTabTextActive]}>
+                  Existing
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeTab, customerMode === "create" && styles.modeTabActive]}
+                onPress={switchToCreate}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.modeTabText, customerMode === "create" && styles.modeTabTextActive]}>
+                  New Customer
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {customerMode === "search" ? (
+              <>
+                <FieldLabel>Search by name or phone</FieldLabel>
+                <TextInput
+                  style={styles.textInput}
+                  value={customerSearch}
+                  onChangeText={(v) => {
+                    setCustomerSearch(v);
+                    if (selectedCustomer && v !== selectedCustomer.name) setSelectedCustomer(null);
+                  }}
+                  placeholder="Start typing to search…"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  autoCapitalize="words"
+                />
+                {showCustomerList && (
+                  <View style={styles.dropdownList}>
+                    {filteredCustomers.map((c) => (
+                      <TouchableOpacity
+                        key={c.userId}
+                        style={styles.dropdownItem}
+                        onPress={() => selectCustomer(c)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={styles.dropdownItemName}>{c.name}</Text>
+                        {c.phone && <Text style={styles.dropdownItemSub}>{c.phone}</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {selectedCustomer && (
+                  <View style={styles.selectedRow}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.successLight} />
+                    <Text style={styles.selectedText}>{selectedCustomer.name} selected</Text>
+                  </View>
+                )}
+                {customers.length === 0 && (
+                  <View style={styles.hintBox}>
+                    <Ionicons name="information-circle-outline" size={15} color={Colors.light.textTertiary} />
+                    <Text style={styles.hintText}>
+                      No prior customers found. Use "New Customer" for first-time bookings.
+                    </Text>
+                  </View>
+                )}
+                {!selectedCustomer && customers.length > 0 && !customerSearch && (
+                  <TouchableOpacity onPress={switchToCreate} style={styles.createLink} activeOpacity={0.7}>
+                    <Text style={styles.createLinkText}>Can't find them? Create new customer →</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <>
+                <FieldLabel>Full name *</FieldLabel>
+                <TextInput
+                  style={styles.textInput}
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                  placeholder="Jane Smith"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  autoCapitalize="words"
+                />
+                <FieldLabel>Phone number</FieldLabel>
+                <TextInput
+                  style={styles.textInput}
+                  value={newCustomerPhone}
+                  onChangeText={setNewCustomerPhone}
+                  placeholder="(555) 123-4567"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  keyboardType="phone-pad"
+                />
+                <FieldLabel>Email (optional)</FieldLabel>
+                <TextInput
+                  style={styles.textInput}
+                  value={newCustomerEmail}
+                  onChangeText={setNewCustomerEmail}
+                  placeholder="jane@example.com"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <View style={styles.hintBox}>
+                  <Ionicons name="information-circle-outline" size={15} color={Colors.light.textTertiary} />
+                  <Text style={styles.hintText}>
+                    A customer profile will be created. They can claim it later by signing up with the same phone or email.
+                  </Text>
+                </View>
+              </>
+            )}
+          </SectionCard>
+
+          {/* ── Vehicle ── */}
+          <SectionCard>
             <Text style={styles.cardSectionLabel}>VEHICLE</Text>
             <View style={styles.twoCol}>
               <View style={styles.halfField}>
                 <FieldLabel>Make</FieldLabel>
-                <InputField value={vehicleMake} onChangeText={setVehicleMake} placeholder="Toyota" />
+                <TextInput
+                  style={styles.textInput}
+                  value={vehicleMake}
+                  onChangeText={setVehicleMake}
+                  placeholder="Toyota"
+                  placeholderTextColor={Colors.light.textTertiary}
+                />
               </View>
               <View style={styles.halfField}>
                 <FieldLabel>Model</FieldLabel>
-                <InputField value={vehicleModel} onChangeText={setVehicleModel} placeholder="Camry" />
+                <TextInput
+                  style={styles.textInput}
+                  value={vehicleModel}
+                  onChangeText={setVehicleModel}
+                  placeholder="Camry"
+                  placeholderTextColor={Colors.light.textTertiary}
+                />
               </View>
             </View>
             <View style={styles.twoCol}>
               <View style={styles.halfField}>
                 <FieldLabel>Year</FieldLabel>
-                <InputField
+                <TextInput
+                  style={styles.textInput}
                   value={vehicleYear}
                   onChangeText={setVehicleYear}
                   placeholder="2022"
+                  placeholderTextColor={Colors.light.textTertiary}
                   keyboardType="numeric"
                 />
               </View>
               <View style={styles.halfField}>
                 <FieldLabel>Color</FieldLabel>
-                <InputField value={vehicleColor} onChangeText={setVehicleColor} placeholder="Silver" />
+                <TextInput
+                  style={styles.textInput}
+                  value={vehicleColor}
+                  onChangeText={setVehicleColor}
+                  placeholder="Silver"
+                  placeholderTextColor={Colors.light.textTertiary}
+                />
               </View>
             </View>
-          </View>
+          </SectionCard>
 
-          {/* Service Package */}
-          <View
-            style={[
-              styles.card,
-              Platform.OS === "web"
-                ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
-                : Shadows.light.level1,
-            ]}
-          >
+          {/* ── Service Package ── */}
+          <SectionCard>
             <Text style={styles.cardSectionLabel}>SERVICE</Text>
             {packages.length === 0 ? (
               <Text style={styles.hintText}>
-                No active service packages found. Add packages in your Business settings.
+                No active packages. Add service packages in your Business settings.
               </Text>
             ) : (
               <View style={styles.packageList}>
@@ -500,14 +628,12 @@ export default function NewBookingScreen() {
                           {pkg.name}
                         </Text>
                         {pkg.description && (
-                          <Text style={styles.packageDesc} numberOfLines={1}>
-                            {pkg.description}
-                          </Text>
+                          <Text style={styles.packageDesc} numberOfLines={1}>{pkg.description}</Text>
                         )}
                         <Text style={styles.packageDuration}>
                           {pkg.durationMins < 60
                             ? `${pkg.durationMins} min`
-                            : `${Math.round(pkg.durationMins / 60 * 10) / 10} hrs`}
+                            : `${Math.round((pkg.durationMins / 60) * 10) / 10} hrs`}
                         </Text>
                       </View>
                       <View style={styles.packageRight}>
@@ -523,53 +649,45 @@ export default function NewBookingScreen() {
                 })}
               </View>
             )}
-          </View>
+          </SectionCard>
 
-          {/* Date & Time */}
-          <View
-            style={[
-              styles.card,
-              Platform.OS === "web"
-                ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
-                : Shadows.light.level1,
-            ]}
-          >
-            <Text style={styles.cardSectionLabel}>DATE & TIME</Text>
+          {/* ── Date & Time ── */}
+          <SectionCard>
+            <Text style={styles.cardSectionLabel}>DATE &amp; TIME</Text>
             <View style={styles.twoCol}>
               <View style={styles.halfField}>
                 <FieldLabel>Date (YYYY-MM-DD)</FieldLabel>
-                <InputField
+                <TextInput
+                  style={styles.textInput}
                   value={bookingDate}
                   onChangeText={setBookingDate}
-                  placeholder="2026-05-20"
+                  placeholder={todayString()}
+                  placeholderTextColor={Colors.light.textTertiary}
                 />
               </View>
               <View style={styles.halfField}>
                 <FieldLabel>Time (HH:MM AM/PM)</FieldLabel>
-                <InputField
+                <TextInput
+                  style={styles.textInput}
                   value={bookingTime}
                   onChangeText={setBookingTime}
                   placeholder="09:00 AM"
+                  placeholderTextColor={Colors.light.textTertiary}
                 />
               </View>
             </View>
-          </View>
+          </SectionCard>
 
-          {/* Address & Notes */}
-          <View
-            style={[
-              styles.card,
-              Platform.OS === "web"
-                ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
-                : Shadows.light.level1,
-            ]}
-          >
+          {/* ── Address & Notes ── */}
+          <SectionCard>
             <Text style={styles.cardSectionLabel}>DETAILS</Text>
             <FieldLabel>Service address</FieldLabel>
-            <InputField
+            <TextInput
+              style={styles.textInput}
               value={serviceAddress}
               onChangeText={setServiceAddress}
               placeholder="123 Main St, Atlanta, GA"
+              placeholderTextColor={Colors.light.textTertiary}
             />
             <View style={{ height: Spacing.mdSm }} />
             <FieldLabel>Notes for crew</FieldLabel>
@@ -583,14 +701,14 @@ export default function NewBookingScreen() {
               numberOfLines={3}
               textAlignVertical="top"
             />
-          </View>
+          </SectionCard>
 
-          {/* Summary */}
-          {selectedPackage && selectedCustomer && (
+          {/* ── Summary bar ── */}
+          {selectedPackage && effectiveCustomerName && (
             <View style={styles.summaryBar}>
               <View>
                 <Text style={styles.summaryLabel}>
-                  {selectedCustomer.name} · {selectedPackage.name}
+                  {effectiveCustomerName} · {selectedPackage.name}
                 </Text>
                 <Text style={styles.summaryDate}>
                   {bookingDate} at {bookingTime}
@@ -609,17 +727,23 @@ export default function NewBookingScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* CTA footer */}
+      {/* ── CTA footer ── */}
       <View style={styles.ctaFooter}>
         <TouchableOpacity
           style={[
             styles.ctaBtn,
-            (submitState === "saving" || !selectedCustomer || !selectedPackageId) && {
-              opacity: 0.55,
-            },
+            (submitState === "saving" ||
+              !selectedPackageId ||
+              (customerMode === "search" && !selectedCustomer) ||
+              (customerMode === "create" && !newCustomerName.trim())) && { opacity: 0.55 },
           ]}
           onPress={handleSubmit}
-          disabled={submitState === "saving" || !selectedCustomer || !selectedPackageId}
+          disabled={
+            submitState === "saving" ||
+            !selectedPackageId ||
+            (customerMode === "search" && !selectedCustomer) ||
+            (customerMode === "create" && !newCustomerName.trim())
+          }
           activeOpacity={0.8}
         >
           {submitState === "saving" ? (
@@ -630,6 +754,25 @@ export default function NewBookingScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+  );
+}
+
+// ─── NavHeader ────────────────────────────────────────────────────────────────
+
+function NavHeader({ onBack }: { onBack: () => void }) {
+  return (
+    <View style={styles.navHeader}>
+      <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
+        <Ionicons name="chevron-back" size={22} color={Colors.light.textPrimary} />
+      </TouchableOpacity>
+      <View style={styles.navTitleRow}>
+        <Text style={styles.navTitle}>New Booking</Text>
+        <View style={styles.newBadge}>
+          <Text style={styles.newBadgeText}>NEW</Text>
+        </View>
+      </View>
+      <View style={styles.navSpacer} />
+    </View>
   );
 }
 
@@ -654,17 +797,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
   },
-  backBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
+  backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  navTitleRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
   navTitle: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.h4,
@@ -702,6 +836,35 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: Spacing.mdSm,
   },
+  modeToggleRow: {
+    flexDirection: "row",
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.sm,
+    padding: 3,
+    marginBottom: Spacing.mdSm,
+  },
+  modeTab: {
+    flex: 1,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+  },
+  modeTabActive: {
+    backgroundColor: Colors.light.surface,
+    ...(Platform.OS === "web"
+      ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08)" } as object)
+      : Shadows.light.level1),
+  },
+  modeTabText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+  },
+  modeTabTextActive: {
+    fontFamily: Typography.bodySemiBold,
+    color: Colors.light.textPrimary,
+  },
   fieldLabel: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyS,
@@ -724,13 +887,8 @@ const styles = StyleSheet.create({
     height: 80,
     paddingTop: Spacing.mdSm,
   },
-  twoCol: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  halfField: {
-    flex: 1,
-  },
+  twoCol: { flexDirection: "row", gap: Spacing.sm },
+  halfField: { flex: 1 },
   dropdownList: {
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,
@@ -739,7 +897,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     overflow: "hidden",
     ...(Platform.OS === "web"
-      ? { boxShadow: "0 4px 6px -1px rgba(0,0,0,0.08)" }
+      ? ({ boxShadow: "0 4px 6px -1px rgba(0,0,0,0.08)" } as object)
       : Shadows.light.level2),
   },
   dropdownItem: {
@@ -759,26 +917,38 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     marginTop: 2,
   },
-  selectedCustomerRow: {
+  selectedRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
-  selectedCustomerText: {
+  selectedText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyS,
     color: Colors.successLight,
   },
+  hintBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
   hintText: {
+    flex: 1,
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
     lineHeight: 18,
   },
-  packageList: {
-    gap: Spacing.sm,
+  createLink: { paddingVertical: Spacing.sm },
+  createLinkText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.foamBlue,
+    textDecorationLine: "underline",
   },
+  packageList: { gap: Spacing.sm },
   packageRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -812,10 +982,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
   },
-  packageRight: {
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
+  packageRight: { alignItems: "flex-end", gap: Spacing.xs },
   packagePrice: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,

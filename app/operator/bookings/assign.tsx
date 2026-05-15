@@ -97,10 +97,6 @@ function getLoadLabel(count: number): string {
   return "Heavy load";
 }
 
-function getFilledBars(count: number): number {
-  return Math.min(count, 5);
-}
-
 function findConflict(
   targetDate: Date,
   targetDurMins: number | null,
@@ -108,16 +104,13 @@ function findConflict(
 ): { hasConflict: boolean; label: string | null } {
   const targetStart = targetDate.getTime();
   const targetEnd = targetStart + (targetDurMins ?? 120) * 60000;
-
   for (const b of crewBookings) {
     const bStart = new Date(b.scheduled_at).getTime();
     const bEnd = bStart + (b.estimated_duration_mins ?? 120) * 60000;
     if (bStart < targetEnd && bEnd > targetStart) {
-      const conflictStart = formatTime(new Date(b.scheduled_at));
-      const conflictEnd = formatTime(new Date(bEnd));
       return {
         hasConflict: true,
-        label: `Has a job ${conflictStart} – ${conflictEnd}`,
+        label: `Has a job ${formatTime(new Date(b.scheduled_at))} – ${formatTime(new Date(bEnd))}`,
       };
     }
   }
@@ -127,7 +120,7 @@ function findConflict(
 // ─── Load Indicator ───────────────────────────────────────────────────────────
 
 function LoadBar({ count }: { count: number }) {
-  const filled = getFilledBars(count);
+  const filled = Math.min(count, 5);
   return (
     <View style={styles.loadBarRow}>
       <View style={styles.loadBarDots}>
@@ -159,9 +152,7 @@ function CrewRow({
   showUnavailable: boolean;
   onSelect: () => void;
 }) {
-  const isHidden = !crew.isAvailable && !showUnavailable;
-  if (isHidden) return null;
-
+  if (!crew.isAvailable && !showUnavailable) return null;
   const disabled = !crew.isAvailable;
 
   return (
@@ -216,8 +207,6 @@ export default function AssignJobScreen() {
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [crewNotes, setCrewNotes] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user || !bookingId) return;
@@ -226,7 +215,6 @@ export default function AssignJobScreen() {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
-      // Operator profile
       const { data: profileData } = await supabase
         .from("detailer_profiles")
         .select("id")
@@ -239,7 +227,6 @@ export default function AssignJobScreen() {
       }
       const detailerId: string = (profileData as { id: string }).id;
 
-      // Booking details
       const { data: rawBooking, error: bookingError } = await supabase
         .from("bookings")
         .select(
@@ -269,12 +256,8 @@ export default function AssignJobScreen() {
       };
       setBookingCtx(ctx);
 
-      // Pre-select currently assigned crew member
-      if (b.crew_member_id) {
-        setSelectedCrewId(b.crew_member_id);
-      }
+      if (b.crew_member_id) setSelectedCrewId(b.crew_member_id);
 
-      // Team members
       const { data: rawMembers } = await supabase
         .from("team_members")
         .select("id, user_id, is_active")
@@ -294,25 +277,13 @@ export default function AssignJobScreen() {
         }
       }
 
-      // Crew bookings on the same day for conflict detection
       const memberIds = members.map((m) => m.id);
       let crewBookingsMap: Record<string, RawCrewBooking[]> = {};
       let crewJobCountMap: Record<string, number> = {};
 
       if (memberIds.length > 0) {
-        const dayStart = new Date(
-          scheduledAt.getFullYear(),
-          scheduledAt.getMonth(),
-          scheduledAt.getDate()
-        ).toISOString();
-        const dayEnd = new Date(
-          scheduledAt.getFullYear(),
-          scheduledAt.getMonth(),
-          scheduledAt.getDate(),
-          23,
-          59,
-          59
-        ).toISOString();
+        const dayStart = new Date(scheduledAt.getFullYear(), scheduledAt.getMonth(), scheduledAt.getDate()).toISOString();
+        const dayEnd = new Date(scheduledAt.getFullYear(), scheduledAt.getMonth(), scheduledAt.getDate(), 23, 59, 59).toISOString();
 
         const { data: crewBookings } = await supabase
           .from("bookings")
@@ -334,11 +305,7 @@ export default function AssignJobScreen() {
         .filter((m) => m.is_active)
         .map((m) => {
           const name = memberUserMap[m.user_id] ?? "Crew";
-          const { hasConflict, label } = findConflict(
-            scheduledAt,
-            ctx.estimatedDurMins,
-            crewBookingsMap[m.id] ?? []
-          );
+          const { hasConflict, label } = findConflict(scheduledAt, ctx.estimatedDurMins, crewBookingsMap[m.id] ?? []);
           return {
             id: m.id,
             name,
@@ -362,42 +329,13 @@ export default function AssignJobScreen() {
     fetchData();
   }, [fetchData]);
 
-  async function handleConfirm() {
+  function handleReview() {
     if (!bookingId || !selectedCrewId) return;
-    setSaveError(null);
-    setIsSaving(true);
-    try {
-      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
-      const supabase = getSupabase();
-
-      const updatePayload: { crew_member_id: string; notes?: string } = {
-        crew_member_id: selectedCrewId,
-      };
-      if (crewNotes.trim()) {
-        updatePayload.notes = crewNotes.trim();
-      }
-
-      const { error } = await supabase
-        .from("bookings")
-        .update(updatePayload)
-        .eq("id", bookingId);
-
-      if (error) {
-        console.warn("[AssignJob] update error", error);
-        setSaveError("Failed to save assignment. Please try again.");
-        setIsSaving(false);
-        return;
-      }
-
-      router.back();
-    } catch (err) {
-      console.warn("[AssignJob] confirm error", err);
-      setSaveError("An unexpected error occurred.");
-      setIsSaving(false);
-    }
+    const notesParam = crewNotes.trim() ? encodeURIComponent(crewNotes.trim()) : "";
+    router.push(
+      `/operator/bookings/crew-assignment?bookingId=${bookingId}&crewId=${selectedCrewId}${notesParam ? `&notes=${notesParam}` : ""}`
+    );
   }
-
-  const selectedCrew = crewOptions.find((c) => c.id === selectedCrewId) ?? null;
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (screenState === "loading") {
@@ -439,11 +377,8 @@ export default function AssignJobScreen() {
     );
   }
 
-  const hasAvailableCrew = crewOptions.some((c) => c.isAvailable);
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.navHeader}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={Colors.light.textPrimary} />
@@ -466,8 +401,7 @@ export default function AssignJobScreen() {
           </Text>
         </View>
 
-        {/* Crew selection */}
-        <Text style={styles.sectionLabel}>CHOOSE A CREW MEMBER</Text>
+        <Text style={styles.sectionLabel}>STEP 1 OF 2 — CHOOSE A CREW MEMBER</Text>
 
         {crewOptions.length === 0 ? (
           <View style={styles.noCrewBox}>
@@ -490,30 +424,23 @@ export default function AssignJobScreen() {
           </View>
         )}
 
-        {/* Show unavailable toggle */}
         {crewOptions.some((c) => !c.isAvailable) && (
           <View style={styles.toggleRow}>
             <View style={styles.toggleLabelBlock}>
               <Text style={styles.toggleLabel}>Show unavailable crew</Text>
-              <Text style={styles.toggleSubLabel}>
-                Shows crew with scheduling conflicts.
-              </Text>
+              <Text style={styles.toggleSubLabel}>Shows crew with scheduling conflicts.</Text>
             </View>
             <Switch
               value={showUnavailable}
               onValueChange={setShowUnavailable}
-              trackColor={{
-                false: Colors.light.borderDefault,
-                true: Colors.foamBlue,
-              }}
+              trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
               thumbColor={Colors.white}
             />
           </View>
         )}
 
-        {/* Notes */}
         <View style={styles.notesBlock}>
-          <Text style={styles.sectionLabel}>NOTES FOR CREW MEMBER</Text>
+          <Text style={styles.sectionLabel}>NOTES FOR CREW MEMBER (OPTIONAL)</Text>
           <TextInput
             style={styles.notesInput}
             value={crewNotes}
@@ -525,34 +452,19 @@ export default function AssignJobScreen() {
             textAlignVertical="top"
           />
         </View>
-
-        {saveError && (
-          <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={16} color={Colors.errorLight} />
-            <Text style={styles.errorBannerText}>{saveError}</Text>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Footer CTA */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.confirmBtn, (!selectedCrewId || isSaving) && { opacity: 0.55 }]}
-          onPress={handleConfirm}
-          disabled={!selectedCrewId || isSaving}
+          style={[styles.reviewBtn, !selectedCrewId && { opacity: 0.45 }]}
+          onPress={handleReview}
+          disabled={!selectedCrewId}
           activeOpacity={0.8}
         >
-          {isSaving ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <Text style={styles.confirmBtnText}>Confirm Assignment</Text>
-          )}
+          <Text style={styles.reviewBtnText}>Review Assignment</Text>
+          <Ionicons name="arrow-forward" size={16} color={Colors.white} />
         </TouchableOpacity>
-        {selectedCrew && (
-          <Text style={styles.notificationHint}>
-            {selectedCrew.name.split(" ")[0]} will receive a push notification immediately.
-          </Text>
-        )}
+        <Text style={styles.stepHint}>Step 1 of 2 — you'll confirm on the next screen</Text>
       </View>
     </SafeAreaView>
   );
@@ -579,23 +491,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
   },
-  backBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   navTitle: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.h4,
     color: Colors.light.textPrimary,
   },
   navSpacer: { width: 32 },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: 140,
-    gap: Spacing.md,
-  },
+  scrollContent: { padding: Spacing.md, paddingBottom: 140, gap: Spacing.md },
   jobContextBar: {
     backgroundColor: Colors.foamBlueSubtle,
     borderRadius: Radius.md,
@@ -613,9 +516,7 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     letterSpacing: 0.8,
   },
-  crewList: {
-    gap: Spacing.sm,
-  },
+  crewList: { gap: Spacing.sm },
   crewRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -630,13 +531,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.foamBlue,
     ...(Platform.OS === "web"
-      ? { boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08)" }
+      ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08)" } as object)
       : Shadows.light.level1),
   },
-  crewRowDisabled: {
-    backgroundColor: Colors.light.bgSecondary,
-    opacity: 0.8,
-  },
+  crewRowDisabled: { backgroundColor: Colors.light.bgSecondary, opacity: 0.8 },
   crewAvatar: {
     width: 44,
     height: 44,
@@ -675,21 +573,9 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     marginBottom: Spacing.xs,
   },
-  loadBarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    marginTop: 2,
-  },
-  loadBarDots: {
-    flexDirection: "row",
-    gap: 3,
-  },
-  loadDot: {
-    width: 12,
-    height: 6,
-    borderRadius: 3,
-  },
+  loadBarRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm, marginTop: 2 },
+  loadBarDots: { flexDirection: "row", gap: 3 },
+  loadDot: { width: 12, height: 6, borderRadius: 3 },
   loadLabel: {
     fontFamily: Typography.body,
     fontSize: Typography.size.label,
@@ -712,10 +598,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderSubtle,
   },
-  toggleLabelBlock: {
-    flex: 1,
-    paddingRight: Spacing.md,
-  },
+  toggleLabelBlock: { flex: 1, paddingRight: Spacing.md },
   toggleLabel: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
@@ -728,9 +611,7 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     lineHeight: 16,
   },
-  notesBlock: {
-    gap: Spacing.sm,
-  },
+  notesBlock: { gap: Spacing.sm },
   notesInput: {
     height: 52,
     borderWidth: 1,
@@ -743,32 +624,13 @@ const styles = StyleSheet.create({
     color: Colors.light.textPrimary,
     backgroundColor: Colors.light.surface,
   },
-  noCrewBox: {
-    alignItems: "center",
-    gap: Spacing.mdSm,
-    paddingVertical: Spacing.xl,
-  },
+  noCrewBox: { alignItems: "center", gap: Spacing.mdSm, paddingVertical: Spacing.xl },
   noCrewText: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textSecondary,
     textAlign: "center",
     maxWidth: 260,
-  },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    backgroundColor: "rgba(220,38,38,0.08)",
-    borderRadius: Radius.md,
-    padding: Spacing.mdSm,
-  },
-  errorBannerText: {
-    flex: 1,
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyS,
-    color: Colors.errorLight,
-    lineHeight: 18,
   },
   footer: {
     position: "absolute",
@@ -780,23 +642,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderSubtle,
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
-  confirmBtn: {
+  reviewBtn: {
     height: 48,
     backgroundColor: Colors.foamBlue,
     borderRadius: Radius.sm,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: Spacing.sm,
   },
-  confirmBtnText: {
+  reviewBtnText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
-  notificationHint: {
+  stepHint: {
     fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
+    fontSize: Typography.size.label,
     color: Colors.light.textTertiary,
     textAlign: "center",
   },

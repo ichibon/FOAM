@@ -47,14 +47,7 @@ interface RawUser {
 // ─── Screen types ─────────────────────────────────────────────────────────────
 
 type ScreenState = "loading" | "fetch_error" | "empty" | "main";
-type Segment = "upcoming" | "past";
-type FilterChip = "all" | string; // string = team_member id
-
-interface CrewChip {
-  id: string;
-  name: string;
-  initials: string;
-}
+type FilterChip = "all" | "today" | "upcoming" | "unassigned" | "completed";
 
 interface BookingCard {
   id: string;
@@ -89,11 +82,23 @@ function formatTime(date: Date): string {
 }
 
 function formatDateShort(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = (d.getTime() - today.getTime()) / 86400000;
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function isUpcoming(date: Date): boolean {
-  return date >= new Date(new Date().setHours(0, 0, 0, 0));
+function isToday(date: Date): boolean {
+  const now = new Date();
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
 }
 
 function statusBadgeConfig(status: BookingStatus, isUnassigned: boolean): {
@@ -105,35 +110,24 @@ function statusBadgeConfig(status: BookingStatus, isUnassigned: boolean): {
     return { label: "Unassigned", bg: "rgba(217,119,6,0.08)", color: Colors.warningLight };
   }
   switch (status) {
-    case "requested":
-      return { label: "Requested", bg: "rgba(217,119,6,0.08)", color: Colors.warningLight };
-    case "confirmed":
-      return { label: "Confirmed", bg: Colors.foamBlueSubtle, color: Colors.foamBlue };
-    case "in_progress":
-      return { label: "In Progress", bg: Colors.foamBlueSubtle, color: Colors.foamBlue };
-    case "completed":
-      return { label: "Completed", bg: "rgba(22,163,74,0.08)", color: Colors.successLight };
-    case "cancelled":
-      return { label: "Cancelled", bg: Colors.light.bgSecondary, color: Colors.light.textSecondary };
-    case "no_show":
-      return { label: "No Show", bg: "rgba(220,38,38,0.08)", color: Colors.errorLight };
-    default:
-      return { label: status, bg: Colors.light.bgSecondary, color: Colors.light.textSecondary };
+    case "requested":   return { label: "Requested",   bg: "rgba(217,119,6,0.08)",  color: Colors.warningLight };
+    case "confirmed":   return { label: "Confirmed",   bg: Colors.foamBlueSubtle,   color: Colors.foamBlue };
+    case "in_progress": return { label: "In Progress", bg: Colors.foamBlueSubtle,   color: Colors.foamBlue };
+    case "completed":   return { label: "Completed",   bg: "rgba(22,163,74,0.08)",  color: Colors.successLight };
+    case "cancelled":   return { label: "Cancelled",   bg: Colors.light.bgSecondary, color: Colors.light.textSecondary };
+    case "no_show":     return { label: "No Show",     bg: "rgba(220,38,38,0.08)",  color: Colors.errorLight };
+    default:            return { label: status,        bg: Colors.light.bgSecondary, color: Colors.light.textSecondary };
   }
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Booking card ─────────────────────────────────────────────────────────────
 
 function BookingListCard({
   booking,
-  crewName,
-  crewInitials,
   onPress,
   onAssignPress,
 }: {
   booking: BookingCard;
-  crewName: string | null;
-  crewInitials: string | null;
   onPress: () => void;
   onAssignPress: () => void;
 }) {
@@ -146,24 +140,21 @@ function BookingListCard({
       style={[
         styles.card,
         Platform.OS === "web"
-          ? { boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object
+          ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
           : Shadows.light.level1,
       ]}
     >
+      {/* Time + action button */}
       <View style={styles.cardTopRow}>
-        <View style={styles.cardTimeBlock}>
+        <View>
           <Text style={styles.cardTime}>{booking.timeLabel}</Text>
           <Text style={styles.cardDate}>{booking.dateLabel}</Text>
         </View>
         {booking.isUnassigned ? (
-          <TouchableOpacity
-            onPress={onAssignPress}
-            style={styles.assignBtn}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity onPress={onAssignPress} style={styles.assignBtn} activeOpacity={0.75}>
             <Text style={styles.assignBtnText}>Assign</Text>
           </TouchableOpacity>
-        ) : booking.status === "confirmed" || booking.status === "in_progress" ? (
+        ) : (booking.status === "confirmed" || booking.status === "in_progress") ? (
           <TouchableOpacity onPress={onAssignPress} style={styles.reassignBtn} activeOpacity={0.75}>
             <Text style={styles.reassignBtnText}>Reassign</Text>
           </TouchableOpacity>
@@ -174,18 +165,19 @@ function BookingListCard({
       <Text style={styles.cardVehicle}>{booking.vehicleDesc}</Text>
       <Text style={styles.cardPackage}>{booking.packageName}</Text>
 
+      {/* Footer: badge + price */}
       <View style={styles.cardFooter}>
         {booking.isUnassigned ? (
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
-        ) : crewName ? (
+        ) : booking.crewName ? (
           <View style={[styles.crewPill, { backgroundColor: Colors.foamBlueSubtle }]}>
             <View style={styles.crewPillAvatar}>
-              <Text style={styles.crewPillAvatarText}>{(crewInitials ?? "?").slice(0, 2)}</Text>
+              <Text style={styles.crewPillAvatarText}>{(booking.crewInitials ?? "?").slice(0, 2)}</Text>
             </View>
             <Text style={[styles.crewPillName, { color: Colors.foamBlue }]}>
-              {crewName.split(" ")[0]}
+              {booking.crewName.split(" ")[0]}
             </Text>
           </View>
         ) : (
@@ -201,6 +193,16 @@ function BookingListCard({
   );
 }
 
+// ─── Filter chip data ─────────────────────────────────────────────────────────
+
+const FILTER_CHIPS: { id: FilterChip; label: string }[] = [
+  { id: "all",        label: "All" },
+  { id: "today",      label: "Today" },
+  { id: "upcoming",   label: "Upcoming" },
+  { id: "unassigned", label: "Unassigned" },
+  { id: "completed",  label: "Completed" },
+];
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function OperatorBookingsScreen() {
@@ -208,13 +210,9 @@ export default function OperatorBookingsScreen() {
   const router = useRouter();
 
   const [screenState, setScreenState] = useState<ScreenState>("loading");
-  const [segment, setSegment] = useState<Segment>("upcoming");
   const [activeFilter, setActiveFilter] = useState<FilterChip>("all");
   const [bookings, setBookings] = useState<BookingCard[]>([]);
-  const [crewChips, setCrewChips] = useState<CrewChip[]>([]);
   const [crewDisplayMap, setCrewDisplayMap] = useState<Record<string, { name: string; initials: string }>>({});
-  const [detailerId, setDetailerId] = useState<string | null>(null);
-  const [unassignedCount, setUnassignedCount] = useState(0);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -235,7 +233,6 @@ export default function OperatorBookingsScreen() {
       }
 
       const dId: string = (profileData as { id: string }).id;
-      setDetailerId(dId);
 
       const [bookingsRes, membersRes] = await Promise.all([
         supabase
@@ -249,7 +246,7 @@ export default function OperatorBookingsScreen() {
           )
           .eq("detailer_id", dId)
           .order("scheduled_at", { ascending: false })
-          .limit(200),
+          .limit(300),
         supabase
           .from("team_members")
           .select("id, user_id, is_active")
@@ -271,15 +268,11 @@ export default function OperatorBookingsScreen() {
       }
 
       const cMap: Record<string, { name: string; initials: string }> = {};
-      const chips: CrewChip[] = [];
       for (const m of rawMembers) {
         const name = memberUserMap[m.user_id] ?? "Crew";
-        const initials = getInitials(name);
-        cMap[m.id] = { name, initials };
-        chips.push({ id: m.id, name: name.split(" ")[0], initials });
+        cMap[m.id] = { name, initials: getInitials(name) };
       }
       setCrewDisplayMap(cMap);
-      setCrewChips(chips);
 
       const rawBookings: RawBookingRow[] = (bookingsRes.data as RawBookingRow[] | null) ?? [];
 
@@ -311,7 +304,6 @@ export default function OperatorBookingsScreen() {
       });
 
       setBookings(cards);
-      setUnassignedCount(cards.filter((c) => c.isUnassigned).length);
       setScreenState(cards.length === 0 ? "empty" : "main");
     } catch (err) {
       console.warn("[OperatorBookings] fetchData error", err);
@@ -323,17 +315,40 @@ export default function OperatorBookingsScreen() {
     fetchData();
   }, [fetchData]);
 
+  // ── Filter logic ──────────────────────────────────────────────────────────────
+  const now = new Date();
+
   const filteredBookings = bookings.filter((b) => {
-    const segmentMatch =
-      segment === "upcoming"
-        ? isUpcoming(b.scheduledAt)
-        : !isUpcoming(b.scheduledAt);
-    const crewMatch =
-      activeFilter === "all" || b.crewMemberId === activeFilter;
-    return segmentMatch && crewMatch;
+    switch (activeFilter) {
+      case "all":
+        return true;
+      case "today":
+        return isToday(b.scheduledAt);
+      case "upcoming":
+        return (
+          b.scheduledAt >= now &&
+          (b.status === "confirmed" || b.status === "requested" || b.status === "in_progress")
+        );
+      case "unassigned":
+        return b.isUnassigned;
+      case "completed":
+        return b.status === "completed";
+      default:
+        return true;
+    }
   });
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  // Count badges for chips
+  const unassignedCount = bookings.filter((b) => b.isUnassigned).length;
+  const todayCount = bookings.filter((b) => isToday(b.scheduledAt)).length;
+
+  function chipCount(chip: FilterChip): number | null {
+    if (chip === "unassigned") return unassignedCount > 0 ? unassignedCount : null;
+    if (chip === "today") return todayCount > 0 ? todayCount : null;
+    return null;
+  }
+
+  // ── Loading ───────────────────────────────────────────────────────────────────
   if (screenState === "loading") {
     return (
       <SafeAreaView style={styles.container}>
@@ -344,7 +359,7 @@ export default function OperatorBookingsScreen() {
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────────────────────────
   if (screenState === "fetch_error") {
     return (
       <SafeAreaView style={styles.container}>
@@ -361,110 +376,80 @@ export default function OperatorBookingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Text style={styles.headerTitle}>Bookings</Text>
-          <View style={styles.headerActions}>
-            {unassignedCount > 0 && (
-              <TouchableOpacity
-                onPress={() => router.push("/operator/bookings/unassigned")}
-                style={styles.unassignedBadgeBtn}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.unassignedBadgeText}>{unassignedCount} unassigned</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              onPress={() => router.push("/operator/bookings/new")}
-              style={styles.newBookingBtn}
-              activeOpacity={0.75}
-            >
-              <Ionicons name="add" size={20} color={Colors.white} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Upcoming / Past segment */}
-        <View style={styles.segmentRow}>
           <TouchableOpacity
-            style={[styles.segmentBtn, segment === "upcoming" && styles.segmentBtnActive]}
-            onPress={() => setSegment("upcoming")}
+            onPress={() => router.push("/operator/bookings/new")}
+            style={styles.newBookingBtn}
             activeOpacity={0.75}
           >
-            <Text
-              style={[styles.segmentBtnText, segment === "upcoming" && styles.segmentBtnTextActive]}
-            >
-              Upcoming
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentBtn, segment === "past" && styles.segmentBtnActive]}
-            onPress={() => setSegment("past")}
-            activeOpacity={0.75}
-          >
-            <Text
-              style={[styles.segmentBtnText, segment === "past" && styles.segmentBtnTextActive]}
-            >
-              Past
-            </Text>
+            <Ionicons name="add" size={20} color={Colors.white} />
           </TouchableOpacity>
         </View>
 
-        {/* Crew filter chips */}
-        {crewChips.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
-            <TouchableOpacity
-              style={[styles.filterChip, activeFilter === "all" && styles.filterChipActive]}
-              onPress={() => setActiveFilter("all")}
-              activeOpacity={0.75}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  activeFilter === "all" && styles.filterChipTextActive,
-                ]}
-              >
-                All
-              </Text>
-            </TouchableOpacity>
-            {crewChips.map((chip) => (
+        {/* Status filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
+          {FILTER_CHIPS.map((chip) => {
+            const isActive = activeFilter === chip.id;
+            const count = chipCount(chip.id);
+            return (
               <TouchableOpacity
                 key={chip.id}
-                style={[styles.filterChip, activeFilter === chip.id && styles.filterChipActive]}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
                 onPress={() => setActiveFilter(chip.id)}
                 activeOpacity={0.75}
               >
-                <View style={styles.filterChipAvatar}>
-                  <Text style={styles.filterChipAvatarText}>{chip.initials.slice(0, 2)}</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    activeFilter === chip.id && styles.filterChipTextActive,
-                  ]}
-                >
-                  {chip.name}
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {chip.label}
                 </Text>
+                {count != null && (
+                  <View
+                    style={[
+                      styles.chipCountBadge,
+                      { backgroundColor: isActive ? Colors.white : chip.id === "unassigned" ? Colors.warningLight : Colors.foamBlue },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipCountText,
+                        { color: isActive ? (chip.id === "unassigned" ? Colors.warningLight : Colors.foamBlue) : Colors.white },
+                      ]}
+                    >
+                      {count}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+            );
+          })}
+        </ScrollView>
       </View>
 
-      {/* Body */}
-      {screenState === "empty" || filteredBookings.length === 0 ? (
+      {/* ── Body ── */}
+      {(screenState === "empty" || filteredBookings.length === 0) ? (
         <View style={styles.centerFill}>
           <Ionicons name="clipboard-outline" size={40} color={Colors.light.textTertiary} />
-          <Text style={styles.emptyHeadline}>No bookings yet</Text>
+          <Text style={styles.emptyHeadline}>
+            {activeFilter === "unassigned"
+              ? "All jobs are assigned"
+              : activeFilter === "completed"
+              ? "No completed bookings yet"
+              : activeFilter === "today"
+              ? "Nothing scheduled today"
+              : activeFilter === "upcoming"
+              ? "No upcoming bookings"
+              : "No bookings yet"}
+          </Text>
           <Text style={styles.emptyBody}>
-            {segment === "upcoming"
-              ? "No upcoming bookings. Tap + to create one."
-              : "No past bookings to show."}
+            {activeFilter === "all" || activeFilter === "upcoming"
+              ? "Tap + to create a manual booking."
+              : "Check a different filter above."}
           </Text>
         </View>
       ) : (
@@ -476,12 +461,8 @@ export default function OperatorBookingsScreen() {
             <BookingListCard
               key={b.id}
               booking={b}
-              crewName={b.crewName}
-              crewInitials={b.crewInitials}
               onPress={() => router.push(`/operator/bookings/${b.id}`)}
-              onAssignPress={() =>
-                router.push(`/operator/bookings/assign?bookingId=${b.id}`)
-              }
+              onAssignPress={() => router.push(`/operator/bookings/assign?bookingId=${b.id}`)}
             />
           ))}
         </ScrollView>
@@ -493,10 +474,7 @@ export default function OperatorBookingsScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.bgPrimary,
-  },
+  container: { flex: 1, backgroundColor: Colors.light.bgPrimary },
   centerFill: {
     flex: 1,
     alignItems: "center",
@@ -522,22 +500,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: Colors.light.textPrimary,
   },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  unassignedBadgeBtn: {
-    backgroundColor: "rgba(217,119,6,0.08)",
-    paddingHorizontal: Spacing.mdSm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.pill,
-  },
-  unassignedBadgeText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.caption,
-    color: Colors.warningLight,
-  },
   newBookingBtn: {
     width: 32,
     height: 32,
@@ -546,55 +508,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  segmentRow: {
-    flexDirection: "row",
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.mdSm,
-    backgroundColor: Colors.light.bgSecondary,
-    borderRadius: Radius.sm,
-    padding: 3,
-  },
-  segmentBtn: {
-    flex: 1,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 6,
-  },
-  segmentBtnActive: {
-    backgroundColor: Colors.light.surface,
-    ...Platform.select({
-      web: { boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08)" },
-      default: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        elevation: 2,
-      },
-    }),
-  },
-  segmentBtnText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyS,
-    color: Colors.light.textSecondary,
-  },
-  segmentBtnTextActive: {
-    fontFamily: Typography.bodySemiBold,
-    color: Colors.light.textPrimary,
-  },
   filterScroll: {
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.mdSm,
+    paddingBottom: Spacing.md,
     gap: Spacing.sm,
     flexDirection: "row",
   },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: Spacing.xs,
     paddingHorizontal: Spacing.mdSm,
-    height: 32,
+    height: 34,
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,
@@ -604,26 +529,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.foamBlue,
     borderColor: Colors.foamBlue,
   },
-  filterChipAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.foamBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterChipAvatarText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 8,
-    color: Colors.white,
-  },
   filterChipText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textSecondary,
   },
-  filterChipTextActive: {
-    color: Colors.white,
+  filterChipTextActive: { color: Colors.white },
+  chipCountBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipCountText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 10,
   },
   listContent: {
     paddingHorizontal: Spacing.md,
@@ -644,9 +566,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: Spacing.sm,
   },
-  cardTimeBlock: {
-    gap: 2,
-  },
   cardTime: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,
@@ -656,6 +575,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
+    marginTop: 2,
   },
   assignBtn: {
     height: 32,

@@ -234,43 +234,6 @@ export default function NewBookingScreen() {
   }
 
   // ── Resolve or create customer, then create booking ──────────────────────────
-  async function resolveCustomerId(): Promise<string | null> {
-    const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
-    const supabase = getSupabase();
-
-    if (customerMode === "search") {
-      return selectedCustomer?.userId ?? null;
-    }
-
-    // Create new customer: insert into users table with role customer
-    const trimName = newCustomerName.trim();
-    const trimPhone = newCustomerPhone.trim();
-    const trimEmail = newCustomerEmail.trim();
-
-    if (!trimName) return null;
-
-    const insertPayload: Record<string, string> = {
-      full_name: trimName,
-      role: "customer",
-    };
-    if (trimPhone) insertPayload.phone = trimPhone;
-    if (trimEmail) insertPayload.email = trimEmail;
-
-    const { data: newUser, error: userError } = await supabase
-      .from("users")
-      .insert(insertPayload)
-      .select("id")
-      .single();
-
-    if (userError || !newUser) {
-      console.warn("[NewBooking] create customer error", userError);
-      throw new Error(
-        "Could not create customer account. They may need to sign up through the FOAM app first."
-      );
-    }
-    return (newUser as { id: string }).id;
-  }
-
   async function handleSubmit() {
     if (!detailerId) return;
 
@@ -306,79 +269,117 @@ export default function NewBookingScreen() {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
-      let customerId: string | null = null;
-      try {
-        customerId = await resolveCustomerId();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to resolve customer.";
-        setErrorMsg(msg);
-        setSubmitState("error");
-        return;
-      }
+      if (isCreateMode) {
+        // ── Walk-in / phone booking ─────────────────────────────────────────────
+        // Store contact + vehicle info in booking_contacts (operator-owned table).
+        // booking.customer_id and booking.vehicle_id are left null; booking_contacts
+        // is the source of truth for this booking's contact details.
+        const contactPayload: Record<string, unknown> = {
+          detailer_id: detailerId,
+          full_name: newCustomerName.trim(),
+        };
+        if (newCustomerPhone.trim()) contactPayload.phone = newCustomerPhone.trim();
+        if (newCustomerEmail.trim()) contactPayload.email = newCustomerEmail.trim();
+        if (vehicleMake.trim()) contactPayload.vehicle_make = vehicleMake.trim();
+        if (vehicleModel.trim()) contactPayload.vehicle_model = vehicleModel.trim();
+        if (vehicleYear.trim()) contactPayload.vehicle_year = parseInt(vehicleYear.trim(), 10);
+        if (vehicleColor.trim()) contactPayload.vehicle_color = vehicleColor.trim();
 
-      if (!customerId) {
-        setErrorMsg(isCreateMode ? "Customer name is required." : "Please select a customer.");
-        setSubmitState("error");
-        return;
-      }
-
-      // Create vehicle record if make or model provided
-      let vehicleId: string | null = null;
-      if (vehicleMake.trim() || vehicleModel.trim()) {
-        const { data: vehicleData, error: vehicleError } = await supabase
-          .from("vehicles")
-          .insert({
-            customer_id: customerId,
-            make: vehicleMake.trim() || null,
-            model: vehicleModel.trim() || null,
-            year: vehicleYear.trim() ? parseInt(vehicleYear.trim(), 10) : null,
-            color: vehicleColor.trim() || null,
-            is_default: false,
-          })
+        const { data: contactRow, error: contactError } = await supabase
+          .from("booking_contacts")
+          .insert(contactPayload)
           .select("id")
           .single();
 
-        if (!vehicleError && vehicleData) {
-          vehicleId = (vehicleData as { id: string }).id;
+        if (contactError || !contactRow) {
+          console.warn("[NewBooking] booking_contacts insert error", contactError);
+          setErrorMsg("Failed to save contact info. Please try again.");
+          setSubmitState("error");
+          return;
         }
-      }
 
-      // Fallback: use existing default vehicle if any
-      if (!vehicleId) {
-        const { data: existingVehicle } = await supabase
-          .from("vehicles")
-          .select("id")
-          .eq("customer_id", customerId)
-          .eq("is_default", true)
-          .limit(1)
-          .single();
-        if (existingVehicle) vehicleId = (existingVehicle as { id: string }).id;
-      }
+        const contactId: string = (contactRow as { id: string }).id;
 
-      if (!vehicleId) {
-        setErrorMsg("Please enter at least a vehicle make or model so a record can be created.");
-        setSubmitState("error");
-        return;
-      }
+        const { error: bookingError } = await supabase.from("bookings").insert({
+          contact_id: contactId,
+          detailer_id: detailerId,
+          package_id: selectedPackageId,
+          status: "confirmed",
+          scheduled_at: scheduledAt,
+          service_address: serviceAddress.trim() || null,
+          notes: notes.trim() || null,
+          tip_amount: 0,
+          is_recurring: false,
+        });
 
-      const { error: bookingError } = await supabase.from("bookings").insert({
-        customer_id: customerId,
-        detailer_id: detailerId,
-        vehicle_id: vehicleId,
-        package_id: selectedPackageId,
-        status: "confirmed",
-        scheduled_at: scheduledAt,
-        service_address: serviceAddress.trim() || null,
-        notes: notes.trim() || null,
-        tip_amount: 0,
-        is_recurring: false,
-      });
+        if (bookingError) {
+          console.warn("[NewBooking] walk-in booking insert error", bookingError);
+          setErrorMsg("Failed to create booking. Please try again.");
+          setSubmitState("error");
+          return;
+        }
+      } else {
+        // ── Existing registered customer ────────────────────────────────────────
+        const customerId = selectedCustomer!.userId;
 
-      if (bookingError) {
-        console.warn("[NewBooking] insert error", bookingError);
-        setErrorMsg("Failed to create booking. Please try again.");
-        setSubmitState("error");
-        return;
+        // Create vehicle record if make or model provided
+        let vehicleId: string | null = null;
+        if (vehicleMake.trim() || vehicleModel.trim()) {
+          const { data: vehicleData, error: vehicleError } = await supabase
+            .from("vehicles")
+            .insert({
+              customer_id: customerId,
+              make: vehicleMake.trim() || null,
+              model: vehicleModel.trim() || null,
+              year: vehicleYear.trim() ? parseInt(vehicleYear.trim(), 10) : null,
+              color: vehicleColor.trim() || null,
+              is_default: false,
+            })
+            .select("id")
+            .single();
+
+          if (!vehicleError && vehicleData) {
+            vehicleId = (vehicleData as { id: string }).id;
+          }
+        }
+
+        // Fallback: use the customer's default vehicle
+        if (!vehicleId) {
+          const { data: existingVehicle } = await supabase
+            .from("vehicles")
+            .select("id")
+            .eq("customer_id", customerId)
+            .eq("is_default", true)
+            .limit(1)
+            .maybeSingle();
+          if (existingVehicle) vehicleId = (existingVehicle as { id: string }).id;
+        }
+
+        if (!vehicleId) {
+          setErrorMsg("Please enter at least a vehicle make or model so a record can be created.");
+          setSubmitState("error");
+          return;
+        }
+
+        const { error: bookingError } = await supabase.from("bookings").insert({
+          customer_id: customerId,
+          detailer_id: detailerId,
+          vehicle_id: vehicleId,
+          package_id: selectedPackageId,
+          status: "confirmed",
+          scheduled_at: scheduledAt,
+          service_address: serviceAddress.trim() || null,
+          notes: notes.trim() || null,
+          tip_amount: 0,
+          is_recurring: false,
+        });
+
+        if (bookingError) {
+          console.warn("[NewBooking] booking insert error", bookingError);
+          setErrorMsg("Failed to create booking. Please try again.");
+          setSubmitState("error");
+          return;
+        }
       }
 
       setSubmitState("success");
@@ -548,7 +549,7 @@ export default function NewBookingScreen() {
                 <View style={styles.hintBox}>
                   <Ionicons name="information-circle-outline" size={15} color={Colors.light.textTertiary} />
                   <Text style={styles.hintText}>
-                    A customer profile will be created. They can claim it later by signing up with the same phone or email.
+                    Contact info is saved to this booking only. If they later download the FOAM app, they can connect their account to see booking history.
                   </Text>
                 </View>
               </>

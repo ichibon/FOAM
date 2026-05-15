@@ -124,12 +124,26 @@ export interface VehicleSizePricing {
   price_adjustment: number;
 }
 
+export interface BookingContact {
+  id: string;
+  detailer_id: string;
+  full_name: string;
+  phone?: string;
+  email?: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
+  created_at: string;
+}
+
 export interface Booking {
   id: string;
-  customer_id: string;
+  customer_id?: string;
   detailer_id: string;
   crew_member_id?: string;
-  vehicle_id: string;
+  vehicle_id?: string;
+  contact_id?: string;
   package_id: string;
   status: BookingStatus;
   scheduled_at: string;

@@ -348,6 +348,14 @@ export default function OperatorBookingsScreen() {
     return null;
   }
 
+  function handleChipPress(chip: FilterChip) {
+    if (chip === "unassigned") {
+      router.push("/operator/bookings/unassigned");
+      return;
+    }
+    setActiveFilter(chip);
+  }
+
   // ── Loading ───────────────────────────────────────────────────────────────────
   if (screenState === "loading") {
     return (
@@ -402,7 +410,7 @@ export default function OperatorBookingsScreen() {
               <TouchableOpacity
                 key={chip.id}
                 style={[styles.filterChip, isActive && styles.filterChipActive]}
-                onPress={() => setActiveFilter(chip.id)}
+                onPress={() => handleChipPress(chip.id)}
                 activeOpacity={0.75}
               >
                 <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>

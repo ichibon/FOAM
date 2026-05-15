@@ -23,6 +23,7 @@ interface RawBookingDetail {
   scheduled_at: string;
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
+  contact_id: string | null;
   service_address: string | null;
   subtotal: number | null;
   platform_fee: number | null;
@@ -46,6 +47,14 @@ interface RawBookingDetail {
     description: string | null;
     duration_mins: number;
     base_price: number;
+  } | null;
+  booking_contacts: {
+    full_name: string | null;
+    phone: string | null;
+    vehicle_make: string | null;
+    vehicle_model: string | null;
+    vehicle_year: number | null;
+    vehicle_color: string | null;
   } | null;
 }
 
@@ -181,11 +190,12 @@ export default function BookingDetailScreen() {
       const { data: raw, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, scheduled_at, estimated_duration_mins, crew_member_id," +
+          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, contact_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "users!bookings_customer_id_fkey(full_name, phone)," +
           "vehicles(make,model,year,color,vehicle_type)," +
-          "service_packages(name,description,duration_mins,base_price)"
+          "service_packages(name,description,duration_mins,base_price)," +
+          "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
         )
         .eq("id", id)
         .single();
@@ -225,7 +235,19 @@ export default function BookingDetailScreen() {
         }
       }
 
-      const custName = b.users?.full_name ?? "Customer";
+      // Walk-in bookings use booking_contacts instead of users/vehicles
+      const contact = b.booking_contacts;
+      const custName = b.users?.full_name ?? contact?.full_name ?? "Customer";
+
+      const vehicleDesc = b.vehicles
+        ? [b.vehicles.year, b.vehicles.make, b.vehicles.model, b.vehicles.color]
+            .filter(Boolean)
+            .join(" ")
+        : contact
+        ? [contact.vehicle_year, contact.vehicle_make, contact.vehicle_model, contact.vehicle_color]
+            .filter(Boolean)
+            .join(" ") || "Vehicle (walk-in)"
+        : "Vehicle";
 
       setBooking({
         id: b.id,
@@ -236,13 +258,9 @@ export default function BookingDetailScreen() {
         isUnassigned,
         customerName: custName,
         customerInitials: getInitials(custName),
-        customerPhone: b.users?.phone ?? null,
+        customerPhone: b.users?.phone ?? contact?.phone ?? null,
         serviceAddress: b.service_address,
-        vehicleDesc: b.vehicles
-          ? [b.vehicles.year, b.vehicles.make, b.vehicles.model, b.vehicles.color]
-              .filter(Boolean)
-              .join(" ")
-          : "Vehicle",
+        vehicleDesc,
         vehicleType: b.vehicles?.vehicle_type ?? null,
         packageName: b.service_packages?.name ?? "Service",
         packageDescription: b.service_packages?.description ?? null,

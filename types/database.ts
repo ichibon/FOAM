@@ -272,3 +272,36 @@ export interface PaginatedResponse<T> {
   count: number;
   hasMore: boolean;
 }
+
+export type AssetType = "van" | "trailer" | "truck" | "other";
+
+export interface BusinessAsset {
+  id: string;
+  detailer_id: string;
+  name: string;
+  asset_type: AssetType;
+  license_plate?: string;
+  home_base_address?: string;
+  home_base_lat?: number;
+  home_base_lng?: number;
+  service_radius_miles?: number;
+  equipment_notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessLocation {
+  id: string;
+  detailer_id: string;
+  name: string;
+  address: string;
+  lat?: number;
+  lng?: number;
+  bay_count?: number;
+  accepts_walkins: boolean;
+  location_hours?: Record<string, { open: string; close: string } | null>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

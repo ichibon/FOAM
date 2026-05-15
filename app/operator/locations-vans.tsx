@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
+import { AddVehicleDrawer } from "@/components/AddVehicleDrawer";
+import { AddLocationDrawer } from "@/components/AddLocationDrawer";
 
 interface VanSummary {
   id: string;
@@ -41,6 +43,9 @@ export default function LocationsVansScreen() {
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>("approved");
+  const [storedDetailerId, setStoredDetailerId] = useState<string>("");
+  const [addVanOpen, setAddVanOpen] = useState(false);
+  const [addLocationOpen, setAddLocationOpen] = useState(false);
 
   const loadUnits = useCallback(async () => {
     setLoading(true);
@@ -57,6 +62,7 @@ export default function LocationsVansScreen() {
         .single();
       if (!profile) return;
       setApprovalStatus((profile.approval_status as ApprovalStatus) ?? "approved");
+      setStoredDetailerId((profile as { id: string; approval_status: string }).id);
 
       const [{ data: assetsData }, { data: locsData }] = await Promise.all([
         supabase
@@ -184,7 +190,7 @@ export default function LocationsVansScreen() {
               </View>
               <TouchableOpacity
                 style={styles.addUnitButton}
-                onPress={() => router.push("/onboarding/operator/build")}
+                onPress={() => setAddVanOpen(true)}
                 activeOpacity={0.8}
               >
                 <LucideIcon name="Plus" size={16} color={Colors.foamBlue} />
@@ -271,7 +277,7 @@ export default function LocationsVansScreen() {
               </View>
               <TouchableOpacity
                 style={styles.addUnitButton}
-                onPress={() => router.push("/onboarding/operator/build")}
+                onPress={() => setAddLocationOpen(true)}
                 activeOpacity={0.8}
               >
                 <LucideIcon name="Plus" size={16} color={Colors.foamBlue} />
@@ -360,6 +366,18 @@ export default function LocationsVansScreen() {
           </View>
         </ScrollView>
       )}
+      <AddVehicleDrawer
+        visible={addVanOpen}
+        onRequestClose={() => setAddVanOpen(false)}
+        detailerId={storedDetailerId}
+        onAdded={() => { setAddVanOpen(false); void loadUnits(); }}
+      />
+      <AddLocationDrawer
+        visible={addLocationOpen}
+        onRequestClose={() => setAddLocationOpen(false)}
+        detailerId={storedDetailerId}
+        onAdded={() => { setAddLocationOpen(false); void loadUnits(); }}
+      />
     </SafeAreaView>
   );
 }

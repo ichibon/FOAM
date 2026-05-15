@@ -14,6 +14,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import type { BookingStatus } from "@/types/database";
+import { TeamCalendarDrawer } from "@/components/TeamCalendarDrawer";
+import { ComplaintReviewDrawer } from "@/components/ComplaintReviewDrawer";
 
 // ─── Raw DB row shapes (avoids `any`) ─────────────────────────────────────────
 
@@ -372,6 +374,11 @@ export default function OperatorTodayScreen() {
   const [alertSeverity, setAlertSeverity] = useState<"warning" | "error">("warning");
   // Unresolved alert count derived from real booking signals (no_show + requested)
   const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
+  // Calendar + complaint drawers
+  const [storedDetailerId, setStoredDetailerId] = useState<string>("");
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [complaintVisible, setComplaintVisible] = useState(false);
+  const [firstNoShowBookingId, setFirstNoShowBookingId] = useState<string | null>(null);
 
   const isMorning = new Date().getHours() < 9;
 
@@ -412,6 +419,7 @@ export default function OperatorTodayScreen() {
       }
 
       const detailerId: string = (profileData as { id: string }).id;
+      setStoredDetailerId(detailerId);
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
@@ -541,10 +549,12 @@ export default function OperatorTodayScreen() {
         .gte("scheduled_at", todayStart)
         .lte("scheduled_at", todayEnd);
 
-      const noShowCount  = ((alertRows ?? []) as Array<{ id: string; status: string }>)
-        .filter((r) => r.status === "no_show").length;
-      const pendingCount = ((alertRows ?? []) as Array<{ id: string; status: string }>)
-        .filter((r) => r.status === "requested").length;
+      const alertList = (alertRows ?? []) as Array<{ id: string; status: string }>;
+      const noShowCount  = alertList.filter((r) => r.status === "no_show").length;
+      const pendingCount = alertList.filter((r) => r.status === "requested").length;
+
+      const firstNoShow = alertList.find((r) => r.status === "no_show");
+      if (firstNoShow) setFirstNoShowBookingId(firstNoShow.id);
 
       const totalAlerts = noShowCount + pendingCount + (unassigned > 0 ? 1 : 0);
       setUnresolvedAlertCount(totalAlerts);
@@ -602,6 +612,7 @@ export default function OperatorTodayScreen() {
           subtitleStyle={undefined}
           alertCount={0}
           onBellPress={() => router.push("/operator/alerts")}
+          onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
         />
         <View style={styles.centerFill}>
           <View style={styles.emptyIconCircle}>
@@ -659,6 +670,7 @@ export default function OperatorTodayScreen() {
     const totalJobs = todayJobs.length;
     const subtitle = `${todayLabel} · ${totalJobs} jobs today · ${allAssigned ? "All assigned" : `${stats.unassigned} unassigned`}`;
     return (
+      <>
       <SafeAreaView style={styles.container}>
         <StickyHeader
           firstName={firstName}
@@ -667,6 +679,7 @@ export default function OperatorTodayScreen() {
           greetingLarge
           alertCount={unresolvedAlertCount}
           onBellPress={() => router.push("/operator/alerts")}
+          onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
         />
         <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Team status pills */}
@@ -709,6 +722,18 @@ export default function OperatorTodayScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <TeamCalendarDrawer
+        visible={calendarVisible}
+        onRequestClose={() => setCalendarVisible(false)}
+        detailerId={storedDetailerId}
+      />
+      <ComplaintReviewDrawer
+        visible={complaintVisible}
+        onRequestClose={() => setComplaintVisible(false)}
+        bookingId={firstNoShowBookingId}
+        onResolved={fetchData}
+      />
+      </>
     );
   }
 
@@ -719,6 +744,7 @@ export default function OperatorTodayScreen() {
   const subtitle = subParts.join(" · ");
 
   return (
+    <>
     <SafeAreaView style={styles.container}>
       <StickyHeader
         firstName={firstName}
@@ -730,6 +756,7 @@ export default function OperatorTodayScreen() {
         }
         alertCount={unresolvedAlertCount}
         onBellPress={() => router.push("/operator/alerts")}
+        onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
       />
 
       {/* ── Dismissible alert strip ─────────────────────────────────────────── */}
@@ -742,7 +769,13 @@ export default function OperatorTodayScreen() {
         >
           <TouchableOpacity
             style={styles.alertStripMain}
-            onPress={() => router.push("/operator/alerts")}
+            onPress={() => {
+              if (alertSeverity === "error" && firstNoShowBookingId) {
+                setComplaintVisible(true);
+              } else {
+                router.push("/operator/alerts");
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -846,6 +879,18 @@ export default function OperatorTodayScreen() {
 
       </ScrollView>
     </SafeAreaView>
+    <TeamCalendarDrawer
+      visible={calendarVisible}
+      onRequestClose={() => setCalendarVisible(false)}
+      detailerId={storedDetailerId}
+    />
+    <ComplaintReviewDrawer
+      visible={complaintVisible}
+      onRequestClose={() => setComplaintVisible(false)}
+      bookingId={firstNoShowBookingId}
+      onResolved={fetchData}
+    />
+    </>
   );
 }
 
@@ -859,6 +904,7 @@ interface StickyHeaderProps {
   greetingLarge?: boolean;
   alertCount: number;
   onBellPress: () => void;
+  onCalendarPress?: () => void;
 }
 
 function StickyHeader({
@@ -869,6 +915,7 @@ function StickyHeader({
   greetingLarge,
   alertCount,
   onBellPress,
+  onCalendarPress,
 }: StickyHeaderProps) {
   return (
     <View style={styles.stickyHeader}>
@@ -884,18 +931,25 @@ function StickyHeader({
             ) : null}
           </Text>
         </View>
-        <TouchableOpacity style={styles.bellBtn} onPress={onBellPress}>
-          {alertCount > 0 ? (
-            <View>
-              <Ionicons name="notifications" size={22} color={Colors.light.textPrimary} />
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
-              </View>
-            </View>
-          ) : (
-            <Ionicons name="notifications-outline" size={22} color={Colors.light.textPrimary} />
+        <View style={styles.headerActions}>
+          {onCalendarPress && (
+            <TouchableOpacity style={styles.iconBtn} onPress={onCalendarPress} activeOpacity={0.7}>
+              <Ionicons name="calendar-outline" size={22} color={Colors.light.textPrimary} />
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.bellBtn} onPress={onBellPress}>
+            {alertCount > 0 ? (
+              <View>
+                <Ionicons name="notifications" size={22} color={Colors.light.textPrimary} />
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+                </View>
+              </View>
+            ) : (
+              <Ionicons name="notifications-outline" size={22} color={Colors.light.textPrimary} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -973,7 +1027,9 @@ const styles = StyleSheet.create({
   },
   subtitleSuccess: { fontFamily: Typography.bodySemiBold, color: Colors.successLight },
   subtitleWarning: { fontFamily: Typography.bodySemiBold, color: Colors.warningLight },
-  bellBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -8, marginTop: -4 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 0, marginTop: -4 },
+  iconBtn: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
+  bellBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -8 },
   bellBadge: {
     position: "absolute", top: -4, right: -4,
     width: 16, height: 16, borderRadius: 8,

@@ -122,13 +122,15 @@ export function ServiceDrawer({
         duration_mins: durationMins,
       };
 
+      let packageId: string;
+
       if (isEdit) {
         const { error: dbErr } = await supabase
           .from("service_packages")
           .update(payload)
           .eq("id", service!.id);
         if (dbErr) throw dbErr;
-        onSaved({ id: service!.id, name: nameTrimmed });
+        packageId = service!.id;
       } else {
         const { data: newRow, error: dbErr } = await supabase
           .from("service_packages")
@@ -142,9 +144,30 @@ export function ServiceDrawer({
           .single();
         if (dbErr) throw dbErr;
         if (!newRow) throw new Error("No data returned from insert.");
-        const id: string = (newRow as unknown as { id: string }).id;
-        onSaved({ id, name: nameTrimmed });
+        packageId = (newRow as unknown as { id: string }).id;
       }
+
+      // ── Vehicle size pricing ─────────────────────────────────────────────────
+      // Always delete existing rows for this package, then insert current values.
+      await supabase.from("vehicle_size_pricing").delete().eq("package_id", packageId);
+
+      if (vehiclePricingEnabled) {
+        const vehicleRows = (["sedan", "suv", "truck", "van"] as (keyof VehiclePricing)[])
+          .filter((t) => pricing[t].trim() !== "")
+          .map((t) => ({
+            package_id: packageId,
+            vehicle_type: t,
+            price_adjustment: parseFloat(pricing[t]),
+          }))
+          .filter((r) => !isNaN(r.price_adjustment));
+
+        if (vehicleRows.length > 0) {
+          const { error: vErr } = await supabase.from("vehicle_size_pricing").insert(vehicleRows);
+          if (vErr) throw vErr;
+        }
+      }
+
+      onSaved({ id: packageId, name: nameTrimmed });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save service.";
       setError(msg);

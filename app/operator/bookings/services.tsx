@@ -18,6 +18,11 @@ import type { ServiceDrawerService } from "@/components/ServiceDrawer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface RawVehiclePricingRow {
+  vehicle_type: string;
+  price_adjustment: number;
+}
+
 interface RawServicePackage {
   id: string;
   name: string;
@@ -25,7 +30,15 @@ interface RawServicePackage {
   duration_mins: number;
   description: string | null;
   display_order: number;
+  vehicle_size_pricing: RawVehiclePricingRow[];
 }
+
+type VehiclePricingMap = {
+  sedan: string;
+  suv: string;
+  truck: string;
+  van: string;
+};
 
 interface ServiceItem {
   id: string;
@@ -34,6 +47,8 @@ interface ServiceItem {
   hours: number;
   minutes: number;
   description: string | null;
+  vehiclePricing: boolean;
+  pricing: VehiclePricingMap;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,7 +96,7 @@ export default function ServicesScreen() {
 
       const { data: pkgData, error: pkgErr } = await supabase
         .from("service_packages")
-        .select("id,name,base_price,duration_mins,description,display_order")
+        .select("id,name,base_price,duration_mins,description,display_order,vehicle_size_pricing(vehicle_type,price_adjustment)")
         .eq("detailer_id", dId)
         .eq("is_active", true)
         .order("display_order");
@@ -91,6 +106,13 @@ export default function ServicesScreen() {
       setServices(
         rows.map((r) => {
           const { hours, minutes } = minsToHM(r.duration_mins);
+          const vspRows = r.vehicle_size_pricing ?? [];
+          const pricing: VehiclePricingMap = { sedan: "", suv: "", truck: "", van: "" };
+          for (const row of vspRows) {
+            const t = row.vehicle_type as keyof VehiclePricingMap;
+            if (t in pricing) pricing[t] = row.price_adjustment.toString();
+          }
+          const vehiclePricing = vspRows.length > 0;
           return {
             id: r.id,
             name: r.name,
@@ -98,6 +120,8 @@ export default function ServicesScreen() {
             hours,
             minutes,
             description: r.description,
+            vehiclePricing,
+            pricing,
           };
         })
       );
@@ -126,8 +150,8 @@ export default function ServicesScreen() {
       hours: svc.hours,
       minutes: svc.minutes,
       description: svc.description,
-      vehiclePricing: false,
-      pricing: { sedan: "", suv: "", truck: "", van: "" },
+      vehiclePricing: svc.vehiclePricing,
+      pricing: svc.pricing,
     });
     setDrawerVisible(true);
   }
@@ -152,7 +176,11 @@ export default function ServicesScreen() {
     try {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
-      await supabase.from("service_packages").delete().eq("id", id);
+      const { error: delErr } = await supabase
+        .from("service_packages")
+        .delete()
+        .eq("id", id);
+      if (delErr) throw delErr;
       setServices((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       console.warn("[Services] delete error", err);
@@ -222,6 +250,30 @@ export default function ServicesScreen() {
                       {svc.description}
                     </Text>
                   ) : null}
+                  {svc.vehiclePricing && (
+                    <View style={styles.chipRow}>
+                      {svc.pricing.sedan ? (
+                        <View style={styles.chip}>
+                          <Text style={styles.chipText}>Sedan ${svc.pricing.sedan}</Text>
+                        </View>
+                      ) : null}
+                      {svc.pricing.suv ? (
+                        <View style={styles.chip}>
+                          <Text style={styles.chipText}>SUV +${svc.pricing.suv}</Text>
+                        </View>
+                      ) : null}
+                      {svc.pricing.truck ? (
+                        <View style={styles.chip}>
+                          <Text style={styles.chipText}>Truck +${svc.pricing.truck}</Text>
+                        </View>
+                      ) : null}
+                      {svc.pricing.van ? (
+                        <View style={styles.chip}>
+                          <Text style={styles.chipText}>Van +${svc.pricing.van}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
                 </View>
                 <View style={styles.cardActions}>
                   <TouchableOpacity
@@ -418,6 +470,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: Radius.sm,
     backgroundColor: Colors.light.bgSecondary,
+  },
+
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  chip: {
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.bgSecondary,
+  },
+  chipText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textSecondary,
   },
 
   addTrigger: {

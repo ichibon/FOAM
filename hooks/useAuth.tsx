@@ -64,22 +64,8 @@ async function fetchUserProfile(
     .eq("id", userId)
     .single();
 
-  if (!data) {
-    // No users row yet — the signup screen is responsible for writing it
-    // via writeRoleAndNavigate. If auth itself is broken, sign out.
-    const { error: authErr } = await client.auth.getUser();
-    if (authErr) {
-      await client.auth.signOut();
-    }
-    setRole(null);
-    setOnboardingComplete(false);
-    setPendingApproval(false);
-    setLoading(false);
-    return;
-  }
-
-  const resolvedRole = (data.role as UserRole) ?? null;
-  const resolvedOnboarding = data.onboarding_complete === true;
+  const resolvedRole = (data?.role as UserRole) ?? null;
+  const resolvedOnboarding = data?.onboarding_complete === true;
 
   setRole(resolvedRole);
   setOnboardingComplete(resolvedOnboarding);
@@ -117,29 +103,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const c = client;
 
     c.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
+      setSession(s);
       if (s) {
-        setSession(s);
         fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
       } else {
         setLoading(false);
-        setSession(s);
       }
     });
 
     const { data: { subscription } } = c.auth.onAuthStateChange(
       (_event: string, s: Session | null) => {
+        setSession(s);
         if (s) {
-          // Set loading=true BEFORE setSession so _layout never sees
-          // { session, role=null, loading=false } and routes to role-select.
           setLoading(true);
-          setSession(s);
           fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
         } else {
-          setLoading(false);
-          setSession(s);
           setRole(null);
           setOnboardingComplete(false);
           setPendingApproval(false);
+          setLoading(false);
         }
       }
     );

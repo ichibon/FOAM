@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -10,48 +10,13 @@ import {
   KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as AppleAuthentication from "expo-apple-authentication";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
-import { supabase, UserRole } from "@/lib/supabase";
-import { signInWithGoogle, signInWithApple } from "@/lib/auth";
-import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
-const VALID_ROLES: UserRole[] = ["customer", "operator", "team_member"];
-
-function onboardingEntryFor(role: UserRole): string {
-  switch (role) {
-    case "customer": return "/onboarding/customer/vehicle";
-    case "operator": return "/onboarding/operator/build";
-    case "team_member": return "/onboarding/crew/invite";
-  }
-}
-
-function toErrorMessage(err: unknown, fallback: string): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "object" && err !== null && "message" in err) {
-    return String((err as Record<string, unknown>).message);
-  }
-  return fallback;
-}
-
-function toErrorCode(err: unknown): string {
-  if (typeof err === "object" && err !== null && "code" in err) {
-    return String((err as Record<string, unknown>).code);
-  }
-  return "";
-}
-
 export default function SignupScreen() {
-  const { role: roleParam } = useLocalSearchParams<{ role: string }>();
-  const role = VALID_ROLES.includes(roleParam as UserRole)
-    ? (roleParam as UserRole)
-    : null;
-
-  const { refreshAuth } = useAuth();
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,98 +24,24 @@ export default function SignupScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (!role) {
-      router.replace("/auth/role-select");
-    }
-  }, [role]);
-
-  async function handleGoogle() {
-    if (!role) return;
-    setError(null);
-    setLoading(true);
-    try {
-      await signInWithGoogle();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      await writeRoleAndNavigate(
-        user.id,
-        user.user_metadata?.full_name ?? "",
-        user.email ?? ""
-      );
-      setLoading(false);
-    } catch (err: unknown) {
-      const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
-      if (msg !== "BROWSER_CLOSED") setError(msg);
-      setLoading(false);
-    }
-  }
-
-  async function handleApple() {
-    if (!role) return;
-    setError(null);
-    setLoading(true);
-    try {
-      await signInWithApple();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      await writeRoleAndNavigate(
-        user.id,
-        user.user_metadata?.full_name ?? "",
-        user.email ?? ""
-      );
-      setLoading(false);
-    } catch (err: unknown) {
-      const code = toErrorCode(err);
-      if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
-        setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));
-      }
-      setLoading(false);
-    }
-  }
-
   async function handleSignup() {
-    if (!role) {
-      router.replace("/auth/role-select");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const { data: { user: existingUser } } = await supabase.auth.getUser();
-
-    if (existingUser) {
-      await writeRoleAndNavigate(
-        existingUser.id,
-        existingUser.user_metadata?.full_name ?? "",
-        existingUser.email ?? ""
-      );
-      setLoading(false);
-      return;
-    }
-
-    if (!fullName.trim() || !email.trim() || !password) {
+    if (!fullName || !email || !password) {
       setError("Please fill in all fields.");
-      setLoading(false);
       return;
     }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
-      setLoading(false);
       return;
     }
+    setLoading(true);
+    setError(null);
 
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim() } },
+      options: {
+        data: { full_name: fullName.trim() },
+      },
     });
 
     if (signUpError) {
@@ -159,66 +50,9 @@ export default function SignupScreen() {
       return;
     }
 
-    const userId = signUpData.user?.id;
-    if (!userId) {
-      setError("Account created — please check your email to confirm.");
-      setLoading(false);
-      return;
-    }
-
-    await writeRoleAndNavigate(userId, fullName.trim(), email.trim());
+    router.replace("/auth/role-select");
     setLoading(false);
   }
-
-  async function writeRoleAndNavigate(userId: string, displayName: string, email: string): Promise<boolean> {
-    if (!role) return false;
-
-    const { error: userError } = await supabase
-      .from("users")
-      .upsert(
-        {
-          id: userId,
-          role,
-          display_name: displayName || undefined,
-          email: email || undefined,
-        },
-        { onConflict: "id" }
-      );
-    if (userError) {
-      setError("Failed to save your role. Please try again.");
-      return false;
-    }
-
-    if (role === "customer") {
-      const { error: profileError } = await supabase
-        .from("customer_profiles")
-        .upsert({ user_id: userId }, { onConflict: "user_id", ignoreDuplicates: true });
-      if (profileError) {
-        setError("Failed to create your profile. Please try again.");
-        return false;
-      }
-    } else if (role === "operator") {
-      const { error: profileError } = await supabase
-        .from("detailer_profiles")
-        .upsert(
-          { user_id: userId, operation_type: "mobile" },
-          { onConflict: "user_id", ignoreDuplicates: false }
-        );
-      if (profileError) {
-        setError("Failed to create your profile. Please try again.");
-        return false;
-      }
-    }
-
-    await refreshAuth();
-
-    router.replace(
-      onboardingEntryFor(role) as Parameters<typeof router.replace>[0]
-    );
-    return true;
-  }
-
-  if (!role) return null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -231,11 +65,7 @@ export default function SignupScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
             <LucideIcon name="ChevronLeft" size={20} color={Colors.light.textPrimary} />
           </TouchableOpacity>
 
@@ -243,10 +73,7 @@ export default function SignupScreen() {
             <Text style={styles.heading}>Create your account</Text>
             <View style={styles.subRow}>
               <Text style={styles.subheading}>Already have an account? </Text>
-              <TouchableOpacity
-                onPress={() => router.replace("/auth/login")}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity onPress={() => router.replace("/auth/login")} activeOpacity={0.7}>
                 <Text style={styles.subLink}>Log in</Text>
               </TouchableOpacity>
             </View>
@@ -257,41 +84,6 @@ export default function SignupScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
-
-          <View style={styles.ssoRow}>
-            {Platform.OS === "ios" && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={
-                  AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
-                }
-                buttonStyle={
-                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
-                cornerRadius={Radius.sm}
-                style={styles.ssoHalf}
-                onPress={handleApple}
-              />
-            )}
-            <TouchableOpacity
-              style={[
-                styles.googleBtn,
-                Platform.OS !== "ios" && styles.ssoFull,
-              ]}
-              onPress={handleGoogle}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.googleG}>G</Text>
-              <Text style={styles.googleText}>
-                {Platform.OS === "ios" ? "Google" : "Continue with Google"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerLabel}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
@@ -347,6 +139,10 @@ export default function SignupScreen() {
               <Text style={styles.inputHint}>At least 8 characters</Text>
             </View>
           </View>
+
+          <View style={styles.trustRow}>
+            <Text style={styles.trustText}>We'll never sell your data. Ever.</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -363,7 +159,6 @@ export default function SignupScreen() {
             <Text style={styles.primaryButtonText}>Create Account</Text>
           )}
         </TouchableOpacity>
-        <Text style={styles.trustText}>We'll never sell your data. Ever.</Text>
       </View>
     </SafeAreaView>
   );
@@ -379,7 +174,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xl2,
-    paddingBottom: 32,
+    paddingBottom: 120,
   },
   backButton: {
     width: 44,
@@ -390,13 +185,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   headerBlock: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   heading: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 20,
     color: Colors.light.textPrimary,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   subRow: {
     flexDirection: "row",
@@ -425,57 +220,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
-  },
-  ssoRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  ssoHalf: {
-    flex: 1,
-    height: 48,
-  },
-  googleBtn: {
-    flex: 1,
-    height: 48,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.light.borderDefault,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  ssoFull: {
-    flex: 1,
-  },
-  googleG: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 17,
-    color: "#4285F4",
-    lineHeight: 20,
-  },
-  googleText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.light.borderSubtle,
-  },
-  dividerLabel: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
   },
   form: { gap: Spacing.md },
   inputGroup: { gap: Spacing.xs },
@@ -513,12 +257,20 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     marginLeft: 4,
   },
+  trustRow: {
+    marginTop: Spacing.xl,
+    alignItems: "center",
+  },
+  trustText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+  },
   footer: {
     paddingHorizontal: Spacing.md,
-    paddingBottom: Platform.OS === "web" ? 24 : 16,
+    paddingBottom: Platform.OS === "web" ? 24 : 0,
     paddingTop: Spacing.md,
     backgroundColor: Colors.light.bgPrimary,
-    gap: Spacing.mdSm,
   },
   primaryButton: {
     height: 48,
@@ -532,11 +284,5 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
-  },
-  trustText: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.caption,
-    color: Colors.light.textTertiary,
-    textAlign: "center",
   },
 });

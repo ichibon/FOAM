@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Platform } from "react-native";
-import { Stack, router, usePathname } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -47,7 +47,6 @@ function mainTabFor(role: UserRole): string {
 
 function RootLayoutNav() {
   const { session, role, onboardingComplete, loading } = useAuth();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
@@ -58,9 +57,6 @@ function RootLayoutNav() {
     }
 
     if (!role) {
-      // Don't bounce the user mid-SSO signup — the signup screen writes the
-      // role and navigates itself. Redirecting here would race with that write.
-      if (pathname === "/auth/signup") return;
       router.replace("/auth/role-select");
       return;
     }
@@ -73,7 +69,7 @@ function RootLayoutNav() {
 
     const tab = mainTabFor(role);
     router.replace(tab as Parameters<typeof router.replace>[0]);
-  }, [session, role, onboardingComplete, loading, pathname]);
+  }, [session, role, onboardingComplete, loading]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

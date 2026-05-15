@@ -28,6 +28,7 @@ interface RawBookingRow {
   service_packages: { name: string; base_price: number } | null;
   total: number | null;
   subtotal: number | null;
+  booking_contacts: { full_name: string | null } | null;
 }
 
 interface RawTeamMember {
@@ -232,7 +233,8 @@ export default function AssignJobScreen() {
         .select(
           "id, status, scheduled_at, estimated_duration_mins, crew_member_id, total, subtotal," +
           "users!bookings_customer_id_fkey(full_name)," +
-          "service_packages(name,base_price)"
+          "service_packages(name,base_price)," +
+          "booking_contacts(full_name)"
         )
         .eq("id", bookingId)
         .single();
@@ -246,7 +248,7 @@ export default function AssignJobScreen() {
       const scheduledAt = new Date(b.scheduled_at);
       const ctx: BookingContext = {
         id: b.id,
-        customerName: b.users?.full_name ?? "Customer",
+        customerName: b.users?.full_name ?? b.booking_contacts?.full_name ?? "Customer",
         packageName: b.service_packages?.name ?? "Service",
         scheduledAt,
         timeLabel: formatTime(scheduledAt),

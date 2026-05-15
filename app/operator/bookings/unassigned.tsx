@@ -27,6 +27,7 @@ interface RawUnassignedBooking {
   users: { full_name: string | null } | null;
   vehicles: { make: string | null; model: string | null; year: number | null; color: string | null } | null;
   service_packages: { name: string; base_price: number } | null;
+  booking_contacts: { full_name: string | null; vehicle_make: string | null; vehicle_model: string | null; vehicle_year: number | null; vehicle_color: string | null } | null;
 }
 
 interface RawTeamMember {
@@ -167,7 +168,8 @@ export default function UnassignedJobsScreen() {
             "id, status, scheduled_at, estimated_duration_mins, service_address, subtotal, total," +
             "users!bookings_customer_id_fkey(full_name)," +
             "vehicles(make,model,year,color)," +
-            "service_packages(name,base_price)"
+            "service_packages(name,base_price)," +
+            "booking_contacts(full_name,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("detailer_id", detailerId)
           .in("status", ["confirmed", "requested"])
@@ -221,8 +223,11 @@ export default function UnassignedJobsScreen() {
       const cards: UnassignedCard[] = rawBookings.map((b) => {
         const scheduledAt = new Date(b.scheduled_at);
         const veh = b.vehicles;
+        const contact = b.booking_contacts;
         const vehicleDesc = veh
           ? [veh.year, veh.make, veh.model, veh.color].filter(Boolean).join(" ")
+          : contact
+          ? [contact.vehicle_year, contact.vehicle_make, contact.vehicle_model, contact.vehicle_color].filter(Boolean).join(" ") || "Vehicle (walk-in)"
           : "Vehicle";
 
         const crewAvailability: CrewAvailability[] = rawMembers.map((m) => {
@@ -246,7 +251,7 @@ export default function UnassignedJobsScreen() {
           timeLabel: formatTime(scheduledAt),
           dateLabel: formatDateShort(scheduledAt),
           durationLabel: formatDuration(b.estimated_duration_mins),
-          customerName: b.users?.full_name ?? "Customer",
+          customerName: b.users?.full_name ?? b.booking_contacts?.full_name ?? "Customer",
           vehicleDesc,
           packageName: b.service_packages?.name ?? "Service",
           price: b.total ?? b.subtotal ?? b.service_packages?.base_price ?? null,

@@ -25,6 +25,7 @@ interface RawBookingRow {
   subtotal: number | null;
   users: { full_name: string | null } | null;
   service_packages: { name: string; base_price: number } | null;
+  booking_contacts: { full_name: string | null } | null;
 }
 
 interface RawTeamMemberRow {
@@ -141,7 +142,8 @@ export default function CrewAssignmentScreen() {
           .select(
             "id, scheduled_at, estimated_duration_mins, service_address, total, subtotal," +
             "users!bookings_customer_id_fkey(full_name)," +
-            "service_packages(name,base_price)"
+            "service_packages(name,base_price)," +
+            "booking_contacts(full_name)"
           )
           .eq("id", bookingId)
           .single(),
@@ -189,7 +191,7 @@ export default function CrewAssignmentScreen() {
 
       setSummary({
         bookingId: b.id,
-        customerName: b.users?.full_name ?? "Customer",
+        customerName: b.users?.full_name ?? b.booking_contacts?.full_name ?? "Customer",
         packageName: b.service_packages?.name ?? "Service",
         scheduledAt,
         timeLabel: formatTime(scheduledAt),

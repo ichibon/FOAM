@@ -39,7 +39,7 @@ interface RawUser {
 
 // ─── Screen types ──────────────────────────────────────────────────────────────
 
-type ScreenState = "loading" | "error" | "empty" | "morning" | "main";
+type ScreenState = "loading" | "fetch_error" | "empty" | "morning" | "main";
 type MemberStatus = "on_job" | "en_route" | "available" | "off_today";
 type ActivityIcon = "warning" | "star" | "arrow-forward" | "checkmark" | "add";
 
@@ -542,8 +542,7 @@ export default function OperatorTodayScreen() {
       setScreenState(jobs.length === 0 ? "empty" : isMorning ? "morning" : "main");
     } catch (err) {
       console.warn("[OperatorToday] fetchData error", err);
-      // Fall back to demo data so the UI is always visible
-      setScreenState("main");
+      setScreenState("fetch_error");
     }
   }, [user]);
 
@@ -590,26 +589,44 @@ export default function OperatorTodayScreen() {
     );
   }
 
+  // ── Fetch error ──────────────────────────────────────────────────────────────
+  if (screenState === "fetch_error") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerFill}>
+          <Ionicons name="cloud-offline-outline" size={40} color={Colors.light.textTertiary} />
+          <Text style={[styles.emptyHeadline, { marginTop: Spacing.lg, fontSize: 20 }]}>
+            Couldn't load your schedule
+          </Text>
+          <Text style={[styles.emptyBody, { marginBottom: Spacing.xl }]}>
+            Check your connection and try again.
+          </Text>
+          <TouchableOpacity style={styles.emptyCtaBtn} onPress={fetchData}>
+            <Text style={styles.emptyCtaText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   // ── Shared data for morning + main ───────────────────────────────────────────
   const todayLabel = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",
   });
   const allAssigned = stats.unassigned === 0;
-  const displayMembers = teamMembers.length > 0 ? teamMembers : MOCK_TEAM_MEMBERS;
-  const displayJobs    = todayJobs.length  > 0 ? todayJobs  : MOCK_JOBS;
 
   // Classify jobs using canonical DB field (crew_member_id), not display string
-  const unassignedJobs = displayJobs.filter(
+  const unassignedJobs = todayJobs.filter(
     (j) => j.status === "confirmed" && !j.crew_member_id
   );
-  const assignedJobs = displayJobs.filter(
+  const assignedJobs = todayJobs.filter(
     (j) => j.status === "in_progress" || (j.status === "confirmed" && j.crew_member_id)
   );
-  const completedJobs = displayJobs.filter((j) => j.status === "completed");
+  const completedJobs = todayJobs.filter((j) => j.status === "completed");
 
   // ── Morning ──────────────────────────────────────────────────────────────────
   if (screenState === "morning") {
-    const totalJobs = displayJobs.length;
+    const totalJobs = todayJobs.length;
     const subtitle = `${todayLabel} · ${totalJobs} jobs today · ${allAssigned ? "All assigned" : `${stats.unassigned} unassigned`}`;
     return (
       <SafeAreaView style={styles.container}>
@@ -626,7 +643,7 @@ export default function OperatorTodayScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Team Status</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
-              {displayMembers.map((m) => <TeamPillChip key={m.id} member={m} />)}
+              {teamMembers.map((m) => <TeamPillChip key={m.id} member={m} />)}
             </ScrollView>
           </View>
 
@@ -651,12 +668,12 @@ export default function OperatorTodayScreen() {
               <Text style={styles.sectionTitle}>Live Jobs</Text>
               <TouchableOpacity><Text style={styles.sectionLink}>View All</Text></TouchableOpacity>
             </View>
-            {displayJobs.slice(0, 5).map((job) => (
+            {todayJobs.slice(0, 5).map((job) => (
               <UpcomingJobCard key={job.id} job={job} />
             ))}
-            {displayJobs.length > 5 && (
+            {todayJobs.length > 5 && (
               <Text style={styles.moreJobsHint}>
-                + {displayJobs.length - 5} more jobs today
+                + {todayJobs.length - 5} more jobs today
               </Text>
             )}
           </View>
@@ -747,7 +764,7 @@ export default function OperatorTodayScreen() {
             contentContainerStyle={styles.chipCardRow}
             style={styles.chipCardScroll}
           >
-            {displayMembers.map((m) => <TeamChipCard key={m.id} member={m} />)}
+            {teamMembers.map((m) => <TeamChipCard key={m.id} member={m} />)}
           </ScrollView>
         </View>
 
@@ -887,37 +904,6 @@ function StatsGrid({ stats }: { stats: OperatorStats }) {
     </View>
   );
 }
-
-// ─── Mock data (used when DB has no rows yet) ──────────────────────────────────
-
-const MOCK_TEAM_MEMBERS: TeamMember[] = [
-  { id: "m1", name: "Jordan",  initials: "JO", status: "on_job" },
-  { id: "m2", name: "Kayla",   initials: "KA", status: "on_job" },
-  { id: "m3", name: "Devon",   initials: "DE", status: "en_route" },
-  { id: "m4", name: "Trey",    initials: "TR", status: "available" },
-  { id: "m5", name: "Simone",  initials: "SI", status: "off_today" },
-];
-
-const MOCK_JOBS: JobCard[] = [
-  {
-    id: "j1", scheduledAt: new Date(), timeLabel: "11:30 AM", durationLabel: "~2 hrs",
-    customerName: "Christina L.", vehicleDesc: "2022 Mercedes GLE · Silver",
-    packageName: "Full Interior Detail", status: "confirmed", crew_member_id: null,
-  },
-  {
-    id: "j2", scheduledAt: new Date(), timeLabel: "9:00 AM", durationLabel: "~2.5 hrs",
-    customerName: "Terrence W.", vehicleDesc: "2021 BMW X5 · Midnight Blue",
-    packageName: "Full Interior Detail", status: "in_progress",
-    crew_member_id: "m1", assignedTo: "Jordan", assignedToInitials: "JO",
-    startedMinAgo: 47, estDoneLabel: "11:30 AM",
-  },
-  {
-    id: "j3", scheduledAt: new Date(), timeLabel: "8:45 AM", durationLabel: "~1 hr",
-    customerName: "Marcus R.", vehicleDesc: "2020 Ford F-150",
-    packageName: "Exterior Wash", status: "completed",
-    crew_member_id: "m1", assignedTo: "Jordan", assignedToInitials: "JO",
-  },
-];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

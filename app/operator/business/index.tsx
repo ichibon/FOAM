@@ -329,10 +329,12 @@ export default function BusinessScreen() {
         const teamMembers = (teamRes.data as TeamMemberRow[] | null) ?? [];
         const todayRaw = (todayRes.data as RawBookingRow[] | null) ?? [];
 
-        const total = bookings.reduce((s, b) => s + (b.total ?? b.subtotal ?? 0) + b.tip_amount, 0);
+        const bookingAmount = (b: { total?: number | null; subtotal?: number | null; tip_amount: number }) =>
+          b.total ?? ((b.subtotal ?? 0) + b.tip_amount);
+        const total = bookings.reduce((s, b) => s + bookingAmount(b), 0);
         const pending = bookings
           .filter((b) => b.status === "requested" || b.status === "confirmed")
-          .reduce((s, b) => s + (b.total ?? b.subtotal ?? 0) + b.tip_amount, 0);
+          .reduce((s, b) => s + bookingAmount(b), 0);
         const confirmed = total - pending;
 
         setTotalRevenue(total);
@@ -348,7 +350,7 @@ export default function BusinessScreen() {
           const pkg = b.service_packages?.name ?? "Other";
           if (!svcMap[pkg]) svcMap[pkg] = { name: pkg, count: 0, revenue: 0 };
           svcMap[pkg].count += 1;
-          svcMap[pkg].revenue += (b.total ?? b.subtotal ?? 0) + b.tip_amount;
+          svcMap[pkg].revenue += bookingAmount(b);
         }
         setServiceBreakdown(
           Object.values(svcMap).sort((a, b) => b.revenue - a.revenue)
@@ -369,7 +371,7 @@ export default function BusinessScreen() {
         for (const b of bookings) {
           if (b.crew_member_id && memberMap[b.crew_member_id]) {
             memberMap[b.crew_member_id].jobCount += 1;
-            memberMap[b.crew_member_id].revenue += (b.total ?? b.subtotal ?? 0) + b.tip_amount;
+            memberMap[b.crew_member_id].revenue += bookingAmount(b);
           }
         }
         const breakdown = Object.values(memberMap)
@@ -396,7 +398,7 @@ export default function BusinessScreen() {
             customerName,
             vehicleDesc,
             packageName: b.service_packages?.name ?? "Service",
-            amount: (b.total ?? b.subtotal ?? 0) + b.tip_amount,
+            amount: bookingAmount(b),
             status: b.status,
             crewName: b.crew_member_id ? (crewNameMap[b.crew_member_id] ?? "") : "",
           };
@@ -414,7 +416,10 @@ export default function BusinessScreen() {
   useFocusEffect(
     useCallback(() => {
       load(period);
-    }, [load, period])
+      // Only re-run when the screen gains focus or `load` identity changes.
+      // Period changes are handled by handlePeriod which calls load() directly.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [load])
   );
 
   function handlePeriod(p: Period) {

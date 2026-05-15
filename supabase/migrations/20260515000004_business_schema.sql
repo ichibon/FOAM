@@ -1,10 +1,7 @@
--- Add default_commission_rate and tip_distribution to detailer_profiles
+-- Add default_commission_rate to detailer_profiles.
+-- tip_distribution_model already exists (added by stripe migration); no new column needed.
 ALTER TABLE detailer_profiles
   ADD COLUMN IF NOT EXISTS default_commission_rate NUMERIC(5,2) NOT NULL DEFAULT 38;
-
-ALTER TABLE detailer_profiles
-  ADD COLUMN IF NOT EXISTS tip_distribution TEXT NOT NULL DEFAULT 'assigned'
-  CHECK (tip_distribution IN ('assigned', 'split_daily'));
 
 -- Crew time entries: tracks when a crew member clocked in/out on a booking.
 -- Used as the primary source for payroll earnings calculation.

@@ -71,14 +71,14 @@ export default function CommissionScreen() {
 
       const { data: profileData, error: profileErr } = await supabase
         .from("detailer_profiles")
-        .select("id, default_commission_rate, tip_distribution")
+        .select("id, default_commission_rate, tip_distribution_model")
         .eq("user_id", user.id)
         .single();
       if (profileErr || !profileData) throw profileErr ?? new Error("no profile");
 
       const pid: string = profileData.id;
       const defRate = profileData.default_commission_rate ?? 38;
-      const tipDist: TipDistribution = profileData.tip_distribution ?? "assigned";
+      const tipDist: TipDistribution = profileData.tip_distribution_model ?? "assigned";
 
       setProfileId(pid);
       setDefaultRate(defRate);
@@ -166,7 +166,7 @@ export default function CommissionScreen() {
 
       const profileUpdates: Record<string, unknown> = {};
       if (defaultRate !== originalDefaultRate) profileUpdates.default_commission_rate = defaultRate;
-      if (tipDistribution !== originalTipDistribution) profileUpdates.tip_distribution = tipDistribution;
+      if (tipDistribution !== originalTipDistribution) profileUpdates.tip_distribution_model = tipDistribution;
 
       if (Object.keys(profileUpdates).length > 0) {
         const { error: profileErr } = await supabase

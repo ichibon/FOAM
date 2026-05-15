@@ -251,6 +251,17 @@ export interface RainProtectionClaim {
   created_at: string;
 }
 
+export interface CrewTimeEntry {
+  id: string;
+  booking_id: string;
+  crew_member_id: string;
+  detailer_id: string;
+  clocked_in_at?: string;
+  clocked_out_at?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export interface ApiResponse<T> {
   data: T | null;
   error: string | null;

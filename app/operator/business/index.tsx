@@ -68,6 +68,12 @@ interface TodayJob {
   crewName: string;
 }
 
+interface ServiceBreakdown {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
 const PERIODS: { key: Period; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "week", label: "This Week" },
@@ -261,8 +267,11 @@ export default function BusinessScreen() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [pendingRevenue, setPendingRevenue] = useState(0);
   const [confirmedRevenue, setConfirmedRevenue] = useState(0);
+  const [jobCount, setJobCount] = useState(0);
+  const [avgTicket, setAvgTicket] = useState(0);
   const [chartData, setChartData] = useState<ChartBar[]>([]);
   const [teamBreakdown, setTeamBreakdown] = useState<TeamBreakdown[]>([]);
+  const [serviceBreakdown, setServiceBreakdown] = useState<ServiceBreakdown[]>([]);
   const [todayJobs, setTodayJobs] = useState<TodayJob[]>([]);
 
   const load = useCallback(
@@ -329,6 +338,22 @@ export default function BusinessScreen() {
         setTotalRevenue(total);
         setPendingRevenue(pending);
         setConfirmedRevenue(confirmed);
+
+        const count = bookings.length;
+        setJobCount(count);
+        setAvgTicket(count > 0 ? Math.round(total / count) : 0);
+
+        const svcMap: Record<string, ServiceBreakdown> = {};
+        for (const b of bookings) {
+          const pkg = b.service_packages?.name ?? "Other";
+          if (!svcMap[pkg]) svcMap[pkg] = { name: pkg, count: 0, revenue: 0 };
+          svcMap[pkg].count += 1;
+          svcMap[pkg].revenue += (b.total ?? b.subtotal ?? 0) + b.tip_amount;
+        }
+        setServiceBreakdown(
+          Object.values(svcMap).sort((a, b) => b.revenue - a.revenue)
+        );
+
         setChartData(buildChartData(bookings, p));
 
         const memberMap: Record<string, TeamBreakdown> = {};
@@ -487,6 +512,18 @@ export default function BusinessScreen() {
             </View>
           </View>
 
+          {/* Job count + avg ticket stats */}
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, styles.shadow]}>
+              <Text style={styles.statValue}>{jobCount}</Text>
+              <Text style={styles.statLabel}>Total Jobs</Text>
+            </View>
+            <View style={[styles.statCard, styles.shadow]}>
+              <Text style={styles.statValue}>{jobCount > 0 ? fmtCurrency(avgTicket) : "—"}</Text>
+              <Text style={styles.statLabel}>Avg Ticket</Text>
+            </View>
+          </View>
+
           {/* Bar chart */}
           <View style={[styles.card, styles.shadow]}>
             <View style={styles.chartHeader}>
@@ -557,6 +594,42 @@ export default function BusinessScreen() {
                     </View>
                   </View>
                 ))}
+              </View>
+            </View>
+          )}
+
+          {/* Service type breakdown */}
+          {serviceBreakdown.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>BY SERVICE TYPE</Text>
+              </View>
+              <View style={[styles.card, styles.shadow, { padding: 0 }]}>
+                {serviceBreakdown.map((s, idx) => {
+                  const pct = totalRevenue > 0 ? (s.revenue / totalRevenue) * 100 : 0;
+                  return (
+                    <View
+                      key={s.name}
+                      style={[
+                        styles.svcRow,
+                        idx < serviceBreakdown.length - 1 && styles.svcRowBorder,
+                      ]}
+                    >
+                      <View style={styles.svcInfo}>
+                        <Text style={styles.svcName}>{s.name}</Text>
+                        <Text style={styles.svcCount}>
+                          {s.count} job{s.count !== 1 ? "s" : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.svcRight}>
+                        <View style={styles.svcBarBg}>
+                          <View style={[styles.svcBarFill, { width: `${Math.max(pct, 2)}%` }]} />
+                        </View>
+                        <Text style={styles.svcRevenue}>{fmtCurrency(s.revenue)}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -890,5 +963,79 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.foamBlue,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    padding: Spacing.md,
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  statValue: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 22,
+    color: Colors.light.textPrimary,
+  },
+  statLabel: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+  },
+  svcRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.mdSm,
+    minHeight: 52,
+    gap: Spacing.md,
+  },
+  svcRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+  },
+  svcInfo: { minWidth: 100 },
+  svcName: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  svcCount: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginTop: 1,
+  },
+  svcRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  svcBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.pill,
+    overflow: "hidden",
+  },
+  svcBarFill: {
+    height: "100%",
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.pill,
+  },
+  svcRevenue: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textPrimary,
+    minWidth: 48,
+    textAlign: "right",
   },
 });

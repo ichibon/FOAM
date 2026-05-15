@@ -33,15 +33,6 @@ interface TeamMemberEarning {
   serviceCommission: number;
   tipsReceived: number;
   totalOwed: number;
-  isPaid: boolean;
-}
-
-interface RawBookingRow {
-  id: string;
-  status: string;
-  subtotal: number | null;
-  tip_amount: number;
-  crew_member_id: string | null;
 }
 
 interface RawTeamMemberRow {
@@ -50,13 +41,31 @@ interface RawTeamMemberRow {
   commission_rate: number | null;
 }
 
+interface RawBookingRow {
+  id: string;
+  subtotal: number | null;
+  tip_amount: number;
+  crew_member_id: string | null;
+}
+
+interface RawTimeEntryRow {
+  id: string;
+  booking_id: string;
+  crew_member_id: string;
+}
+
 const PERIODS: { key: PayPeriod; label: string }[] = [
   { key: "week", label: "This Week" },
   { key: "month", label: "This Month" },
   { key: "alltime", label: "All Time" },
 ];
 
-function getPeriodRange(period: PayPeriod): { start: string; end: string; label: string; payoutDate: string } {
+function getPeriodMeta(period: PayPeriod): {
+  start: string;
+  end: string;
+  label: string;
+  payoutDate: string;
+} {
   const now = new Date();
   const end = new Date(now);
   end.setHours(23, 59, 59, 999);
@@ -67,23 +76,23 @@ function getPeriodRange(period: PayPeriod): { start: string; end: string; label:
     const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     start.setDate(start.getDate() + diff);
     start.setHours(0, 0, 0, 0);
-    const nextMonday = new Date(start);
-    nextMonday.setDate(nextMonday.getDate() + 7);
+    const payout = new Date(start);
+    payout.setDate(payout.getDate() + 7);
     return {
       start: start.toISOString(),
       end: end.toISOString(),
       label: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-      payoutDate: nextMonday.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
+      payoutDate: payout.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
     };
   }
   if (period === "month") {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const payout = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     return {
       start: start.toISOString(),
       end: end.toISOString(),
       label: now.toLocaleString("default", { month: "long", year: "numeric" }),
-      payoutDate: nextMonth.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
+      payoutDate: payout.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
     };
   }
   const start = new Date(2024, 0, 1);
@@ -112,7 +121,9 @@ export default function PayrollScreen() {
   const [fetchError, setFetchError] = useState(false);
   const [members, setMembers] = useState<TeamMemberEarning[]>([]);
   const [paidState, setPaidState] = useState<Record<string, boolean>>({});
-  const [periodMeta, setPeriodMeta] = useState({ label: "", payoutDate: "" });
+  const [periodLabel, setPeriodLabel] = useState("");
+  const [payoutDate, setPayoutDate] = useState("");
+  const [usedFallback, setUsedFallback] = useState(false);
 
   const load = useCallback(
     async (p: PayPeriod) => {
@@ -120,7 +131,8 @@ export default function PayrollScreen() {
       setLoading(true);
       setFetchError(false);
       try {
-        const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+        const { getSupabase } =
+          require("@/lib/supabase") as typeof import("@/lib/supabase");
         const supabase = getSupabase();
 
         const { data: profileData, error: profileErr } = await supabase
@@ -131,8 +143,9 @@ export default function PayrollScreen() {
         if (profileErr || !profileData) throw profileErr ?? new Error("no profile");
 
         const profileId: string = profileData.id;
-        const meta = getPeriodRange(p);
-        setPeriodMeta({ label: meta.label, payoutDate: meta.payoutDate });
+        const meta = getPeriodMeta(p);
+        setPeriodLabel(meta.label);
+        setPayoutDate(meta.payoutDate);
 
         const [teamRes, bookingsRes] = await Promise.all([
           supabase
@@ -142,7 +155,7 @@ export default function PayrollScreen() {
             .eq("is_active", true),
           supabase
             .from("bookings")
-            .select("id, status, subtotal, tip_amount, crew_member_id")
+            .select("id, subtotal, tip_amount, crew_member_id")
             .eq("detailer_id", profileId)
             .eq("status", "completed")
             .gte("scheduled_at", meta.start)
@@ -154,22 +167,81 @@ export default function PayrollScreen() {
         const teamMembers = (teamRes.data as RawTeamMemberRow[] | null) ?? [];
         const bookings = (bookingsRes.data as RawBookingRow[] | null) ?? [];
 
+        // Attempt to load crew_time_entries to attribute bookings to crew members
+        // who actually clocked in, rather than relying solely on crew_member_id.
+        const bookingIds = bookings.map((b) => b.id);
+        let timeEntries: RawTimeEntryRow[] = [];
+        let usingFallback = true;
+
+        if (bookingIds.length > 0) {
+          const { data: teData } = await supabase
+            .from("crew_time_entries")
+            .select("id, booking_id, crew_member_id")
+            .in("booking_id", bookingIds);
+          if (teData && teData.length > 0) {
+            timeEntries = teData as RawTimeEntryRow[];
+            usingFallback = false;
+          }
+        }
+
+        setUsedFallback(usingFallback);
+
+        // Build a map: booking_id → crew_member_id
+        // If time entries exist, they take precedence over booking.crew_member_id.
+        const bookingToCrew: Record<string, string[]> = {};
+        if (!usingFallback) {
+          for (const te of timeEntries) {
+            if (!bookingToCrew[te.booking_id]) bookingToCrew[te.booking_id] = [];
+            if (!bookingToCrew[te.booking_id].includes(te.crew_member_id)) {
+              bookingToCrew[te.booking_id].push(te.crew_member_id);
+            }
+          }
+        } else {
+          for (const b of bookings) {
+            if (b.crew_member_id) {
+              bookingToCrew[b.id] = [b.crew_member_id];
+            }
+          }
+        }
+
+        const rateMap: Record<string, number> = {};
+        for (const tm of teamMembers) rateMap[tm.id] = tm.commission_rate ?? 38;
+
+        // Aggregate earnings per crew member
+        const earningsMap: Record<
+          string,
+          { serviceRevenue: number; tips: number; jobCount: number }
+        > = {};
+        for (const tm of teamMembers) {
+          earningsMap[tm.id] = { serviceRevenue: 0, tips: 0, jobCount: 0 };
+        }
+
+        for (const b of bookings) {
+          const assignedCrew = bookingToCrew[b.id] ?? [];
+          if (assignedCrew.length === 0) continue;
+          // Split revenue evenly if multiple crew on same booking
+          const splitCount = assignedCrew.length;
+          for (const crewId of assignedCrew) {
+            if (!earningsMap[crewId]) continue;
+            earningsMap[crewId].serviceRevenue += (b.subtotal ?? 0) / splitCount;
+            earningsMap[crewId].tips += b.tip_amount / splitCount;
+            earningsMap[crewId].jobCount += 1;
+          }
+        }
+
         const earnings: TeamMemberEarning[] = teamMembers.map((tm) => {
-          const rate = tm.commission_rate ?? 38;
-          const memberBookings = bookings.filter((b) => b.crew_member_id === tm.id);
-          const serviceRevenue = memberBookings.reduce((s, b) => s + (b.subtotal ?? 0), 0);
-          const tips = memberBookings.reduce((s, b) => s + b.tip_amount, 0);
-          const commission = Math.round((serviceRevenue * rate) / 100);
+          const rate = rateMap[tm.id];
+          const e = earningsMap[tm.id] ?? { serviceRevenue: 0, tips: 0, jobCount: 0 };
+          const commission = Math.round((e.serviceRevenue * rate) / 100);
           return {
             id: tm.id,
             name: tm.users?.full_name ?? "Team Member",
             initials: getInitials(tm.users?.full_name ?? "TM"),
-            jobCount: memberBookings.length,
+            jobCount: e.jobCount,
             commissionRate: rate,
             serviceCommission: commission,
-            tipsReceived: tips,
-            totalOwed: commission + tips,
-            isPaid: false,
+            tipsReceived: Math.round(e.tips),
+            totalOwed: commission + Math.round(e.tips),
           };
         });
 
@@ -202,18 +274,24 @@ export default function PayrollScreen() {
   function handleRunPayroll() {
     Alert.alert(
       "Run Payroll",
-      "Automated payroll disbursement is coming soon. For now, use the per-member 'Mark as Paid' buttons.",
+      "Automated payroll disbursement is coming soon. Use the per-member 'Mark as Paid' buttons for now.",
       [{ text: "Got it" }]
     );
   }
 
   const totalPayout = members.reduce((s, m) => s + m.totalOwed, 0);
-  const allPaid = members.length > 0 && members.every((m) => paidState[m.id]);
+  const allPaid =
+    members.length > 0 && members.every((m) => paidState[m.id]);
+  const activeMembers = members.filter((m) => m.jobCount > 0);
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.headerRow}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
           <Ionicons name="chevron-back" size={20} color={Colors.light.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Payroll Summary</Text>
@@ -226,7 +304,11 @@ export default function PayrollScreen() {
         </View>
       ) : fetchError ? (
         <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={40} color={Colors.warningLight} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={40}
+            color={Colors.warningLight}
+          />
           <Text style={styles.errorText}>Couldn't load payroll data</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => load(period)}>
             <Text style={styles.retryText}>Retry</Text>
@@ -252,7 +334,12 @@ export default function PayrollScreen() {
                   onPress={() => handlePeriod(p.key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.chipText, period === p.key && styles.chipTextActive]}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      period === p.key && styles.chipTextActive,
+                    ]}
+                  >
                     {p.label}
                   </Text>
                 </TouchableOpacity>
@@ -262,11 +349,23 @@ export default function PayrollScreen() {
             {/* Pay period info */}
             <View style={[styles.card, styles.shadow]}>
               <Text style={styles.metaLabel}>PAY PERIOD</Text>
-              <Text style={styles.periodLabel}>{periodMeta.label}</Text>
-              {periodMeta.payoutDate !== "On demand" && (
+              <Text style={styles.periodLabelText}>{periodLabel}</Text>
+              {payoutDate !== "On demand" && (
                 <Text style={styles.periodSub}>
-                  Commission paid out on {periodMeta.payoutDate}
+                  Commission paid out on {payoutDate}
                 </Text>
+              )}
+              {usedFallback && (
+                <View style={styles.fallbackNote}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={13}
+                    color={Colors.foamBlue}
+                  />
+                  <Text style={styles.fallbackText}>
+                    Earnings based on completed bookings. Time-entry based tracking activates once crew members start clocking in.
+                  </Text>
+                </View>
               )}
             </View>
 
@@ -277,16 +376,25 @@ export default function PayrollScreen() {
             </View>
 
             {/* Member cards */}
-            {members.length === 0 ? (
+            {activeMembers.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Ionicons name="people-outline" size={32} color={Colors.light.textTertiary} />
-                <Text style={styles.emptyText}>No completed jobs this period</Text>
+                <Ionicons
+                  name="people-outline"
+                  size={32}
+                  color={Colors.light.textTertiary}
+                />
+                <Text style={styles.emptyText}>
+                  No completed jobs this period
+                </Text>
               </View>
             ) : (
-              members.map((m) => {
+              activeMembers.map((m) => {
                 const isPaid = paidState[m.id] ?? false;
                 return (
-                  <View key={m.id} style={[styles.card, styles.shadow, styles.memberCard]}>
+                  <View
+                    key={m.id}
+                    style={[styles.card, styles.shadow, styles.memberCard]}
+                  >
                     <View style={styles.memberHeader}>
                       <View style={styles.memberLeft}>
                         <View style={styles.avatar}>
@@ -294,7 +402,9 @@ export default function PayrollScreen() {
                         </View>
                         <Text style={styles.memberName}>{m.name}</Text>
                       </View>
-                      <Text style={styles.jobCount}>{m.jobCount} job{m.jobCount !== 1 ? "s" : ""}</Text>
+                      <Text style={styles.jobCount}>
+                        {m.jobCount} job{m.jobCount !== 1 ? "s" : ""}
+                      </Text>
                     </View>
 
                     <View style={styles.breakdown}>
@@ -302,15 +412,21 @@ export default function PayrollScreen() {
                         <Text style={styles.breakdownLabel}>
                           Service commission ({m.commissionRate}%)
                         </Text>
-                        <Text style={styles.breakdownValue}>{fmtCurrency(m.serviceCommission)}</Text>
+                        <Text style={styles.breakdownValue}>
+                          {fmtCurrency(m.serviceCommission)}
+                        </Text>
                       </View>
                       <View style={styles.breakdownRow}>
                         <Text style={styles.breakdownLabel}>Tips received</Text>
-                        <Text style={styles.breakdownValue}>{fmtCurrency(m.tipsReceived)}</Text>
+                        <Text style={styles.breakdownValue}>
+                          {fmtCurrency(m.tipsReceived)}
+                        </Text>
                       </View>
                       <View style={styles.totalBreakdown}>
                         <Text style={styles.totalOwedLabel}>Total owed</Text>
-                        <Text style={styles.totalOwedAmount}>{fmtCurrency(m.totalOwed)}</Text>
+                        <Text style={styles.totalOwedAmount}>
+                          {fmtCurrency(m.totalOwed)}
+                        </Text>
                       </View>
                     </View>
 
@@ -327,7 +443,11 @@ export default function PayrollScreen() {
                         <Text
                           style={[
                             styles.statusBadgeText,
-                            { color: isPaid ? Colors.successLight : Colors.warningLight },
+                            {
+                              color: isPaid
+                                ? Colors.successLight
+                                : Colors.warningLight,
+                            },
                           ]}
                         >
                           {isPaid ? "Paid" : "Pending"}
@@ -338,7 +458,11 @@ export default function PayrollScreen() {
                     {isPaid ? (
                       <View style={styles.paidBtn}>
                         <Text style={styles.paidBtnText}>Paid</Text>
-                        <Ionicons name="checkmark" size={16} color={Colors.successLight} />
+                        <Ionicons
+                          name="checkmark"
+                          size={16}
+                          color={Colors.successLight}
+                        />
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -358,14 +482,16 @@ export default function PayrollScreen() {
           {/* Run Payroll CTA */}
           <View style={styles.ctaContainer}>
             <TouchableOpacity
-              style={[styles.ctaBtn, allPaid && styles.ctaBtnActive]}
+              style={[styles.ctaBtn, allPaid && styles.ctaBtnSuccess]}
               activeOpacity={0.8}
               onPress={handleRunPayroll}
             >
               <Text style={styles.ctaBtnText}>Run Payroll</Text>
             </TouchableOpacity>
             <Text style={styles.ctaNote}>
-              {allPaid ? "All members marked as paid" : "Mark each member as paid individually or run payroll."}
+              {allPaid
+                ? "All members marked as paid"
+                : "Mark each member individually or run payroll."}
             </Text>
           </View>
         </>
@@ -471,7 +597,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: Spacing.xs,
   },
-  periodLabel: {
+  periodLabelText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: 18,
     color: Colors.light.textPrimary,
@@ -481,6 +607,22 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textSecondary,
+  },
+  fallbackNote: {
+    flexDirection: "row",
+    gap: Spacing.xs,
+    alignItems: "flex-start",
+    marginTop: Spacing.sm,
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.xs,
+    padding: Spacing.sm,
+  },
+  fallbackText: {
+    fontFamily: Typography.body,
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    flex: 1,
+    lineHeight: 16,
   },
   totalRow: {
     flexDirection: "row",
@@ -654,7 +796,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaBtnActive: { backgroundColor: Colors.foamBlueHover },
+  ctaBtnSuccess: { backgroundColor: Colors.successLight },
   ctaBtnText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,

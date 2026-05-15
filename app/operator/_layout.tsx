@@ -25,6 +25,8 @@ export default function OperatorLayout() {
   const { user, pendingApproval } = useAuth();
   const [hasTeam, setHasTeam] = useState(false);
 
+  // Redirect on every render cycle when pending — not just on change —
+  // so a pending operator who deep-links or taps a tab cannot bypass lockout.
   useEffect(() => {
     if (pendingApproval) {
       router.replace("/operator/pending");
@@ -49,6 +51,14 @@ export default function OperatorLayout() {
     } catch {
       setHasTeam(false);
     }
+  }
+
+  // Hard render-gate: if the operator's approval is pending, never mount
+  // the tab shell. The useEffect above fires the redirect concurrently,
+  // but this guard ensures the tab bar and its screens are never visible
+  // even for a single frame.
+  if (pendingApproval) {
+    return null;
   }
 
   return (

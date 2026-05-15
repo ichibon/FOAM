@@ -159,6 +159,7 @@ export function DateTimeDrawer({
     if (!hm) return;
     const d = new Date(selYear, selMonth, selDay, hm.h, hm.m);
     onConfirm(d.toISOString());
+    onRequestClose();
   }
 
   // ── Calendar rows ─────────────────────────────────────────────────────────

@@ -97,7 +97,7 @@ export function ComplaintReviewDrawer({
 
       if (!booking) { setLoading(false); return; }
 
-      const b = booking as {
+      const b = booking as unknown as {
         id: string;
         status: string;
         scheduled_at: string;
@@ -374,35 +374,47 @@ export function ComplaintReviewDrawer({
             <View style={styles.card}>
               <Text style={styles.resolveTitle}>Resolve This Complaint</Text>
               <View style={styles.actionStack}>
+                {/* Accept — Issue Refund */}
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.actionBtnPrimary]}
                   activeOpacity={0.8}
-                  onPress={handleCallCustomer}
-                  disabled={!detail.customerPhone}
                 >
-                  <Ionicons name="call-outline" size={16} color={Colors.white} />
-                  <Text style={styles.actionBtnTextPrimary}>
-                    Contact {detail.customerName.split(" ")[0]}
-                  </Text>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={Colors.white} />
+                  <Text style={styles.actionBtnTextPrimary}>Accept — Issue Refund</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnWarning]}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="cash-outline" size={16} color={Colors.warningLight} />
-                  <Text style={[styles.actionBtnTextOutline, { color: Colors.warningLight }]}>
-                    Issue Partial Refund
-                  </Text>
-                </TouchableOpacity>
-
+                {/* Accept — Schedule Re-Do */}
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.actionBtnOutline]}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="calendar-outline" size={16} color={Colors.foamBlue} />
                   <Text style={[styles.actionBtnTextOutline, { color: Colors.foamBlue }]}>
-                    Assign Re-Do Job
+                    Accept — Schedule Re-Do
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Dispute */}
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.actionBtnWarning]}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="shield-outline" size={16} color={Colors.warningLight} />
+                  <Text style={[styles.actionBtnTextOutline, { color: Colors.warningLight }]}>
+                    Dispute Complaint
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Contact */}
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.actionBtnContact]}
+                  activeOpacity={0.8}
+                  onPress={handleCallCustomer}
+                  disabled={!detail.customerPhone}
+                >
+                  <Ionicons name="call-outline" size={16} color={Colors.light.textSecondary} />
+                  <Text style={[styles.actionBtnTextOutline, { color: Colors.light.textSecondary }]}>
+                    Contact {detail.customerName.split(" ")[0]}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -601,6 +613,10 @@ const styles = StyleSheet.create({
   actionBtnOutline: {
     borderWidth: 1,
     borderColor: Colors.foamBlue,
+  },
+  actionBtnContact: {
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
   },
   actionBtnTextPrimary: {
     fontFamily: Typography.bodySemiBold,

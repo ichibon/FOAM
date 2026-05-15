@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import type { ComponentProps } from "react";
 import {
   View,
   Text,
@@ -310,20 +311,22 @@ export function UnitsSelectionDrawer({
 
 // ─── EmptyUnitCard ────────────────────────────────────────────────────────────
 
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+
 function EmptyUnitCard({
   iconName,
   message,
   hint,
   onAdd,
 }: {
-  iconName: string;
+  iconName: IoniconName;
   message: string;
   hint: string;
   onAdd: () => void;
 }) {
   return (
     <View style={emptyStyles.card}>
-      <Ionicons name={iconName as any} size={30} color={Colors.light.textDisabled} />
+      <Ionicons name={iconName} size={30} color={Colors.light.textDisabled} />
       <Text style={emptyStyles.message}>{message}</Text>
       <Text style={emptyStyles.hint}>{hint}</Text>
       <TouchableOpacity style={emptyStyles.addBtn} onPress={onAdd} activeOpacity={0.8}>

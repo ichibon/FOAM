@@ -132,12 +132,13 @@ export default function TeamRosterScreen() {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileErr } = await supabase
         .from("detailer_profiles")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
 
+      if (profileErr) throw profileErr;
       if (!profileData) {
         setMembers([]);
         setScreenState("main");

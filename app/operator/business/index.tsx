@@ -282,12 +282,13 @@ export default function BusinessScreen() {
         const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
         const supabase = getSupabase();
 
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileErr } = await supabase
           .from("detailer_profiles")
           .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
 
+        if (profileErr) throw profileErr;
         if (!profileData) {
           setLoading(false);
           return;
@@ -325,6 +326,10 @@ export default function BusinessScreen() {
                 .order("scheduled_at", { ascending: true })
             : Promise.resolve({ data: [], error: null }),
         ]);
+
+        if (bookingsRes.error) throw bookingsRes.error;
+        if (teamRes.error) throw teamRes.error;
+        if (todayRes.error) throw todayRes.error;
 
         const bookings = (bookingsRes.data as unknown as RawBookingRow[] | null) ?? [];
         const teamMembers = (teamRes.data as unknown as TeamMemberRow[] | null) ?? [];

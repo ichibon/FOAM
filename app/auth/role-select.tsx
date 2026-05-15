@@ -62,7 +62,8 @@ export default function RoleSelectScreen() {
 
       const { error: roleError } = await supabase
         .from("users")
-        .upsert({ id: user.id, role }, { onConflict: "id" });
+        .update({ role })
+        .eq("id", user.id);
       if (roleError) throw roleError;
 
       if (role === "customer") {

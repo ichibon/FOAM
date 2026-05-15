@@ -16,6 +16,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { ServiceDrawer } from "@/components/ServiceDrawer";
+import { DateTimeDrawer } from "@/components/DateTimeDrawer";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
@@ -67,28 +68,22 @@ type SubmitState = "idle" | "saving" | "success" | "error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildScheduledAt(dateStr: string, timeStr: string): string | null {
-  const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (!dateMatch || !timeMatch) return null;
-  let hours = parseInt(timeMatch[1], 10);
-  const minutes = parseInt(timeMatch[2], 10);
-  const ampm = timeMatch[3]?.toUpperCase();
-  if (ampm === "PM" && hours < 12) hours += 12;
-  if (ampm === "AM" && hours === 12) hours = 0;
-  const d = new Date(
-    parseInt(dateMatch[1], 10),
-    parseInt(dateMatch[2], 10) - 1,
-    parseInt(dateMatch[3], 10),
-    hours,
-    minutes
-  );
-  return isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-function todayString(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function formatScheduledAt(iso: string | null): string {
+  if (!iso) return "Select date and time";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "Select date and time";
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h < 12 ? "AM" : "PM";
+    const dH = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    const dM = m === 0 ? "00" : String(m);
+    return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()} at ${dH}:${dM} ${ampm}`;
+  } catch {
+    return "Select date and time";
+  }
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -142,8 +137,8 @@ export default function NewBookingScreen() {
   const [vehicleColor, setVehicleColor] = useState("");
   const [vehicleType, setVehicleType] = useState<VehicleSizeKey | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [bookingDate, setBookingDate] = useState(todayString());
-  const [bookingTime, setBookingTime] = useState("09:00 AM");
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [dateTimeDrawerVisible, setDateTimeDrawerVisible] = useState(false);
   const [serviceAddress, setServiceAddress] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -325,14 +320,8 @@ export default function NewBookingScreen() {
       setErrorMsg("Please select a service package.");
       return;
     }
-    if (!bookingDate || !bookingTime) {
-      setErrorMsg("Please enter a valid date and time.");
-      return;
-    }
-
-    const scheduledAt = buildScheduledAt(bookingDate, bookingTime);
     if (!scheduledAt) {
-      setErrorMsg("Invalid date or time format. Use YYYY-MM-DD and HH:MM AM/PM.");
+      setErrorMsg("Please select a date and time.");
       return;
     }
 
@@ -786,28 +775,22 @@ export default function NewBookingScreen() {
           {/* ── Date & Time ── */}
           <SectionCard>
             <Text style={styles.cardSectionLabel}>DATE &amp; TIME</Text>
-            <View style={styles.twoCol}>
-              <View style={styles.halfField}>
-                <FieldLabel>Date (YYYY-MM-DD)</FieldLabel>
-                <TextInput
-                  style={styles.textInput}
-                  value={bookingDate}
-                  onChangeText={setBookingDate}
-                  placeholder={todayString()}
-                  placeholderTextColor={Colors.light.textTertiary}
-                />
-              </View>
-              <View style={styles.halfField}>
-                <FieldLabel>Time (HH:MM AM/PM)</FieldLabel>
-                <TextInput
-                  style={styles.textInput}
-                  value={bookingTime}
-                  onChangeText={setBookingTime}
-                  placeholder="09:00 AM"
-                  placeholderTextColor={Colors.light.textTertiary}
-                />
-              </View>
-            </View>
+            <FieldLabel>Date &amp; time</FieldLabel>
+            <TouchableOpacity
+              style={styles.dateTimeField}
+              onPress={() => setDateTimeDrawerVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.dateTimeFieldText,
+                  !scheduledAt && styles.dateTimeFieldPlaceholder,
+                ]}
+              >
+                {formatScheduledAt(scheduledAt)}
+              </Text>
+              <Ionicons name="calendar-outline" size={18} color={Colors.foamBlue} />
+            </TouchableOpacity>
           </SectionCard>
 
           {/* ── Address & Notes ── */}
@@ -844,7 +827,7 @@ export default function NewBookingScreen() {
                   {vehicleType ? ` · ${vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)}` : ""}
                 </Text>
                 <Text style={styles.summaryDate}>
-                  {bookingDate} at {bookingTime}
+                  {formatScheduledAt(scheduledAt)}
                 </Text>
               </View>
               <Text style={styles.summaryPrice}>${effectivePrice.toFixed(0)}</Text>
@@ -868,6 +851,16 @@ export default function NewBookingScreen() {
           onSaved={(saved) => handleServiceAdded(saved.id)}
         />
       ) : null}
+
+      <DateTimeDrawer
+        visible={dateTimeDrawerVisible}
+        onRequestClose={() => setDateTimeDrawerVisible(false)}
+        value={scheduledAt}
+        onConfirm={(iso) => {
+          setScheduledAt(iso);
+          setDateTimeDrawerVisible(false);
+        }}
+      />
 
       {/* ── CTA footer ── */}
       <View style={styles.ctaFooter}>
@@ -1031,6 +1024,26 @@ const styles = StyleSheet.create({
   },
   twoCol: { flexDirection: "row", gap: Spacing.sm },
   halfField: { flex: 1 },
+  dateTimeField: {
+    height: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: Colors.foamBlue,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.mdSm,
+    backgroundColor: Colors.light.surface,
+  },
+  dateTimeFieldText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    flex: 1,
+  },
+  dateTimeFieldPlaceholder: {
+    color: Colors.light.textTertiary,
+  },
   dropdownList: {
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,

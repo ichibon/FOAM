@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet, Platform } from "react-native";
-import { Tabs, router } from "expo-router";
+import { StyleSheet, Platform } from "react-native";
+import { Tabs, Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Layout } from "@/constants/design";
@@ -25,14 +25,6 @@ export default function OperatorLayout() {
   const { user, pendingApproval } = useAuth();
   const [hasTeam, setHasTeam] = useState(false);
 
-  // Redirect on every render cycle when pending — not just on change —
-  // so a pending operator who deep-links or taps a tab cannot bypass lockout.
-  useEffect(() => {
-    if (pendingApproval) {
-      router.replace("/operator/pending");
-    }
-  }, [pendingApproval]);
-
   useEffect(() => {
     if (!user) return;
     fetchHasTeam();
@@ -53,12 +45,15 @@ export default function OperatorLayout() {
     }
   }
 
-  // Hard render-gate: if the operator's approval is pending, never mount
-  // the tab shell. The useEffect above fires the redirect concurrently,
-  // but this guard ensures the tab bar and its screens are never visible
-  // even for a single frame.
+  // Pending operators: render a headerless Stack so /operator/pending can
+  // display its own full-screen UI. The Tabs shell is never mounted, so
+  // there is no tab bar they could tap to escape to other screens.
   if (pendingApproval) {
-    return null;
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="pending" />
+      </Stack>
+    );
   }
 
   return (

@@ -280,8 +280,11 @@ export default function OperatorBookingsScreen() {
 
       const cards: BookingCard[] = rawBookings.map((b) => {
         const veh = b.vehicles;
+        const contact = b.booking_contacts;
         const vehicleDesc = veh
           ? [veh.year, veh.make, veh.model, veh.color].filter(Boolean).join(" ")
+          : contact
+          ? [contact.vehicle_year, contact.vehicle_make, contact.vehicle_model, contact.vehicle_color].filter(Boolean).join(" ") || "Vehicle (walk-in)"
           : "Vehicle";
         const scheduledAt = new Date(b.scheduled_at);
         const isUnassigned =

@@ -127,7 +127,7 @@ export default function CrewAssignmentScreen() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const decodedNotes = notes ? decodeURIComponent(notes) : null;
+  const decodedNotes = notes ?? null;
 
   const fetchData = useCallback(async () => {
     if (!user || !bookingId || !crewId) return;
@@ -226,9 +226,6 @@ export default function CrewAssignmentScreen() {
       const updatePayload: Record<string, unknown> = {
         crew_member_id: summary.crewId,
       };
-      if (summary.notes) {
-        updatePayload.notes = summary.notes;
-      }
 
       const { error } = await supabase
         .from("bookings")

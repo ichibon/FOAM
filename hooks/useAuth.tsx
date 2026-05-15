@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
 import type { UserRole } from "@/lib/supabase";
+
+export const PENDING_SSO_ROLE_KEY = "foam_pending_sso_role";
+const VALID_SSO_ROLES: UserRole[] = ["customer", "operator", "team_member"];
 
 interface AuthContextType {
   session: Session | null;
@@ -64,8 +68,106 @@ async function fetchUserProfile(
     .eq("id", userId)
     .single();
 
-  const resolvedRole = (data?.role as UserRole) ?? null;
+  if (!data) {
+    const { error: authErr } = await client.auth.getUser();
+    if (authErr) {
+      await client.auth.signOut();
+      setRole(null);
+      setOnboardingComplete(false);
+      setPendingApproval(false);
+      setLoading(false);
+      return;
+    }
+
+    // No users row yet — check for pending SSO role stored before OAuth started.
+    let pendingRole: string | null = null;
+    try { pendingRole = await AsyncStorage.getItem(PENDING_SSO_ROLE_KEY); } catch {}
+
+    if (pendingRole && VALID_SSO_ROLES.includes(pendingRole as UserRole)) {
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
+
+      await client.from("users").upsert(
+        { id: userId, role: pendingRole },
+        { onConflict: "id" }
+      );
+
+      if (pendingRole === "customer") {
+        await client.from("customer_profiles").upsert(
+          { user_id: userId },
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+      } else if (pendingRole === "operator") {
+        await client.from("detailer_profiles").upsert(
+          { user_id: userId, operation_type: "mobile" },
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+      }
+
+      const { data: freshData } = await client
+        .from("users")
+        .select("role, onboarding_complete")
+        .eq("id", userId)
+        .single();
+
+      if (freshData) {
+        const resolvedRole = (freshData.role as UserRole) ?? null;
+        setRole(resolvedRole);
+        setOnboardingComplete(freshData.onboarding_complete === true);
+        setPendingApproval(false);
+        setLoading(false);
+        return;
+      }
+    }
+
+    setRole(null);
+    setOnboardingComplete(false);
+    setPendingApproval(false);
+    setLoading(false);
+    return;
+  }
+
+  let resolvedRole = (data?.role as UserRole) ?? null;
   const resolvedOnboarding = data?.onboarding_complete === true;
+
+  // Row exists but role is null — trigger created it before the user picked a role.
+  if (!resolvedRole) {
+    let pendingRole: string | null = null;
+    try { pendingRole = await AsyncStorage.getItem(PENDING_SSO_ROLE_KEY); } catch {}
+
+    if (pendingRole && VALID_SSO_ROLES.includes(pendingRole as UserRole)) {
+      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
+
+      await client.from("users").upsert(
+        { id: userId, role: pendingRole },
+        { onConflict: "id" }
+      );
+
+      if (pendingRole === "customer") {
+        await client.from("customer_profiles").upsert(
+          { user_id: userId },
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+      } else if (pendingRole === "operator") {
+        await client.from("detailer_profiles").upsert(
+          { user_id: userId, operation_type: "mobile" },
+          { onConflict: "user_id", ignoreDuplicates: true }
+        );
+      }
+
+      resolvedRole = pendingRole as UserRole;
+    } else {
+      // AsyncStorage empty — a concurrent fetchUserProfile call may have already
+      // consumed the key and written the role. Re-read DB to pick it up.
+      const { data: recheck } = await client
+        .from("users")
+        .select("role")
+        .eq("id", userId)
+        .single();
+      if (recheck?.role) {
+        resolvedRole = recheck.role as UserRole;
+      }
+    }
+  }
 
   setRole(resolvedRole);
   setOnboardingComplete(resolvedOnboarding);
@@ -103,25 +205,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const c = client;
 
     c.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
-      setSession(s);
       if (s) {
+        setSession(s);
         fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
       } else {
         setLoading(false);
+        setSession(s);
       }
     });
 
     const { data: { subscription } } = c.auth.onAuthStateChange(
       (_event: string, s: Session | null) => {
-        setSession(s);
         if (s) {
+          // CRITICAL: set loading=true BEFORE setSession so the layout never sees
+          // {session, role=null, loading=false} and routes prematurely to role-select.
           setLoading(true);
+          setSession(s);
           fetchUserProfile(s.user.id, c, setRole, setOnboardingComplete, setPendingApproval, setLoading);
         } else {
+          setLoading(false);
+          setSession(s);
           setRole(null);
           setOnboardingComplete(false);
           setPendingApproval(false);
-          setLoading(false);
         }
       }
     );

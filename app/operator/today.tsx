@@ -556,7 +556,11 @@ export default function OperatorTodayScreen() {
       const pendingCount = alertList.filter((r) => r.status === "requested").length;
 
       const firstNoShow = alertList.find((r) => r.status === "no_show");
-      if (firstNoShow) setFirstNoShowBookingId(firstNoShow.id);
+      if (firstNoShow) {
+        setFirstNoShowBookingId(firstNoShow.id);
+      } else {
+        setFirstNoShowBookingId(null);
+      }
 
       const totalAlerts = noShowCount + pendingCount + (unassigned > 0 ? 1 : 0);
       setUnresolvedAlertCount(totalAlerts);
@@ -607,6 +611,7 @@ export default function OperatorTodayScreen() {
       weekday: "long", month: "long", day: "numeric",
     });
     return (
+      <>
       <SafeAreaView style={styles.container}>
         <StickyHeader
           firstName={firstName}
@@ -630,6 +635,17 @@ export default function OperatorTodayScreen() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      <TeamCalendarDrawer
+        visible={calendarVisible}
+        onRequestClose={() => setCalendarVisible(false)}
+        detailerId={storedDetailerId}
+      />
+      <UnitsSelectionDrawer
+        visible={unitsVisible}
+        onRequestClose={() => setUnitsVisible(false)}
+        detailerId={storedDetailerId}
+      />
+      </>
     );
   }
 

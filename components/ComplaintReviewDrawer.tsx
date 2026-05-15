@@ -205,7 +205,7 @@ export function ComplaintReviewDrawer({
       const supabase = getSupabase();
       await supabase
         .from("bookings")
-        .update({ status: "refunded", notes: "[Complaint accepted — refund issued by operator]" })
+        .update({ status: "completed", notes: "[Complaint accepted — refund issued by operator]" })
         .eq("id", bookingId);
       onResolved?.();
       onRequestClose();

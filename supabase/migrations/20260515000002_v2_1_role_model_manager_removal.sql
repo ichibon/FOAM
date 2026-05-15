@@ -24,6 +24,40 @@
 -- ============================================================
 
 
+-- ── 0. Remove 'manager' from users.role check constraint ─────
+--    (defensive — no-ops if the constraint doesn't exist or
+--    'manager' is already absent)
+
+DO $$
+DECLARE
+  v_con_name text;
+BEGIN
+  -- Find any check constraint on users.role that still references 'manager'
+  SELECT con.conname
+    INTO v_con_name
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_namespace ns  ON ns.oid  = rel.relnamespace
+   WHERE ns.nspname = 'public'
+     AND rel.relname = 'users'
+     AND con.contype = 'c'
+     AND pg_get_constraintdef(con.oid) ILIKE '%manager%'
+   LIMIT 1;
+
+  IF v_con_name IS NOT NULL THEN
+    -- Drop the old constraint and recreate it without 'manager'
+    EXECUTE format('ALTER TABLE public.users DROP CONSTRAINT %I', v_con_name);
+    ALTER TABLE public.users
+      ADD CONSTRAINT users_role_check
+        CHECK (role IN ('customer', 'operator', 'team_member'));
+    RAISE NOTICE 'Replaced constraint % — manager removed from allowed roles', v_con_name;
+  ELSE
+    RAISE NOTICE 'No constraint referencing manager found on users.role — skipping';
+  END IF;
+END;
+$$;
+
+
 -- ── 1. Add has_team to detailer_profiles ─────────────────────
 
 ALTER TABLE public.detailer_profiles

@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +50,7 @@ function getInitials(name: string): string {
 
 export default function CommissionScreen() {
   const { user } = useAuth();
+  const { memberId: preselectedId } = useLocalSearchParams<{ memberId?: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fetchError, setFetchError] = useState(false);
@@ -100,7 +101,7 @@ export default function CommissionScreen() {
         name: tm.users?.full_name ?? "Team Member",
         initials: getInitials(tm.users?.full_name ?? "TM"),
         rate: tm.commission_rate ?? null,
-        isEditing: false,
+        isEditing: tm.id === preselectedId,
         editValue: String(tm.commission_rate ?? defRate),
         isDirty: false,
       }));
@@ -110,7 +111,7 @@ export default function CommissionScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, preselectedId]);
 
   useFocusEffect(
     useCallback(() => {

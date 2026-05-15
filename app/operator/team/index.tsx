@@ -39,7 +39,7 @@ interface RawBookingRow {
 
 // ─── Derived UI types ─────────────────────────────────────────────────────────
 
-type MemberStatus = "on_job" | "available" | "off_today";
+type MemberStatus = "on_job" | "available" | "off_today" | "inactive";
 
 interface RosterMember {
   id: string;
@@ -101,18 +101,20 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
 function statusLabel(s: MemberStatus): string {
   if (s === "on_job") return "On Job";
   if (s === "available") return "Available";
-  return "Off Today";
+  if (s === "off_today") return "Off Today";
+  return "Inactive";
 }
 
 function statusBgColor(s: MemberStatus): string {
   if (s === "on_job") return "rgba(22,163,74,0.10)";
-  if (s === "available") return Colors.light.bgSecondary;
+  if (s === "available") return Colors.foamBlueSubtle;
   return Colors.light.bgSecondary;
 }
 
 function statusTextColor(s: MemberStatus): string {
   if (s === "on_job") return Colors.successLight;
-  return Colors.light.textSecondary;
+  if (s === "available") return Colors.foamBlue;
+  return Colors.light.textTertiary;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -188,9 +190,11 @@ export default function TeamRosterScreen() {
 
         let status: MemberStatus;
         if (!m.is_active) {
-          status = "off_today";
+          status = "inactive";
         } else if (inProgressBooking) {
           status = "on_job";
+        } else if (memberTodayBookings.length === 0) {
+          status = "off_today";
         } else {
           status = "available";
         }
@@ -269,14 +273,23 @@ export default function TeamRosterScreen() {
           <Text style={styles.title}>Team</Text>
           <Text style={styles.dateLabel}>{TODAY_DATE.toUpperCase()}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => router.push("/operator/team/add")}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={16} color={Colors.foamBlue} />
-          <Text style={styles.addBtnText}>Add Member</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => router.push("/operator/business/payroll")}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="cash-outline" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => router.push("/operator/team/add")}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={16} color={Colors.foamBlue} />
+            <Text style={styles.addBtnText}>Add Member</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -306,19 +319,19 @@ export default function TeamRosterScreen() {
             {members.map((m) => (
               <TouchableOpacity
                 key={m.id}
-                style={[styles.memberCard, shadow, !m.isActive && styles.memberCardDimmed]}
+                style={[styles.memberCard, shadow, m.status === "inactive" && styles.memberCardDimmed]}
                 onPress={() => router.push(`/operator/team/${m.id}`)}
                 activeOpacity={0.8}
               >
                 <View style={styles.memberTop}>
-                  <View style={[styles.avatar, !m.isActive && styles.avatarInactive]}>
-                    <Text style={[styles.avatarText, !m.isActive && styles.avatarTextInactive]}>
+                  <View style={[styles.avatar, m.status === "inactive" && styles.avatarInactive]}>
+                    <Text style={[styles.avatarText, m.status === "inactive" && styles.avatarTextInactive]}>
                       {m.initials}
                     </Text>
                   </View>
                   <View style={styles.memberInfo}>
                     <View style={styles.memberNameRow}>
-                      <Text style={[styles.memberName, !m.isActive && styles.memberNameInactive]}>
+                      <Text style={[styles.memberName, m.status === "inactive" && styles.memberNameInactive]}>
                         {m.name}
                       </Text>
                       <View
@@ -358,12 +371,16 @@ export default function TeamRosterScreen() {
                       </View>
                     )}
 
-                    {m.isActive && m.totalJobsToday === 0 && (
+                    {m.status === "available" && m.totalJobsToday > 0 && !m.currentJobName && (
+                      <Text style={styles.noJobsText}>Scheduled today — not yet started</Text>
+                    )}
+
+                    {m.status === "off_today" && (
                       <Text style={styles.noJobsText}>No jobs assigned today</Text>
                     )}
 
-                    {!m.isActive && (
-                      <Text style={styles.noJobsText}>Inactive</Text>
+                    {m.status === "inactive" && (
+                      <Text style={styles.noJobsText}>Inactive account</Text>
                     )}
                   </View>
                 </View>
@@ -455,6 +472,17 @@ const styles = StyleSheet.create({
     color: Colors.light.textTertiary,
     letterSpacing: Typography.tracking.label,
     marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   addBtn: {
     flexDirection: "row",

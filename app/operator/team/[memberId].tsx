@@ -8,6 +8,7 @@ import {
   Switch,
   Platform,
   Alert,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -75,6 +76,8 @@ interface MemberDetail {
   revenueThisMonth: number;
   tipsThisMonth: number;
   weekRevenue: number;
+  avgRating: string | null;
+  totalReviews: number;
   // Schedule
   todayJobs: TodayJob[];
 }
@@ -210,7 +213,7 @@ export default function MemberProfileScreen() {
       const { start: todayStart, end: todayEnd } = todayBounds();
       const { start: weekStart, end: weekEnd } = weekBounds();
 
-      const [allTimeRes, monthRes, todayRes, weekRes] = await Promise.all([
+      const [allTimeRes, monthRes, todayRes, weekRes, ratingsRes] = await Promise.all([
         supabase
           .from("bookings")
           .select("id", { count: "exact", head: true })
@@ -240,11 +243,25 @@ export default function MemberProfileScreen() {
           .eq("status", "completed")
           .gte("scheduled_at", weekStart)
           .lte("scheduled_at", weekEnd),
+        supabase
+          .from("bookings")
+          .select("reviews(rating)")
+          .eq("crew_member_id", memberId)
+          .eq("status", "completed"),
       ]);
 
       const monthBookings = (monthRes.data as RawBookingRow[] | null) ?? [];
       const todayBookings = (todayRes.data as RawBookingRow[] | null) ?? [];
       const weekBookings = (weekRes.data as RawBookingRow[] | null) ?? [];
+      const ratingsRows = (ratingsRes.data as Array<{ reviews: Array<{ rating: number }> | null }> | null) ?? [];
+      const allRatings = ratingsRows
+        .flatMap((b) => b.reviews ?? [])
+        .map((r) => r.rating)
+        .filter((r) => r > 0);
+      const avgRating =
+        allRatings.length > 0
+          ? (allRatings.reduce((s, r) => s + r, 0) / allRatings.length).toFixed(1)
+          : null;
 
       const revenueThisMonth = monthBookings.reduce(
         (s, b) => s + ((b.total ?? b.subtotal ?? 0)),
@@ -296,6 +313,8 @@ export default function MemberProfileScreen() {
         revenueThisMonth,
         tipsThisMonth,
         weekRevenue,
+        avgRating,
+        totalReviews: allRatings.length,
         todayJobs,
       });
 
@@ -482,8 +501,10 @@ export default function MemberProfileScreen() {
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatLabel}>This Month</Text>
-              <Text style={styles.heroStatValue}>{member.jobsThisMonth} jobs</Text>
+              <Text style={styles.heroStatLabel}>Avg Rating</Text>
+              <Text style={styles.heroStatValue}>
+                {member.avgRating != null ? `${member.avgRating} ★` : "—"}
+              </Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStatItem}>
@@ -493,6 +514,17 @@ export default function MemberProfileScreen() {
               </Text>
             </View>
           </View>
+
+          {member.phone && (
+            <TouchableOpacity
+              style={styles.messageBtn}
+              onPress={() => void Linking.openURL(`sms:${member.phone}`)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chatbubble-outline" size={16} color={Colors.foamBlue} />
+              <Text style={styles.messageBtnText}>Message</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Performance */}
@@ -563,7 +595,7 @@ export default function MemberProfileScreen() {
           </View>
         )}
 
-        {/* Commission */}
+        {/* Commission + Payroll */}
         <View style={[styles.card, shadow]}>
           <View style={styles.commissionRow}>
             <Text style={styles.commissionLabel}>Commission rate</Text>
@@ -572,13 +604,30 @@ export default function MemberProfileScreen() {
                 {member.commissionRate != null ? `${member.commissionRate}%` : "Default"}
               </Text>
               <TouchableOpacity
-                onPress={() => router.push("/operator/business/commission")}
+                onPress={() =>
+                  router.push({
+                    pathname: "/operator/business/commission",
+                    params: { memberId: member.id },
+                  })
+                }
                 activeOpacity={0.7}
               >
                 <Text style={styles.commissionEditLink}>Edit</Text>
               </TouchableOpacity>
             </View>
           </View>
+          <View style={styles.cardRowDivider} />
+          <TouchableOpacity
+            style={styles.payrollRow}
+            onPress={() => router.push("/operator/business/payroll")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.payrollLeft}>
+              <Ionicons name="cash-outline" size={18} color={Colors.foamBlue} />
+              <Text style={styles.payrollRowLabel}>View in Payroll</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.light.textTertiary} />
+          </TouchableOpacity>
         </View>
 
         {/* Permissions */}
@@ -958,5 +1007,41 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.errorLight,
+  },
+  messageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    borderColor: Colors.foamBlue,
+    marginTop: Spacing.xs,
+  },
+  messageBtnText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+  },
+  cardRowDivider: {
+    height: 1,
+    backgroundColor: Colors.light.borderSubtle,
+    marginVertical: Spacing.mdSm,
+  },
+  payrollRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  payrollLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  payrollRowLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
   },
 });

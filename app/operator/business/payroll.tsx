@@ -167,8 +167,8 @@ export default function PayrollScreen() {
 
         if (teamRes.error) throw teamRes.error;
 
-        const teamMembers = (teamRes.data as RawTeamMemberRow[] | null) ?? [];
-        const bookings = (bookingsRes.data as RawBookingRow[] | null) ?? [];
+        const teamMembers = (teamRes.data as unknown as RawTeamMemberRow[] | null) ?? [];
+        const bookings = (bookingsRes.data as unknown as RawBookingRow[] | null) ?? [];
 
         // Attempt to load crew_time_entries to attribute bookings to crew members
         // who actually clocked in, rather than relying solely on crew_member_id.
@@ -511,10 +511,7 @@ const cardBase = {
   padding: Spacing.md,
 };
 
-const shadowBase =
-  Platform.OS === "web"
-    ? { boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
-    : Shadows.light.level1;
+const shadowBase = Shadows.light.level1;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.light.bgPrimary },

@@ -95,7 +95,7 @@ export default function CommissionScreen() {
 
       if (teamErr) throw teamErr;
 
-      const teamMembers = (teamData as TeamMemberRow[] | null) ?? [];
+      const teamMembers = (teamData as unknown as TeamMemberRow[] | null) ?? [];
       const overrides: MemberOverride[] = teamMembers.map((tm) => ({
         id: tm.id,
         name: tm.users?.full_name ?? "Team Member",
@@ -453,10 +453,7 @@ const cardBase = {
   padding: Spacing.md,
 };
 
-const shadowBase =
-  Platform.OS === "web"
-    ? { boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
-    : Shadows.light.level1;
+const shadowBase = Shadows.light.level1;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.light.bgPrimary },

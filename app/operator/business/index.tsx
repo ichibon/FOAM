@@ -325,9 +325,9 @@ export default function BusinessScreen() {
 
         if (bookingsRes.error) throw bookingsRes.error;
 
-        const bookings = (bookingsRes.data as RawBookingRow[] | null) ?? [];
-        const teamMembers = (teamRes.data as TeamMemberRow[] | null) ?? [];
-        const todayRaw = (todayRes.data as RawBookingRow[] | null) ?? [];
+        const bookings = (bookingsRes.data as unknown as RawBookingRow[] | null) ?? [];
+        const teamMembers = (teamRes.data as unknown as TeamMemberRow[] | null) ?? [];
+        const todayRaw = (todayRes.data as unknown as RawBookingRow[] | null) ?? [];
 
         const bookingAmount = (b: { total?: number | null; subtotal?: number | null; tip_amount: number }) =>
           b.total ?? ((b.subtotal ?? 0) + b.tip_amount);
@@ -727,10 +727,7 @@ const cardBase = {
   padding: Spacing.md,
 };
 
-const shadowBase =
-  Platform.OS === "web"
-    ? { boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
-    : Shadows.light.level1;
+const shadowBase = Shadows.light.level1;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.light.bgPrimary },

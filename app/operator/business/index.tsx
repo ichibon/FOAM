@@ -290,6 +290,15 @@ export default function BusinessScreen() {
 
         if (profileErr) throw profileErr;
         if (!profileData) {
+          setTotalRevenue(0);
+          setPendingRevenue(0);
+          setConfirmedRevenue(0);
+          setJobCount(0);
+          setAvgTicket(0);
+          setChartData([]);
+          setTeamBreakdown([]);
+          setServiceBreakdown([]);
+          setTodayJobs([]);
           setLoading(false);
           return;
         }

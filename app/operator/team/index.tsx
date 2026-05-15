@@ -174,6 +174,8 @@ export default function TeamRosterScreen() {
       ]);
 
       if (membersRes.error) throw membersRes.error;
+      if (todayBookingsRes.error) throw todayBookingsRes.error;
+      if (weekBookingsRes.error) throw weekBookingsRes.error;
 
       const rawMembers = (membersRes.data as RawMemberRow[] | null) ?? [];
       const todayBookings = (todayBookingsRes.data as RawBookingRow[] | null) ?? [];

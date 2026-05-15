@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -133,14 +132,19 @@ export default function TeamRosterScreen() {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
-      const { data: profileData, error: profileErr } = await supabase
+      const { data: profileData } = await supabase
         .from("detailer_profiles")
         .select("id")
         .eq("user_id", user.id)
-        .single();
-      if (profileErr || !profileData) throw profileErr ?? new Error("no profile");
+        .maybeSingle();
 
-      const pid: string = profileData.id;
+      if (!profileData) {
+        setMembers([]);
+        setScreenState("main");
+        return;
+      }
+
+      const pid: string = (profileData as unknown as { id: string }).id;
       setProfileId(pid);
 
       const { start: todayStart, end: todayEnd } = todayBounds();
@@ -168,7 +172,11 @@ export default function TeamRosterScreen() {
           .lte("scheduled_at", weekEnd),
       ]);
 
-      if (membersRes.error) throw membersRes.error;
+      if (membersRes.error) {
+        setMembers([]);
+        setScreenState("main");
+        return;
+      }
 
       const rawMembers = (membersRes.data as RawMemberRow[] | null) ?? [];
       const todayBookings = (todayBookingsRes.data as RawBookingRow[] | null) ?? [];
@@ -229,10 +237,7 @@ export default function TeamRosterScreen() {
     }, [load])
   );
 
-  const shadow =
-    Platform.OS === "web"
-      ? { boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)" }
-      : Shadows.light.level1;
+  const shadow = Shadows.light.level1;
 
   if (screenState === "loading") {
     return (
@@ -301,21 +306,52 @@ export default function TeamRosterScreen() {
         showsVerticalScrollIndicator={false}
       >
         {members.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="people-outline" size={32} color={Colors.foamBlue} />
+          <View style={styles.emptyWrapper}>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="people" size={36} color={Colors.foamBlue} />
+              </View>
+              <Text style={styles.emptyTitle}>No crew yet.</Text>
+              <Text style={styles.emptyBody}>
+                Your operation starts with your people. Add your first team member.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyAddBtn}
+                onPress={() => router.push("/operator/team/add")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.emptyAddBtnText}>Add Team Member</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.emptyTitle}>No team members yet</Text>
-            <Text style={styles.emptyBody}>
-              Invite crew members to start assigning jobs and tracking performance.
-            </Text>
+
+            <View style={styles.onboardingCard}>
+              <View style={styles.onboardingStep}>
+                <View style={styles.stepNum}>
+                  <Text style={styles.stepNumText}>1</Text>
+                </View>
+                <Text style={styles.stepText}>Add a crew member by phone or email</Text>
+              </View>
+              <View style={styles.onboardingStep}>
+                <View style={styles.stepNum}>
+                  <Text style={styles.stepNumText}>2</Text>
+                </View>
+                <Text style={styles.stepText}>Set their commission rate and permissions</Text>
+              </View>
+              <View style={styles.onboardingStep}>
+                <View style={styles.stepNum}>
+                  <Text style={styles.stepNumText}>3</Text>
+                </View>
+                <Text style={styles.stepText}>Assign them to their first job</Text>
+              </View>
+            </View>
+
             <TouchableOpacity
-              style={styles.emptyAddBtn}
+              style={styles.inviteDashedBtn}
               onPress={() => router.push("/operator/team/add")}
-              activeOpacity={0.85}
+              activeOpacity={0.7}
             >
-              <Ionicons name="add" size={18} color={Colors.white} />
-              <Text style={styles.emptyAddBtnText}>Invite Team Member</Text>
+              <Ionicons name="add" size={14} color={Colors.light.textPrimary} />
+              <Text style={styles.inviteDashedText}>Invite a team member</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -532,23 +568,27 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
+  emptyWrapper: {
+    paddingTop: Spacing.xl2,
+    paddingBottom: Spacing.lg,
+    gap: Spacing.lg,
+  },
   emptyState: {
     alignItems: "center",
-    paddingVertical: Spacing.xl2,
     gap: Spacing.mdSm,
   },
   emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.foamLightBlue,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.foamBlueSubtle,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.xs,
   },
   emptyTitle: {
     fontFamily: Typography.display,
-    fontSize: Typography.size.h3,
+    fontSize: 22,
     color: Colors.light.textPrimary,
   },
   emptyBody: {
@@ -556,23 +596,75 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyM,
     color: Colors.light.textSecondary,
     textAlign: "center",
-    maxWidth: 260,
-    lineHeight: 21,
+    maxWidth: 280,
+    lineHeight: 22,
   },
   emptyAddBtn: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
+    justifyContent: "center",
     height: 48,
-    paddingHorizontal: Spacing.lg,
+    width: "100%",
     backgroundColor: Colors.foamBlue,
     borderRadius: Radius.pill,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   emptyAddBtnText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,
+  },
+  onboardingCard: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    padding: Spacing.md,
+    gap: Spacing.md,
+    ...Shadows.light.level1,
+  },
+  onboardingStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.mdSm,
+  },
+  stepNum: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.foamBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  stepNumText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 13,
+    color: Colors.white,
+  },
+  stepText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    flex: 1,
+    lineHeight: 22,
+  },
+  inviteDashedBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    height: 44,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+    borderColor: Colors.light.borderDefault,
+    borderStyle: "dashed",
+    backgroundColor: "transparent",
+  },
+  inviteDashedText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
   },
   memberCard: {
     backgroundColor: Colors.light.surface,

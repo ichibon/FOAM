@@ -50,6 +50,7 @@ interface RosterMember {
   totalJobsToday: number;
   completedJobsToday: number;
   currentJobName: string | null;
+  nextJobName: string | null;
   weekRevenue: number;
 }
 
@@ -199,6 +200,8 @@ export default function TeamRosterScreen() {
           status = "available";
         }
 
+        const nextBooking = memberTodayBookings.find((b) => b.status === "confirmed");
+
         return {
           id: m.id,
           name,
@@ -208,6 +211,7 @@ export default function TeamRosterScreen() {
           totalJobsToday: memberTodayBookings.length,
           completedJobsToday: completedToday,
           currentJobName: inProgressBooking?.service_packages?.name ?? null,
+          nextJobName: nextBooking?.service_packages?.name ?? null,
           weekRevenue: weekRevenueMap[m.id] ?? 0,
         };
       });
@@ -346,11 +350,17 @@ export default function TeamRosterScreen() {
                       </View>
                     </View>
 
+                    <Text style={styles.memberRole}>Team Member</Text>
+
                     {m.currentJobName && (
-                      <Text style={styles.currentJobText}>Currently: {m.currentJobName}</Text>
+                      <Text style={styles.currentJobText}>On job: {m.currentJobName}</Text>
                     )}
 
-                    {m.isActive && m.totalJobsToday > 0 && (
+                    {!m.currentJobName && m.nextJobName && (
+                      <Text style={styles.currentJobText}>Up next: {m.nextJobName}</Text>
+                    )}
+
+                    {m.status !== "inactive" && m.totalJobsToday > 0 && (
                       <View style={styles.progressWrap}>
                         <View style={styles.progressBg}>
                           <View
@@ -371,7 +381,7 @@ export default function TeamRosterScreen() {
                       </View>
                     )}
 
-                    {m.status === "available" && m.totalJobsToday > 0 && !m.currentJobName && (
+                    {m.status === "available" && m.totalJobsToday > 0 && !m.currentJobName && !m.nextJobName && (
                       <Text style={styles.noJobsText}>Scheduled today — not yet started</Text>
                     )}
 
@@ -632,6 +642,11 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontFamily: Typography.body,
     fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+  },
+  memberRole: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
   },
   noJobsText: {

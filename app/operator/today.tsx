@@ -17,6 +17,21 @@ import type { BookingStatus } from "@/types/database";
 
 // ─── Raw DB row shapes (avoids `any`) ─────────────────────────────────────────
 
+interface RawBookingUser {
+  full_name: string | null;
+}
+
+interface RawBookingVehicle {
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  color: string | null;
+}
+
+interface RawBookingPackage {
+  name: string;
+}
+
 interface RawBooking {
   id: string;
   status: string;
@@ -24,6 +39,9 @@ interface RawBooking {
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
   notes: string | null;
+  users: RawBookingUser | null;
+  vehicles: RawBookingVehicle | null;
+  service_packages: RawBookingPackage | null;
 }
 
 interface RawTeamMember {
@@ -123,9 +141,9 @@ function getStatusDotColor(status: MemberStatus): string {
 
 function getStatusLabel(status: MemberStatus): string {
   switch (status) {
-    case "on_job":    return "On Job";
+    case "on_job":    return "Clocked In";
     case "en_route":  return "En Route";
-    case "available": return "Available";
+    case "available": return "Not Started";
     case "off_today": return "Off Today";
   }
 }
@@ -398,10 +416,15 @@ export default function OperatorTodayScreen() {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-      // ── 3. Today's bookings ─────────────────────────────────────────────
+      // ── 3. Today's bookings with customer / vehicle / package joins ────────
       const { data: rawBookings } = await supabase
         .from("bookings")
-        .select("id, status, scheduled_at, estimated_duration_mins, crew_member_id, notes")
+        .select(
+          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, notes," +
+          "users!bookings_customer_id_fkey(full_name)," +
+          "vehicles(make, model, year, color)," +
+          "service_packages(name)"
+        )
         .eq("detailer_id", detailerId)
         .gte("scheduled_at", todayStart)
         .lte("scheduled_at", todayEnd)
@@ -450,14 +473,21 @@ export default function OperatorTodayScreen() {
             ? new Date(scheduledAt.getTime() + b.estimated_duration_mins * 60000)
             : undefined;
 
+        const veh = b.vehicles;
+        const vehicleDesc = veh
+          ? [veh.year, veh.make, veh.model, veh.color]
+              .filter(Boolean)
+              .join(" ")
+          : "Vehicle";
+
         return {
           id: b.id,
           scheduledAt,
           timeLabel: formatTime(scheduledAt),
           durationLabel: formatDuration(b.estimated_duration_mins),
-          customerName: "Customer",
-          vehicleDesc: "Vehicle",
-          packageName: "Service",
+          customerName: b.users?.full_name ?? "Customer",
+          vehicleDesc:  vehicleDesc,
+          packageName:  b.service_packages?.name ?? "Service",
           status: b.status as BookingStatus,
           crew_member_id: b.crew_member_id,
           assignedTo:        crew?.name,

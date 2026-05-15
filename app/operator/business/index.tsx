@@ -490,6 +490,25 @@ export default function BusinessScreen() {
             ))}
           </ScrollView>
 
+          {jobCount === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="bar-chart-outline" size={48} color={Colors.foamBlue} />
+              </View>
+              <Text style={styles.emptyHeadline}>No revenue yet.</Text>
+              <Text style={styles.emptyBody}>
+                Create your first booking to start tracking revenue.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyCta}
+                onPress={() => router.push("/operator/bookings/new")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.emptyCtaText}>New Booking</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
           {/* Revenue summary */}
           <View style={[styles.card, styles.shadow]}>
             <Text style={styles.revenueAmount}>{fmtCurrency(totalRevenue)}</Text>
@@ -713,6 +732,8 @@ export default function BusinessScreen() {
               <Text style={styles.outlineBtnText}>Payroll Summary →</Text>
             </TouchableOpacity>
           </View>
+            </>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -942,6 +963,50 @@ const styles = StyleSheet.create({
   jobBadges: { flexDirection: "row", gap: 4 },
   badge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.xs },
   badgeText: { fontFamily: Typography.bodyMedium, fontSize: 11 },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.xl3,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.mdSm,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
+  },
+  emptyHeadline: {
+    fontFamily: Typography.display,
+    fontSize: Typography.size.h3,
+    color: Colors.light.textPrimary,
+    textAlign: "center",
+  },
+  emptyBody: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    maxWidth: 260,
+    lineHeight: 21,
+  },
+  emptyCta: {
+    height: 48,
+    paddingHorizontal: Spacing.xl,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: Spacing.sm,
+  },
+  emptyCtaText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.white,
+  },
   payoutCard: { gap: Spacing.mdSm },
   payoutLabel: {
     fontFamily: Typography.body,

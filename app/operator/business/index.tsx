@@ -964,6 +964,7 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.xs },
   badgeText: { fontFamily: Typography.bodyMedium, fontSize: 11 },
   emptyState: {
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: Spacing.xl3,

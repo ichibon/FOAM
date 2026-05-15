@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StyleSheet, Platform } from "react-native";
 import { Tabs, Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,8 +22,7 @@ function TabBarIcon({
 }
 
 export default function OperatorLayout() {
-  const { user, pendingApproval } = useAuth();
-  const [hasTeam, setHasTeam] = useState(false);
+  const { pendingApproval } = useAuth();
 
   // Redirect pending operators whenever pendingApproval changes or the
   // layout mounts, ensuring deep-links to any tab screen are blocked.
@@ -32,26 +31,6 @@ export default function OperatorLayout() {
       router.replace("/operator/pending");
     }
   }, [pendingApproval]);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchHasTeam();
-  }, [user]);
-
-  async function fetchHasTeam() {
-    try {
-      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
-      const supabase = getSupabase();
-      const { data } = await supabase
-        .from("detailer_profiles")
-        .select("has_team")
-        .eq("user_id", user!.id)
-        .single();
-      if (data) setHasTeam(data.has_team === true);
-    } catch {
-      setHasTeam(false);
-    }
-  }
 
   // Pending operators: render a headerless Stack so /operator/pending can
   // display its own full-screen UI. The Tabs shell is never mounted, so
@@ -85,16 +64,12 @@ export default function OperatorLayout() {
       />
       <Tabs.Screen
         name="team"
-        options={
-          hasTeam
-            ? {
-                title: "Team",
-                tabBarIcon: ({ focused }) => (
-                  <TabBarIcon name={focused ? "people" : "people-outline"} focused={focused} />
-                ),
-              }
-            : { href: null }
-        }
+        options={{
+          title: "Team",
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon name={focused ? "people" : "people-outline"} focused={focused} />
+          ),
+        }}
       />
       <Tabs.Screen
         name="bookings"

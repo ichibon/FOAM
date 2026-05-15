@@ -3,6 +3,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Alert,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -622,18 +623,57 @@ export default function OperatorTodayScreen() {
           onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
           onUnitsPress={storedDetailerId ? () => setUnitsVisible(true) : undefined}
         />
-        <View style={styles.centerFill}>
-          <View style={styles.emptyIconCircle}>
-            <Ionicons name="calendar-outline" size={32} color={Colors.foamBlue} />
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.emptyContent}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="calendar-outline" size={40} color={Colors.foamBlue} />
+            </View>
+            <Text style={styles.emptyHeadline}>Wide open today.</Text>
+            <Text style={styles.emptyBody}>
+              Share your booking link and put someone on the calendar.
+            </Text>
+
+            <View style={styles.emptyBtnStack}>
+              <TouchableOpacity
+                style={styles.emptyPrimaryBtn}
+                onPress={() => Alert.alert("Share My Link", "Sharing coming soon.")}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="share-outline" size={18} color={Colors.white} />
+                <Text style={styles.emptyPrimaryBtnText}>Share My Link</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.emptyGhostBtn}
+                onPress={() => router.push("/operator/bookings")}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="compass-outline" size={18} color={Colors.foamBlue} />
+                <Text style={styles.emptyGhostBtnText}>Explore the app</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.emptyStatsCard}>
+              <View style={styles.emptyStatCol}>
+                <Text style={styles.emptyStatLabel}>TODAY</Text>
+                <Text style={styles.emptyStatValue}>$0</Text>
+              </View>
+              <View style={styles.emptyStatDivider} />
+              <View style={styles.emptyStatCol}>
+                <Text style={styles.emptyStatLabel}>THIS WEEK</Text>
+                <Text style={styles.emptyStatValue}>$0</Text>
+              </View>
+              <View style={styles.emptyStatDivider} />
+              <View style={[styles.emptyStatCol, { alignItems: "flex-end" }]}>
+                <Text style={styles.emptyStatLabel}>PENDING</Text>
+                <Text style={styles.emptyStatValue}>$0</Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.emptyHeadline}>Wide open today.</Text>
-          <Text style={styles.emptyBody}>
-            No jobs are scheduled. Create a booking or share your booking link.
-          </Text>
-          <TouchableOpacity style={styles.emptyCtaBtn}>
-            <Text style={styles.emptyCtaText}>Create Booking</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
       <TeamCalendarDrawer
         visible={calendarVisible}
@@ -661,8 +701,8 @@ export default function OperatorTodayScreen() {
           <Text style={[styles.emptyBody, { marginBottom: Spacing.xl }]}>
             Check your connection and try again.
           </Text>
-          <TouchableOpacity style={styles.emptyCtaBtn} onPress={fetchData}>
-            <Text style={styles.emptyCtaText}>Retry</Text>
+          <TouchableOpacity style={styles.emptyPrimaryBtn} onPress={fetchData}>
+            <Text style={styles.emptyPrimaryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1327,24 +1367,72 @@ const styles = StyleSheet.create({
   activityFooterLink: { fontFamily: Typography.bodySemiBold, fontSize: Typography.size.bodyS, color: Colors.foamBlue },
 
   // Empty state
+  emptyScroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xl,
+  },
+  emptyContent: {
+    alignItems: "center",
+  },
   emptyIconCircle: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: "#E1F0F7",
+    backgroundColor: Colors.foamBlueSubtle,
     alignItems: "center", justifyContent: "center",
-    marginBottom: 32,
+    marginBottom: Spacing.lg,
   },
   emptyHeadline: {
-    fontFamily: Typography.display, fontSize: Typography.size.h2,
-    color: Colors.light.textPrimary, marginBottom: Spacing.md, textAlign: "center",
+    fontFamily: Typography.display, fontSize: 28,
+    color: Colors.light.textPrimary, marginBottom: Spacing.mdSm,
+    textAlign: "center", lineHeight: 34,
   },
   emptyBody: {
-    fontFamily: Typography.body, fontSize: Typography.size.bodyM,
+    fontFamily: Typography.body, fontSize: 15,
     color: Colors.light.textSecondary, textAlign: "center",
     lineHeight: 22, maxWidth: 280, marginBottom: Spacing.xl,
   },
-  emptyCtaBtn: {
-    backgroundColor: Colors.foamBlue, borderRadius: Radius.pill,
-    paddingHorizontal: 24, paddingVertical: 14,
+  emptyBtnStack: {
+    width: "100%", gap: Spacing.mdSm, marginBottom: Spacing.xl,
   },
-  emptyCtaText: { fontFamily: Typography.bodySemiBold, fontSize: Typography.size.bodyM, color: Colors.white },
+  emptyPrimaryBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: Spacing.sm, height: 48, borderRadius: Radius.pill,
+    backgroundColor: Colors.foamBlue,
+    ...Shadows.light.level1,
+  },
+  emptyPrimaryBtnText: {
+    fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.white,
+  },
+  emptyGhostBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: Spacing.sm, height: 48, borderRadius: Radius.pill,
+    backgroundColor: Colors.transparent,
+  },
+  emptyGhostBtnText: {
+    fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.foamBlue,
+  },
+  emptyStatsCard: {
+    width: "100%", flexDirection: "row", alignItems: "center",
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.light.borderSubtle,
+    padding: Spacing.md,
+    ...Shadows.light.level1,
+  },
+  emptyStatCol: {
+    flex: 1, alignItems: "flex-start",
+  },
+  emptyStatDivider: {
+    width: 1, height: 36, backgroundColor: Colors.light.borderSubtle,
+    marginHorizontal: Spacing.mdSm,
+  },
+  emptyStatLabel: {
+    fontFamily: Typography.bodyMedium, fontSize: 11,
+    color: Colors.light.textTertiary, textTransform: "uppercase",
+    letterSpacing: 0.8, marginBottom: 4,
+  },
+  emptyStatValue: {
+    fontFamily: Typography.bodySemiBold, fontSize: 20,
+    color: Colors.light.textTertiary,
+  },
 });

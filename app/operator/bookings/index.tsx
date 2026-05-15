@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -445,7 +446,32 @@ export default function OperatorBookingsScreen() {
       </View>
 
       {/* ── Body ── */}
-      {(screenState === "empty" || filteredBookings.length === 0) ? (
+      {screenState === "empty" ? (
+        <View style={styles.centerFill}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="book-outline" size={40} color={Colors.foamBlue} />
+          </View>
+          <Text style={styles.emptyHeadline}>Your first booking is out there.</Text>
+          <Text style={styles.emptyBody}>Share your profile and let customers find you.</Text>
+          <View style={styles.emptyBtnStack}>
+            <TouchableOpacity
+              style={styles.emptyPrimaryBtn}
+              onPress={() => Alert.alert("Share My Profile", "Sharing coming soon.")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.emptyPrimaryBtnText}>Share My Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.emptyGhostBtn}
+              onPress={() => Alert.alert("Service Menu", "Coming soon.")}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.emptyGhostBtnText}>Build my service menu</Text>
+              <Ionicons name="arrow-forward" size={14} color={Colors.foamBlue} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : filteredBookings.length === 0 ? (
         <View style={styles.centerFill}>
           <Ionicons name="clipboard-outline" size={40} color={Colors.light.textTertiary} />
           <Text style={styles.emptyHeadline}>
@@ -459,11 +485,7 @@ export default function OperatorBookingsScreen() {
               ? "No upcoming bookings"
               : "No bookings yet"}
           </Text>
-          <Text style={styles.emptyBody}>
-            {activeFilter === "all" || activeFilter === "upcoming"
-              ? "Tap + to create a manual booking."
-              : "Check a different filter above."}
-          </Text>
+          <Text style={styles.emptyBody}>Check a different filter above.</Text>
         </View>
       ) : (
         <ScrollView
@@ -698,17 +720,47 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
+  emptyIconCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.foamBlueSubtle,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: Spacing.lg,
+  },
   emptyHeadline: {
     fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.h4,
+    fontSize: Typography.size.h2,
     color: Colors.light.textPrimary,
     textAlign: "center",
+    marginBottom: Spacing.mdSm,
   },
   emptyBody: {
     fontFamily: Typography.body,
-    fontSize: Typography.size.bodyM,
+    fontSize: 15,
     color: Colors.light.textSecondary,
     textAlign: "center",
-    maxWidth: 260,
+    maxWidth: 280,
+    lineHeight: 22,
+    marginBottom: Spacing.xl,
+  },
+  emptyBtnStack: {
+    width: "100%", gap: Spacing.mdSm,
+  },
+  emptyPrimaryBtn: {
+    height: 48, borderRadius: Radius.md,
+    backgroundColor: Colors.foamBlue,
+    alignItems: "center", justifyContent: "center",
+    ...Shadows.light.level1,
+  },
+  emptyPrimaryBtnText: {
+    fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.white,
+  },
+  emptyGhostBtn: {
+    height: 48, borderRadius: Radius.md,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: Spacing.xs,
+    backgroundColor: Colors.transparent,
+  },
+  emptyGhostBtnText: {
+    fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.foamBlue,
   },
 });

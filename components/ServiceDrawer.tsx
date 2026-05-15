@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  Modal,
   Switch,
 } from "react-native";
 import { DrawerModal } from "@/components/DrawerModal";
@@ -20,7 +19,6 @@ import { Colors, Typography, Spacing, Radius } from "@/constants/design";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type VehiclePricing = {
-  sedan: string;
   suv: string;
   truck: string;
   van: string;
@@ -45,7 +43,95 @@ export interface ServiceDrawerProps {
   onSaved: (saved: { id: string; name: string }) => void;
 }
 
-const EMPTY_PRICING: VehiclePricing = { sedan: "", suv: "", truck: "", van: "" };
+const EMPTY_PRICING: VehiclePricing = { suv: "", truck: "", van: "" };
+
+// ─── Duration picker options ───────────────────────────────────────────────────
+
+const HOUR_OPTIONS = Array.from({ length: 9 }, (_, i) => ({
+  value: i,
+  label: i === 1 ? "1 hour" : `${i} hours`,
+}));
+
+const MINUTE_OPTIONS = [
+  { value: 0, label: ":00" },
+  { value: 15, label: ":15" },
+  { value: 30, label: ":30" },
+  { value: 45, label: ":45" },
+];
+
+// ─── SelectInput (lightweight modal picker) ───────────────────────────────────
+
+interface SelectOption {
+  value: number;
+  label: string;
+}
+
+function SelectInput({
+  selectedValue,
+  selectedLabel,
+  options,
+  onSelect,
+}: {
+  selectedValue: number;
+  selectedLabel: string;
+  options: SelectOption[];
+  onSelect: (v: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.selectBtn}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.selectBtnText}>{selectedLabel}</Text>
+        <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
+      </TouchableOpacity>
+
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+        statusBarTranslucent
+      >
+        <TouchableOpacity
+          style={styles.pickerBackdrop}
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        >
+          <View style={styles.pickerSheet}>
+            <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+              {options.map((opt) => {
+                const isSelected = opt.value === selectedValue;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      onSelect(opt.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}>
+                      {opt.label}
+                    </Text>
+                    {isSelected && (
+                      <LucideIcon name="Check" size={16} color={Colors.foamBlue} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
+  );
+}
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -160,11 +246,11 @@ export function ServiceDrawer({
       }
 
       // ── Vehicle size pricing ─────────────────────────────────────────────────
-      // Always delete existing rows for this package, then insert current values.
+      // Delete all existing rows for this package, then re-insert current values.
       await supabase.from("vehicle_size_pricing").delete().eq("package_id", packageId);
 
       if (vehiclePricingEnabled) {
-        const vehicleRows = (["sedan", "suv", "truck", "van"] as (keyof VehiclePricing)[])
+        const vehicleRows = (["suv", "truck", "van"] as (keyof VehiclePricing)[])
           .filter((t) => pricing[t].trim() !== "")
           .map((t) => ({
             package_id: packageId,
@@ -188,141 +274,133 @@ export function ServiceDrawer({
     }
   }
 
+  const hoursLabel = HOUR_OPTIONS.find((o) => o.value === hours)?.label ?? `${hours} hours`;
+  const minutesLabel = MINUTE_OPTIONS.find((o) => o.value === minutes)?.label ?? `:${minutes}`;
   const canSave = name.trim().length > 0 && price.length > 0 && (hours > 0 || minutes > 0);
 
   return (
     <DrawerModal visible={visible} onRequestClose={onRequestClose}>
       <DrawerHeader title={isEdit ? "Edit Service" : "New Service"} onClose={onRequestClose} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Service name */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Service name</Text>
+        {/* Service name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Service name</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g., Exterior Wash, Full Detail"
+            placeholderTextColor={Colors.light.textTertiary}
+            autoCapitalize="words"
+          />
+        </View>
+
+        {/* Base price */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Base price</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.currencySymbol}>$</Text>
             <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g., Exterior Wash, Full Detail"
+              style={[styles.input, styles.priceInput]}
+              value={price}
+              onChangeText={setPrice}
+              placeholder="0.00"
               placeholderTextColor={Colors.light.textTertiary}
-              autoCapitalize="words"
+              keyboardType="decimal-pad"
             />
           </View>
+        </View>
 
-          {/* Base price */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Base price</Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.currencySymbol}>$</Text>
-              <TextInput
-                style={[styles.input, styles.priceInput]}
-                value={price}
-                onChangeText={setPrice}
-                placeholder="0.00"
-                placeholderTextColor={Colors.light.textTertiary}
-                keyboardType="decimal-pad"
+        {/* Duration */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Estimated duration</Text>
+          <View style={styles.durationRow}>
+            <View style={styles.flex1}>
+              <SelectInput
+                selectedValue={hours}
+                selectedLabel={hoursLabel}
+                options={HOUR_OPTIONS}
+                onSelect={setHours}
+              />
+            </View>
+            <View style={styles.flex1}>
+              <SelectInput
+                selectedValue={minutes}
+                selectedLabel={minutesLabel}
+                options={MINUTE_OPTIONS}
+                onSelect={setMinutes}
               />
             </View>
           </View>
+        </View>
 
-          {/* Duration */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Estimated duration</Text>
-            <View style={styles.durationRow}>
-              <TouchableOpacity
-                style={[styles.durationBtn, styles.flex1]}
-                onPress={() => setHours((h) => (h + 1) % 13)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.durationBtnText}>
-                  {hours} hour{hours !== 1 ? "s" : ""}
-                </Text>
-                <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.durationBtn, styles.flex1]}
-                onPress={() => setMinutes((m) => (m === 45 ? 0 : m + 15))}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.durationBtnText}>{minutes} min</Text>
-                <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
-              </TouchableOpacity>
-            </View>
+        {/* Description */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Description</Text>
+            <Text style={styles.optional}>Optional</Text>
           </View>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="What's included in this service?"
+            placeholderTextColor={Colors.light.textTertiary}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
 
-          {/* Description */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Description</Text>
-              <Text style={styles.optional}>Optional</Text>
-            </View>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="What's included in this service?"
-              placeholderTextColor={Colors.light.textTertiary}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
+        {/* Vehicle pricing */}
+        <View style={styles.vehicleSection}>
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>Different pricing by vehicle size</Text>
+            <Switch
+              value={vehiclePricingEnabled}
+              onValueChange={setVehiclePricingEnabled}
+              trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
+              thumbColor={Colors.white}
             />
           </View>
 
-          {/* Vehicle pricing */}
-          <View style={styles.vehicleSection}>
-            <View style={styles.switchRow}>
-              <Text style={styles.label}>Different pricing by vehicle size</Text>
-              <Switch
-                value={vehiclePricingEnabled}
-                onValueChange={setVehiclePricingEnabled}
-                trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
-                thumbColor={Colors.white}
-              />
-            </View>
-
-            {vehiclePricingEnabled && (
-              <View style={styles.vehicleInputs}>
-                {(["sedan", "suv", "truck", "van"] as (keyof VehiclePricing)[]).map((type) => (
-                  <View key={type} style={styles.vehicleRow}>
-                    <Text style={styles.vehicleLabel}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </Text>
-                    <View style={styles.vehiclePriceWrap}>
-                      <Text style={styles.vehicleCurrencySymbol}>
-                        {type === "sedan" ? "$" : "+$"}
-                      </Text>
-                      <TextInput
-                        style={styles.vehicleInput}
-                        value={pricing[type]}
-                        onChangeText={(v) => setPricing((p) => ({ ...p, [type]: v }))}
-                        placeholder={type === "sedan" ? "220" : "30"}
-                        placeholderTextColor={Colors.light.textTertiary}
-                        keyboardType="decimal-pad"
-                      />
-                    </View>
+          {vehiclePricingEnabled && (
+            <View style={styles.vehicleInputs}>
+              {(["suv", "truck", "van"] as (keyof VehiclePricing)[]).map((type) => (
+                <View key={type} style={styles.vehicleRow}>
+                  <Text style={styles.vehicleLabel}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                  <View style={styles.vehiclePriceWrap}>
+                    <Text style={styles.vehicleCurrencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.vehicleInput}
+                      value={pricing[type]}
+                      onChangeText={(v) => setPricing((p) => ({ ...p, [type]: v }))}
+                      placeholder="0.00"
+                      placeholderTextColor={Colors.light.textTertiary}
+                      keyboardType="decimal-pad"
+                    />
                   </View>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {error ? (
-            <View style={styles.errorBox}>
-              <LucideIcon name="AlertCircle" size={15} color={Colors.errorLight} />
-              <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ))}
             </View>
-          ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
+          )}
+        </View>
+
+        {error ? (
+          <View style={styles.errorBox}>
+            <LucideIcon name="AlertCircle" size={15} color={Colors.errorLight} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+      </ScrollView>
 
       <DrawerFooter>
         <TouchableOpacity
@@ -398,7 +476,9 @@ const styles = StyleSheet.create({
   },
   durationRow: { flexDirection: "row", gap: Spacing.sm },
   flex1: { flex: 1 },
-  durationBtn: {
+
+  // SelectInput
+  selectBtn: {
     height: 48,
     backgroundColor: Colors.light.bgPrimary,
     borderRadius: Radius.md,
@@ -409,11 +489,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  durationBtnText: {
+  selectBtnText: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textPrimary,
   },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+  },
+  pickerSheet: {
+    backgroundColor: Colors.light.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: 300,
+    paddingBottom: 24,
+  },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.borderSubtle,
+  },
+  pickerOptionSelected: {
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  pickerOptionText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  pickerOptionTextSelected: {
+    fontFamily: Typography.bodyMedium,
+    color: Colors.foamBlue,
+  },
+
   vehicleSection: {
     gap: Spacing.md,
     paddingTop: Spacing.sm,

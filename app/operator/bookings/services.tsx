@@ -34,7 +34,6 @@ interface RawServicePackage {
 }
 
 type VehiclePricingMap = {
-  sedan: string;
   suv: string;
   truck: string;
   van: string;
@@ -109,7 +108,7 @@ export default function ServicesScreen() {
         rows.map((r) => {
           const { hours, minutes } = minsToHM(r.duration_mins);
           const vspRows = r.vehicle_size_pricing ?? [];
-          const pricing: VehiclePricingMap = { sedan: "", suv: "", truck: "", van: "" };
+          const pricing: VehiclePricingMap = { suv: "", truck: "", van: "" };
           for (const row of vspRows) {
             const t = row.vehicle_type as keyof VehiclePricingMap;
             if (t in pricing) pricing[t] = row.price_adjustment.toString();
@@ -329,24 +328,19 @@ export default function ServicesScreen() {
                   ) : null}
                   {svc.vehiclePricing && (
                     <View style={styles.chipRow}>
-                      {svc.pricing.sedan ? (
-                        <View style={styles.chip}>
-                          <Text style={styles.chipText}>Sedan ${svc.pricing.sedan}</Text>
-                        </View>
-                      ) : null}
                       {svc.pricing.suv ? (
                         <View style={styles.chip}>
-                          <Text style={styles.chipText}>SUV +${svc.pricing.suv}</Text>
+                          <Text style={styles.chipText}>SUV ${svc.pricing.suv}</Text>
                         </View>
                       ) : null}
                       {svc.pricing.truck ? (
                         <View style={styles.chip}>
-                          <Text style={styles.chipText}>Truck +${svc.pricing.truck}</Text>
+                          <Text style={styles.chipText}>Truck ${svc.pricing.truck}</Text>
                         </View>
                       ) : null}
                       {svc.pricing.van ? (
                         <View style={styles.chip}>
-                          <Text style={styles.chipText}>Van +${svc.pricing.van}</Text>
+                          <Text style={styles.chipText}>Van ${svc.pricing.van}</Text>
                         </View>
                       ) : null}
                     </View>

@@ -19,12 +19,18 @@ import { ServiceDrawer } from "@/components/ServiceDrawer";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
+interface RawVehiclePricingRow {
+  vehicle_type: string;
+  price_adjustment: number;
+}
+
 interface RawServicePackage {
   id: string;
   name: string;
   base_price: number;
   duration_mins: number;
   description: string | null;
+  vehicle_size_pricing: RawVehiclePricingRow[];
 }
 
 interface RawCustomerRow {
@@ -34,12 +40,20 @@ interface RawCustomerRow {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type VehicleSizeKey = "sedan" | "suv" | "truck" | "van";
+
+interface VehicleSizePricingEntry {
+  vehicleType: VehicleSizeKey;
+  priceAdjustment: number;
+}
+
 interface ServicePackageOption {
   id: string;
   name: string;
   price: number;
   durationMins: number;
   description: string | null;
+  vehicleSizePricing: VehicleSizePricingEntry[];
 }
 
 interface CustomerOption {
@@ -126,6 +140,7 @@ export default function NewBookingScreen() {
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleYear, setVehicleYear] = useState("");
   const [vehicleColor, setVehicleColor] = useState("");
+  const [vehicleType, setVehicleType] = useState<VehicleSizeKey | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [bookingDate, setBookingDate] = useState(todayString());
   const [bookingTime, setBookingTime] = useState("09:00 AM");
@@ -156,7 +171,7 @@ export default function NewBookingScreen() {
       const [pkgRes, custRes] = await Promise.all([
         supabase
           .from("service_packages")
-          .select("id,name,base_price,duration_mins,description")
+          .select("id,name,base_price,duration_mins,description,vehicle_size_pricing(vehicle_type,price_adjustment)")
           .eq("detailer_id", dId)
           .eq("is_active", true)
           .order("display_order"),
@@ -175,6 +190,12 @@ export default function NewBookingScreen() {
           price: p.base_price,
           durationMins: p.duration_mins,
           description: p.description,
+          vehicleSizePricing: (p.vehicle_size_pricing ?? [])
+            .filter((r) => ["sedan", "suv", "truck", "van"].includes(r.vehicle_type))
+            .map((r) => ({
+              vehicleType: r.vehicle_type as VehicleSizeKey,
+              priceAdjustment: r.price_adjustment,
+            })),
         }))
       );
 
@@ -206,7 +227,7 @@ export default function NewBookingScreen() {
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from("service_packages")
-        .select("id,name,base_price,duration_mins,description")
+        .select("id,name,base_price,duration_mins,description,vehicle_size_pricing(vehicle_type,price_adjustment)")
         .eq("detailer_id", detailerId)
         .eq("is_active", true)
         .order("display_order");
@@ -222,11 +243,25 @@ export default function NewBookingScreen() {
           price: p.base_price,
           durationMins: p.duration_mins,
           description: p.description,
+          vehicleSizePricing: (p.vehicle_size_pricing ?? [])
+            .filter((r) => ["sedan", "suv", "truck", "van"].includes(r.vehicle_type))
+            .map((r) => ({
+              vehicleType: r.vehicle_type as VehicleSizeKey,
+              priceAdjustment: r.price_adjustment,
+            })),
         }))
       );
     } catch (err) {
       console.warn("[NewBooking] reloadPackages error", err);
     }
+  }
+
+  function getEffectivePrice(pkg: ServicePackageOption, vType: VehicleSizeKey | null): number {
+    if (!vType || pkg.vehicleSizePricing.length === 0) return pkg.price;
+    const entry = pkg.vehicleSizePricing.find((e) => e.vehicleType === vType);
+    if (!entry) return pkg.price;
+    if (vType === "sedan") return entry.priceAdjustment;
+    return pkg.price + entry.priceAdjustment;
   }
 
   function handleServiceAdded(newPackageId: string) {
@@ -372,6 +407,7 @@ export default function NewBookingScreen() {
               model: vehicleModel.trim() || null,
               year: vehicleYear.trim() ? parseInt(vehicleYear.trim(), 10) : null,
               color: vehicleColor.trim() || null,
+              vehicle_type: vehicleType ?? null,
               is_default: false,
             })
             .select("id")
@@ -431,6 +467,7 @@ export default function NewBookingScreen() {
   }
 
   const selectedPackage = packages.find((p) => p.id === selectedPackageId) ?? null;
+  const effectivePrice = selectedPackage ? getEffectivePrice(selectedPackage, vehicleType) : 0;
   const effectiveCustomerName =
     customerMode === "search"
       ? (selectedCustomer?.name ?? null)
@@ -598,6 +635,32 @@ export default function NewBookingScreen() {
           {/* ── Vehicle ── */}
           <SectionCard>
             <Text style={styles.cardSectionLabel}>VEHICLE</Text>
+
+            {/* Vehicle type selector */}
+            <FieldLabel>Vehicle type</FieldLabel>
+            <View style={styles.vehicleTypeRow}>
+              {(["sedan", "suv", "truck", "van"] as VehicleSizeKey[]).map((vt) => (
+                <TouchableOpacity
+                  key={vt}
+                  style={[
+                    styles.vehicleTypeBtn,
+                    vehicleType === vt && styles.vehicleTypeBtnActive,
+                  ]}
+                  onPress={() => setVehicleType((prev) => (prev === vt ? null : vt))}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.vehicleTypeBtnText,
+                      vehicleType === vt && styles.vehicleTypeBtnTextActive,
+                    ]}
+                  >
+                    {vt.charAt(0).toUpperCase() + vt.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <View style={styles.twoCol}>
               <View style={styles.halfField}>
                 <FieldLabel>Make</FieldLabel>
@@ -675,6 +738,11 @@ export default function NewBookingScreen() {
               <View style={styles.packageList}>
                 {packages.map((pkg) => {
                   const isSelected = selectedPackageId === pkg.id;
+                  const displayPrice = getEffectivePrice(pkg, vehicleType);
+                  const hasPriceAdjustment =
+                    vehicleType !== null &&
+                    pkg.vehicleSizePricing.some((e) => e.vehicleType === vehicleType) &&
+                    displayPrice !== pkg.price;
                   return (
                     <TouchableOpacity
                       key={pkg.id}
@@ -697,8 +765,13 @@ export default function NewBookingScreen() {
                       </View>
                       <View style={styles.packageRight}>
                         <Text style={[styles.packagePrice, isSelected && { color: Colors.foamBlue }]}>
-                          ${pkg.price.toFixed(0)}
+                          ${displayPrice.toFixed(0)}
                         </Text>
+                        {hasPriceAdjustment && (
+                          <Text style={styles.packageBasePrice}>
+                            base ${pkg.price.toFixed(0)}
+                          </Text>
+                        )}
                         {isSelected && (
                           <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
                         )}
@@ -768,12 +841,13 @@ export default function NewBookingScreen() {
               <View>
                 <Text style={styles.summaryLabel}>
                   {effectiveCustomerName} · {selectedPackage.name}
+                  {vehicleType ? ` · ${vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)}` : ""}
                 </Text>
                 <Text style={styles.summaryDate}>
                   {bookingDate} at {bookingTime}
                 </Text>
               </View>
-              <Text style={styles.summaryPrice}>${selectedPackage.price.toFixed(0)}</Text>
+              <Text style={styles.summaryPrice}>${effectivePrice.toFixed(0)}</Text>
             </View>
           )}
 
@@ -1117,6 +1191,41 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,
     color: Colors.light.textPrimary,
+  },
+  packageBasePrice: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+    textDecorationLine: "line-through",
+  },
+  vehicleTypeRow: {
+    flexDirection: "row",
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  vehicleTypeBtn: {
+    flex: 1,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.bgPrimary,
+  },
+  vehicleTypeBtnActive: {
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+    borderWidth: 2,
+  },
+  vehicleTypeBtnText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+  },
+  vehicleTypeBtnTextActive: {
+    fontFamily: Typography.bodySemiBold,
+    color: Colors.foamBlue,
   },
   summaryBar: {
     flexDirection: "row",

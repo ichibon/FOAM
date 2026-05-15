@@ -18,6 +18,7 @@ The following have **not** yet been applied to the live database:
 | File | What it does |
 |------|-------------|
 | `20260515000002_v2_1_role_model_manager_removal.sql` | Adds `has_team` column to `detailer_profiles` + trigger to keep it in sync with `team_members` |
+| `20260515000005_vehicle_size_pricing.sql` | Creates `vehicle_size_pricing` table with RLS — stores per-vehicle-type price overrides and upcharges for service packages |
 
 ## Already applied migrations (do not re-run)
 

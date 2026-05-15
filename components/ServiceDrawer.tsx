@@ -62,7 +62,7 @@ export function ServiceDrawer({
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [hours, setHours] = useState(2);
-  const [minutes, setMinutes] = useState(0);
+  const [minutes, setMinutes] = useState(30);
   const [vehiclePricingEnabled, setVehiclePricingEnabled] = useState(false);
   const [pricing, setPricing] = useState<VehiclePricing>(EMPTY_PRICING);
   const [saving, setSaving] = useState(false);
@@ -83,7 +83,7 @@ export function ServiceDrawer({
       setDescription("");
       setPrice("");
       setHours(2);
-      setMinutes(0);
+      setMinutes(30);
       setVehiclePricingEnabled(false);
       setPricing(EMPTY_PRICING);
     }

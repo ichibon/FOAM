@@ -75,6 +75,7 @@ export function ComplaintReviewDrawer({
   const [loading, setLoading] = useState(false);
   const [photoTab, setPhotoTab] = useState<"before" | "after">("before");
   const [resolving, setResolving] = useState(false);
+  const [actionLoading, setActionLoading] = useState<"refund" | "redo" | "dispute" | null>(null);
 
   const fetchDetail = useCallback(async () => {
     if (!bookingId) return;
@@ -194,6 +195,60 @@ export function ComplaintReviewDrawer({
       console.warn("[ComplaintReview] markResolved error", err);
     }
     setResolving(false);
+  }
+
+  async function handleAcceptRefund() {
+    if (!bookingId) return;
+    setActionLoading("refund");
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      await supabase
+        .from("bookings")
+        .update({ status: "refunded", notes: "[Complaint accepted — refund issued by operator]" })
+        .eq("id", bookingId);
+      onResolved?.();
+      onRequestClose();
+    } catch (err) {
+      console.warn("[ComplaintReview] acceptRefund error", err);
+    }
+    setActionLoading(null);
+  }
+
+  async function handleAcceptRedo() {
+    if (!bookingId) return;
+    setActionLoading("redo");
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      await supabase
+        .from("bookings")
+        .update({ status: "requested", notes: "[Complaint accepted — re-do job to be scheduled]" })
+        .eq("id", bookingId);
+      onResolved?.();
+      onRequestClose();
+    } catch (err) {
+      console.warn("[ComplaintReview] acceptRedo error", err);
+    }
+    setActionLoading(null);
+  }
+
+  async function handleDispute() {
+    if (!bookingId) return;
+    setActionLoading("dispute");
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      await supabase
+        .from("bookings")
+        .update({ notes: "[Complaint disputed by operator — pending FOAM review]" })
+        .eq("id", bookingId);
+      onResolved?.();
+      onRequestClose();
+    } catch (err) {
+      console.warn("[ComplaintReview] dispute error", err);
+    }
+    setActionLoading(null);
   }
 
   function handleCallCustomer() {
@@ -376,19 +431,31 @@ export function ComplaintReviewDrawer({
               <View style={styles.actionStack}>
                 {/* Accept — Issue Refund */}
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnPrimary]}
+                  style={[styles.actionBtn, styles.actionBtnPrimary, actionLoading === "refund" && { opacity: 0.7 }]}
                   activeOpacity={0.8}
+                  onPress={handleAcceptRefund}
+                  disabled={actionLoading !== null}
                 >
-                  <Ionicons name="checkmark-circle-outline" size={16} color={Colors.white} />
+                  {actionLoading === "refund" ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <Ionicons name="checkmark-circle-outline" size={16} color={Colors.white} />
+                  )}
                   <Text style={styles.actionBtnTextPrimary}>Accept — Issue Refund</Text>
                 </TouchableOpacity>
 
                 {/* Accept — Schedule Re-Do */}
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnOutline]}
+                  style={[styles.actionBtn, styles.actionBtnOutline, actionLoading === "redo" && { opacity: 0.7 }]}
                   activeOpacity={0.8}
+                  onPress={handleAcceptRedo}
+                  disabled={actionLoading !== null}
                 >
-                  <Ionicons name="calendar-outline" size={16} color={Colors.foamBlue} />
+                  {actionLoading === "redo" ? (
+                    <ActivityIndicator size="small" color={Colors.foamBlue} />
+                  ) : (
+                    <Ionicons name="calendar-outline" size={16} color={Colors.foamBlue} />
+                  )}
                   <Text style={[styles.actionBtnTextOutline, { color: Colors.foamBlue }]}>
                     Accept — Schedule Re-Do
                   </Text>
@@ -396,10 +463,16 @@ export function ComplaintReviewDrawer({
 
                 {/* Dispute */}
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnWarning]}
+                  style={[styles.actionBtn, styles.actionBtnWarning, actionLoading === "dispute" && { opacity: 0.7 }]}
                   activeOpacity={0.8}
+                  onPress={handleDispute}
+                  disabled={actionLoading !== null}
                 >
-                  <Ionicons name="shield-outline" size={16} color={Colors.warningLight} />
+                  {actionLoading === "dispute" ? (
+                    <ActivityIndicator size="small" color={Colors.warningLight} />
+                  ) : (
+                    <Ionicons name="shield-outline" size={16} color={Colors.warningLight} />
+                  )}
                   <Text style={[styles.actionBtnTextOutline, { color: Colors.warningLight }]}>
                     Dispute Complaint
                   </Text>
@@ -410,7 +483,7 @@ export function ComplaintReviewDrawer({
                   style={[styles.actionBtn, styles.actionBtnContact]}
                   activeOpacity={0.8}
                   onPress={handleCallCustomer}
-                  disabled={!detail.customerPhone}
+                  disabled={!detail.customerPhone || actionLoading !== null}
                 >
                   <Ionicons name="call-outline" size={16} color={Colors.light.textSecondary} />
                   <Text style={[styles.actionBtnTextOutline, { color: Colors.light.textSecondary }]}>

@@ -16,6 +16,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design
 import type { BookingStatus } from "@/types/database";
 import { TeamCalendarDrawer } from "@/components/TeamCalendarDrawer";
 import { ComplaintReviewDrawer } from "@/components/ComplaintReviewDrawer";
+import { UnitsSelectionDrawer } from "@/components/UnitsSelectionDrawer";
 
 // ─── Raw DB row shapes (avoids `any`) ─────────────────────────────────────────
 
@@ -374,11 +375,12 @@ export default function OperatorTodayScreen() {
   const [alertSeverity, setAlertSeverity] = useState<"warning" | "error">("warning");
   // Unresolved alert count derived from real booking signals (no_show + requested)
   const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
-  // Calendar + complaint drawers
+  // Calendar + complaint + units drawers
   const [storedDetailerId, setStoredDetailerId] = useState<string>("");
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [complaintVisible, setComplaintVisible] = useState(false);
   const [firstNoShowBookingId, setFirstNoShowBookingId] = useState<string | null>(null);
+  const [unitsVisible, setUnitsVisible] = useState(false);
 
   const isMorning = new Date().getHours() < 9;
 
@@ -613,6 +615,7 @@ export default function OperatorTodayScreen() {
           alertCount={0}
           onBellPress={() => router.push("/operator/alerts")}
           onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
+          onUnitsPress={storedDetailerId ? () => setUnitsVisible(true) : undefined}
         />
         <View style={styles.centerFill}>
           <View style={styles.emptyIconCircle}>
@@ -680,6 +683,7 @@ export default function OperatorTodayScreen() {
           alertCount={unresolvedAlertCount}
           onBellPress={() => router.push("/operator/alerts")}
           onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
+          onUnitsPress={storedDetailerId ? () => setUnitsVisible(true) : undefined}
         />
         <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Team status pills */}
@@ -733,6 +737,11 @@ export default function OperatorTodayScreen() {
         bookingId={firstNoShowBookingId}
         onResolved={fetchData}
       />
+      <UnitsSelectionDrawer
+        visible={unitsVisible}
+        onRequestClose={() => setUnitsVisible(false)}
+        detailerId={storedDetailerId}
+      />
       </>
     );
   }
@@ -757,6 +766,7 @@ export default function OperatorTodayScreen() {
         alertCount={unresolvedAlertCount}
         onBellPress={() => router.push("/operator/alerts")}
         onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
+        onUnitsPress={storedDetailerId ? () => setUnitsVisible(true) : undefined}
       />
 
       {/* ── Dismissible alert strip ─────────────────────────────────────────── */}
@@ -890,6 +900,11 @@ export default function OperatorTodayScreen() {
       bookingId={firstNoShowBookingId}
       onResolved={fetchData}
     />
+    <UnitsSelectionDrawer
+      visible={unitsVisible}
+      onRequestClose={() => setUnitsVisible(false)}
+      detailerId={storedDetailerId}
+    />
     </>
   );
 }
@@ -905,6 +920,7 @@ interface StickyHeaderProps {
   alertCount: number;
   onBellPress: () => void;
   onCalendarPress?: () => void;
+  onUnitsPress?: () => void;
 }
 
 function StickyHeader({
@@ -916,6 +932,7 @@ function StickyHeader({
   alertCount,
   onBellPress,
   onCalendarPress,
+  onUnitsPress,
 }: StickyHeaderProps) {
   return (
     <View style={styles.stickyHeader}>
@@ -932,6 +949,11 @@ function StickyHeader({
           </Text>
         </View>
         <View style={styles.headerActions}>
+          {onUnitsPress && (
+            <TouchableOpacity style={styles.iconBtn} onPress={onUnitsPress} activeOpacity={0.7}>
+              <Ionicons name="car-outline" size={22} color={Colors.light.textPrimary} />
+            </TouchableOpacity>
+          )}
           {onCalendarPress && (
             <TouchableOpacity style={styles.iconBtn} onPress={onCalendarPress} activeOpacity={0.7}>
               <Ionicons name="calendar-outline" size={22} color={Colors.light.textPrimary} />

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import type { ComponentProps } from "react";
 import {
   View,
   Text,
@@ -6,11 +7,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from "react-native";
-import type { ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { DrawerModal } from "@/components/DrawerModal";
+import { DrawerHeader } from "@/components/DrawerHeader";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,11 +43,13 @@ type ViewMode = "day" | "week";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SLOT_HEIGHT = 60; // px per hour slot
+const SLOT_HEIGHT = 60;
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 20;
 const TOTAL_HOUR_SLOTS = DAY_END_HOUR - DAY_START_HOUR;
+const CREW_COL_MIN_WIDTH = 90;
 const WEEK_DAYS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+const TIME_GUTTER_W = 44;
 
 const CREW_COLORS = [
   "#339DC7", "#2D9E8F", "#4B6CB7", "#7B61C4",
@@ -68,18 +70,15 @@ function addDays(date: Date, days: number): Date {
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
-  const dow = d.getDay(); // 0=Sun
-  d.setDate(d.getDate() - dow);
+  d.setDate(d.getDate() - d.getDay());
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
 function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
 }
 
 function isToday(date: Date): boolean {
@@ -94,29 +93,24 @@ function dayEnd(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
 }
 
-function formatDayHeader(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
+function formatDayLabel(date: Date): string {
+  return isToday(date)
+    ? `Today · ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+    : date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 function formatWeekRange(weekStart: Date): string {
   const weekEnd = addDays(weekStart, 6);
   const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
-  const sameYear = weekStart.getFullYear() === weekEnd.getFullYear();
   if (sameMonth) {
     return weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric" }) +
-      " – " + weekEnd.toLocaleDateString("en-US", { day: "numeric", year: "numeric" });
+      " – " + weekEnd.toLocaleDateString("en-US", { day: "numeric" });
   }
-  return (
-    weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-    " – " +
-    weekEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  );
+  return weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+    " – " + weekEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatHour(h: number): string {
-  if (h === 0 || h === 24) return "12 AM";
   if (h === 12) return "12 PM";
   return h < 12 ? `${h} AM` : `${h - 12} PM`;
 }
@@ -156,19 +150,19 @@ async function fetchRange(
   ]);
 
   const members = (rawMembers as Array<{ id: string; user_id: string }> | null) ?? [];
-  let memberMap: Record<string, { name: string; initials: string; index: number }> = {};
+  const memberMap: Record<string, { name: string; initials: string; index: number }> = {};
 
   if (members.length > 0) {
     const { data: userRows } = await supabase
       .from("users")
       .select("id, full_name")
       .in("id", members.map((m) => m.user_id));
-    const userIdToName: Record<string, string> = {};
+    const userNameMap: Record<string, string> = {};
     for (const u of (userRows as Array<{ id: string; full_name: string | null }> | null) ?? []) {
-      if (u.full_name) userIdToName[u.id] = u.full_name;
+      if (u.full_name) userNameMap[u.id] = u.full_name;
     }
     members.forEach((m, idx) => {
-      const name = userIdToName[m.user_id] ?? "Crew";
+      const name = userNameMap[m.user_id] ?? "Crew";
       memberMap[m.id] = { name, initials: getInitials(name), index: idx };
     });
   }
@@ -207,148 +201,203 @@ async function fetchRange(
   return { jobs, crew: crewList };
 }
 
-// ─── Day-view job block ───────────────────────────────────────────────────────
+// ─── Crew-column Day View ─────────────────────────────────────────────────────
+// Each crew member is a column; rows are hour slots.
+// Unassigned jobs appear in a trailing "Open" column.
 
-function DayJobBlock({ job }: { job: CalJob }) {
-  const slotCount = Math.max(1, Math.round(job.durationMins / 60));
-  const blockHeight = slotCount * SLOT_HEIGHT - 4;
-  const isUnassigned = !job.crewMemberId;
-  const bgColor = isUnassigned ? Colors.light.bgPrimary : crewColor(job.crewIndex);
+type DayColumn = {
+  colKey: string;
+  label: string;
+  initials: string;
+  color: string;
+};
 
-  return (
-    <View
-      style={[
-        dayStyles.block,
-        {
-          height: blockHeight,
-          backgroundColor: bgColor,
-          borderWidth: isUnassigned ? 2 : 0,
-          borderColor: isUnassigned ? Colors.light.borderDefault : "transparent",
-          borderStyle: "dashed",
-          opacity: job.status === "completed" ? 0.6 : 1,
-        },
-        !isUnassigned ? Shadows.light.level1 : null,
-      ]}
-    >
-      {!isUnassigned && (
-        <View style={dayStyles.blockHeader}>
-          <View style={[dayStyles.avatar, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
-            <Text style={dayStyles.avatarText}>{job.crewInitials ?? "?"}</Text>
-          </View>
-          <View style={dayStyles.blockMeta}>
-            <Text style={dayStyles.customer} numberOfLines={1}>{job.customerName}</Text>
-            <Text style={dayStyles.pkg} numberOfLines={1}>{job.packageName}</Text>
-          </View>
-        </View>
-      )}
-      {isUnassigned && (
-        <View style={dayStyles.blockHeader}>
-          <Ionicons name="calendar-outline" size={14} color={Colors.foamBlue} />
-          <View style={dayStyles.blockMeta}>
-            <Text style={[dayStyles.customer, { color: Colors.foamBlue }]} numberOfLines={1}>
-              {job.customerName}
-            </Text>
-            <Text style={[dayStyles.pkg, { color: Colors.light.textTertiary }]} numberOfLines={1}>
-              Unassigned
-            </Text>
-          </View>
-        </View>
-      )}
-    </View>
-  );
+function buildDayColumns(
+  crew: CrewMember[],
+  hasUnassigned: boolean,
+  filterCrewId: string | null
+): DayColumn[] {
+  const visibleCrew = filterCrewId ? crew.filter((m) => m.id === filterCrewId) : crew;
+  const cols: DayColumn[] = visibleCrew.map((m, idx) => ({
+    colKey: m.id,
+    label: m.name.split(" ")[0],
+    initials: m.initials,
+    color: crewColor(idx),
+  }));
+  if (hasUnassigned && !filterCrewId) {
+    cols.push({ colKey: "__unassigned__", label: "Open", initials: "—", color: Colors.light.borderDefault });
+  }
+  return cols;
 }
-
-const dayStyles = StyleSheet.create({
-  block: { borderRadius: Radius.md, padding: 8, marginBottom: 4, overflow: "hidden" },
-  blockHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  avatar: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  avatarText: { fontFamily: Typography.bodySemiBold, fontSize: 9, color: Colors.white },
-  blockMeta: { flex: 1 },
-  customer: { fontFamily: Typography.bodySemiBold, fontSize: 12, color: Colors.white },
-  pkg: { fontFamily: Typography.body, fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 1 },
-});
-
-// ─── Day view ─────────────────────────────────────────────────────────────────
 
 function DayView({
   jobs,
+  crew,
   filterCrewId,
 }: {
   jobs: CalJob[];
+  crew: CrewMember[];
   filterCrewId: string | null;
 }) {
-  const filtered = filterCrewId ? jobs.filter((j) => j.crewMemberId === filterCrewId) : jobs;
+  const hasUnassigned = jobs.some((j) => !j.crewMemberId);
 
-  // Map each job to its starting hour slot
-  const startSlotMap: Record<number, CalJob[]> = {};
-  for (const job of filtered) {
+  // Solo operator (no team): simple single-column timeline
+  if (crew.length === 0) {
+    const startSlotMap: Record<number, CalJob[]> = {};
+    for (const job of jobs) {
+      const h = job.scheduledAt.getHours();
+      if (h < DAY_START_HOUR || h >= DAY_END_HOUR) continue;
+      const idx = h - DAY_START_HOUR;
+      if (!startSlotMap[idx]) startSlotMap[idx] = [];
+      startSlotMap[idx].push(job);
+    }
+    return (
+      <ScrollView style={gvStyles.scroll} contentContainerStyle={gvStyles.content} showsVerticalScrollIndicator={false}>
+        {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, slotIdx) => {
+          const hour = DAY_START_HOUR + slotIdx;
+          const slotJobs = startSlotMap[slotIdx] ?? [];
+          return (
+            <View key={slotIdx} style={gvStyles.row}>
+              <View style={gvStyles.timeGutter}>
+                <Text style={gvStyles.timeLabel}>{formatHour(hour)}</Text>
+              </View>
+              <View style={[gvStyles.cell, { flex: 1 }]}>
+                {slotJobs.map((job) => (
+                  <View key={job.id} style={[gvStyles.jobChip, { backgroundColor: Colors.foamBlue }]}>
+                    <Text style={gvStyles.chipCustomer} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
+                    <Text style={gvStyles.chipPkg} numberOfLines={1}>{job.packageName}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+        {jobs.length === 0 && (
+          <View style={gvStyles.empty}>
+            <Ionicons name="calendar-outline" size={36} color={Colors.light.textDisabled} />
+            <Text style={gvStyles.emptyText}>No jobs scheduled</Text>
+          </View>
+        )}
+      </ScrollView>
+    );
+  }
+
+  // Team view: crew-column grid
+  const columns = buildDayColumns(crew, hasUnassigned, filterCrewId);
+
+  // Build slot map: colKey → slotIdx → CalJob[]
+  const slotMap: Record<string, Record<number, CalJob[]>> = {};
+  for (const col of columns) slotMap[col.colKey] = {};
+  for (const job of jobs) {
     const h = job.scheduledAt.getHours();
     if (h < DAY_START_HOUR || h >= DAY_END_HOUR) continue;
     const slotIdx = h - DAY_START_HOUR;
-    if (!startSlotMap[slotIdx]) startSlotMap[slotIdx] = [];
-    startSlotMap[slotIdx].push(job);
+    const colKey = job.crewMemberId ?? "__unassigned__";
+    if (slotMap[colKey]) {
+      if (!slotMap[colKey][slotIdx]) slotMap[colKey][slotIdx] = [];
+      slotMap[colKey][slotIdx].push(job);
+    }
   }
 
   return (
-    <ScrollView
-      style={dvStyles.scroll}
-      contentContainerStyle={dvStyles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={gvStyles.scroll} contentContainerStyle={gvStyles.content} showsVerticalScrollIndicator={false}>
+      {/* Crew header row */}
+      <View style={[gvStyles.row, gvStyles.headerRow]}>
+        <View style={gvStyles.timeGutter} />
+        {columns.map((col) => (
+          <View key={col.colKey} style={[gvStyles.cell, gvStyles.crewHeaderCell]}>
+            <View style={[gvStyles.crewAvatar, { backgroundColor: col.color }]}>
+              <Text style={gvStyles.crewAvatarText}>{col.initials}</Text>
+            </View>
+            <Text style={gvStyles.crewName} numberOfLines={1}>{col.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Hour rows */}
       {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, slotIdx) => {
         const hour = DAY_START_HOUR + slotIdx;
-        const slotJobs = startSlotMap[slotIdx] ?? [];
         return (
-          <View key={slotIdx} style={dvStyles.slotRow}>
-            <View style={dvStyles.slotLabel}>
-              <Text style={dvStyles.slotLabelText}>{formatHour(hour)}</Text>
+          <View key={slotIdx} style={gvStyles.row}>
+            <View style={gvStyles.timeGutter}>
+              <Text style={gvStyles.timeLabel}>{formatHour(hour)}</Text>
             </View>
-            <View style={dvStyles.slotCell}>
-              <View style={dvStyles.slotLine} />
-              {slotJobs.map((job) => (
-                <DayJobBlock key={job.id} job={job} />
-              ))}
-            </View>
+            {columns.map((col) => {
+              const cellJobs = slotMap[col.colKey]?.[slotIdx] ?? [];
+              return (
+                <View key={col.colKey} style={gvStyles.cell}>
+                  {cellJobs.map((job) => (
+                    <View key={job.id} style={[gvStyles.jobChip, { backgroundColor: col.color }]}>
+                      <Text style={gvStyles.chipCustomer} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
+                      <Text style={gvStyles.chipPkg} numberOfLines={1}>{job.packageName}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
           </View>
         );
       })}
-
-      {filtered.length === 0 && (
-        <View style={dvStyles.empty}>
-          <Ionicons name="calendar-outline" size={36} color={Colors.light.textDisabled} />
-          <Text style={dvStyles.emptyText}>No jobs scheduled</Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
 
-const dvStyles = StyleSheet.create({
+const gvStyles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { paddingTop: 6, paddingBottom: 48 },
-  slotRow: { flexDirection: "row", minHeight: SLOT_HEIGHT },
-  slotLabel: { width: 54, paddingTop: 4, alignItems: "flex-end", paddingRight: 10 },
-  slotLabelText: { fontFamily: Typography.body, fontSize: 11, color: Colors.light.textTertiary },
-  slotCell: {
-    flex: 1,
-    borderLeftWidth: 1,
-    borderLeftColor: Colors.light.borderSubtle,
-    paddingLeft: 10,
-    paddingRight: 12,
-    paddingTop: 4,
+  content: { paddingBottom: 40 },
+  row: {
+    flexDirection: "row",
+    height: SLOT_HEIGHT,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
   },
-  slotLine: {
-    position: "absolute", left: 0, top: 0,
-    width: 6, height: 1,
-    backgroundColor: Colors.light.borderSubtle,
+  headerRow: { height: 52 },
+  timeGutter: {
+    width: TIME_GUTTER_W,
+    alignItems: "flex-end",
+    paddingRight: 8,
+    paddingTop: 8,
+    flexShrink: 0,
   },
+  timeLabel: { fontFamily: Typography.body, fontSize: 10, color: Colors.light.textTertiary },
+  cell: {
+    flex: 1,
+    minWidth: CREW_COL_MIN_WIDTH,
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.light.borderSubtle,
+    padding: 3,
+    gap: 2,
+  },
+  crewHeaderCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingTop: 6,
+  },
+  crewAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crewAvatarText: { fontFamily: Typography.bodySemiBold, fontSize: 9, color: Colors.white },
+  crewName: { fontFamily: Typography.bodyMedium, fontSize: 10, color: Colors.light.textSecondary, textAlign: "center" },
+  jobChip: {
+    borderRadius: Radius.xs,
+    paddingHorizontal: 4,
+    paddingVertical: 3,
+    marginBottom: 1,
+    ...Shadows.light.level1,
+  },
+  chipCustomer: { fontFamily: Typography.bodySemiBold, fontSize: 10, color: Colors.white },
+  chipPkg: { fontFamily: Typography.body, fontSize: 9, color: "rgba(255,255,255,0.85)" },
   empty: { alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.light.textSecondary },
 });
 
-// ─── Week view ────────────────────────────────────────────────────────────────
+// ─── Week View ────────────────────────────────────────────────────────────────
+// Each of the 7 days is a column; rows are hour slots.
 
 function WeekView({
   weekStart,
@@ -364,10 +413,9 @@ function WeekView({
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   const filtered = filterCrewId ? jobs.filter((j) => j.crewMemberId === filterCrewId) : jobs;
 
-  // Group jobs by day index (0–6) and hour
+  // Group by day index and hour
   const gridMap: Record<number, Record<number, CalJob[]>> = {};
   for (let i = 0; i < 7; i++) gridMap[i] = {};
-
   for (const job of filtered) {
     const dayIdx = weekDays.findIndex((d) => isSameDay(d, job.scheduledAt));
     if (dayIdx < 0) continue;
@@ -378,73 +426,50 @@ function WeekView({
     gridMap[dayIdx][slotIdx].push(job);
   }
 
-  const today = new Date();
-
   return (
-    <ScrollView
-      style={wvStyles.scroll}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={wvStyles.content}
-    >
-      {/* Sticky day header row */}
-      <View style={wvStyles.dayHeaderRow}>
-        <View style={wvStyles.timeGutter} />
+    <ScrollView style={wvStyles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={wvStyles.content}>
+      {/* Day header row */}
+      <View style={[wvStyles.row, wvStyles.headerRow]}>
+        <View style={{ width: TIME_GUTTER_W, flexShrink: 0 }} />
         {weekDays.map((d, i) => {
           const todayDay = isToday(d);
           return (
-            <TouchableOpacity
-              key={i}
-              style={wvStyles.dayHeaderCell}
-              onPress={() => onDayPress(d)}
-              activeOpacity={0.7}
-            >
-              <Text style={wvStyles.dayLetterText}>{WEEK_DAYS[d.getDay()]}</Text>
+            <TouchableOpacity key={i} style={wvStyles.cell} onPress={() => onDayPress(d)} activeOpacity={0.7}>
+              <Text style={wvStyles.dayLetter}>{WEEK_DAYS[d.getDay()]}</Text>
               <View style={[wvStyles.dayNumberWrap, todayDay && wvStyles.todayCircle]}>
-                <Text style={[wvStyles.dayNumberText, todayDay && wvStyles.todayText]}>
-                  {d.getDate()}
-                </Text>
+                <Text style={[wvStyles.dayNumber, todayDay && wvStyles.todayText]}>{d.getDate()}</Text>
               </View>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Grid */}
+      {/* Hour rows */}
       {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, slotIdx) => {
         const hour = DAY_START_HOUR + slotIdx;
         return (
-          <View key={slotIdx} style={wvStyles.gridRow}>
-            {/* Time label */}
-            <View style={wvStyles.timeGutter}>
+          <View key={slotIdx} style={wvStyles.row}>
+            <View style={[wvStyles.timeGutter]}>
               <Text style={wvStyles.timeLabel}>{formatHour(hour)}</Text>
             </View>
-            {/* Day cells */}
-            {weekDays.map((_, dayIdx) => {
+            {weekDays.map((d, dayIdx) => {
               const cellJobs = gridMap[dayIdx][slotIdx] ?? [];
-              const isCurrentDay = isToday(weekDays[dayIdx]);
               return (
-                <View
+                <TouchableOpacity
                   key={dayIdx}
-                  style={[wvStyles.gridCell, isCurrentDay && wvStyles.gridCellToday]}
+                  style={[wvStyles.cell, isToday(d) && wvStyles.todayCell]}
+                  onPress={() => onDayPress(d)}
+                  activeOpacity={0.85}
                 >
                   {cellJobs.map((job) => (
                     <View
                       key={job.id}
-                      style={[
-                        wvStyles.jobDot,
-                        {
-                          backgroundColor: job.crewMemberId
-                            ? crewColor(job.crewIndex)
-                            : Colors.light.borderDefault,
-                        },
-                      ]}
+                      style={[wvStyles.dot, { backgroundColor: job.crewMemberId ? crewColor(job.crewIndex) : Colors.light.borderDefault }]}
                     >
-                      <Text style={wvStyles.jobDotText} numberOfLines={1}>
-                        {job.customerName.split(" ")[0]}
-                      </Text>
+                      <Text style={wvStyles.dotText} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
                     </View>
                   ))}
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -454,64 +479,40 @@ function WeekView({
   );
 }
 
-const WEEK_COL = 1; // relative flex weight per day column
-
 const wvStyles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 40 },
-  dayHeaderRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.borderSubtle,
-    backgroundColor: Colors.light.surface,
-  },
-  timeGutter: { width: 44, alignItems: "flex-end", paddingRight: 6, paddingTop: 4 },
-  dayHeaderCell: { flex: WEEK_COL, alignItems: "center", paddingVertical: 6 },
-  dayLetterText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: 10,
-    color: Colors.light.textTertiary,
-    textTransform: "uppercase",
-  },
-  dayNumberWrap: { width: 24, height: 24, alignItems: "center", justifyContent: "center", marginTop: 2, borderRadius: 12 },
-  todayCircle: { backgroundColor: Colors.foamBlue },
-  dayNumberText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  todayText: { color: Colors.white, fontFamily: Typography.bodySemiBold },
-  gridRow: {
+  row: {
     flexDirection: "row",
     height: SLOT_HEIGHT,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
   },
-  timeLabel: {
-    fontFamily: Typography.body,
-    fontSize: 10,
-    color: Colors.light.textTertiary,
-    marginTop: 4,
-  },
-  gridCell: {
-    flex: WEEK_COL,
+  headerRow: { height: 52 },
+  timeGutter: { width: TIME_GUTTER_W, alignItems: "flex-end", paddingRight: 8, paddingTop: 8, flexShrink: 0 },
+  timeLabel: { fontFamily: Typography.body, fontSize: 10, color: Colors.light.textTertiary },
+  cell: {
+    flex: 1,
     borderLeftWidth: 1,
     borderLeftColor: Colors.light.borderSubtle,
     padding: 2,
     gap: 2,
   },
-  gridCellToday: { backgroundColor: "rgba(51,157,199,0.04)" },
-  jobDot: {
-    borderRadius: Radius.xs,
-    paddingHorizontal: 3,
-    paddingVertical: 2,
-    marginBottom: 1,
-  },
-  jobDotText: {
+  todayCell: { backgroundColor: "rgba(51,157,199,0.04)" },
+  dayLetter: {
     fontFamily: Typography.bodyMedium,
-    fontSize: 9,
-    color: Colors.white,
+    fontSize: 10,
+    color: Colors.light.textTertiary,
+    textTransform: "uppercase",
+    textAlign: "center",
+    paddingTop: 4,
   },
+  dayNumberWrap: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", alignSelf: "center", marginTop: 1 },
+  todayCircle: { backgroundColor: Colors.foamBlue },
+  dayNumber: { fontFamily: Typography.bodyMedium, fontSize: 12, color: Colors.light.textSecondary },
+  todayText: { color: Colors.white, fontFamily: Typography.bodySemiBold },
+  dot: { borderRadius: Radius.xs, paddingHorizontal: 3, paddingVertical: 2, marginBottom: 1 },
+  dotText: { fontFamily: Typography.bodyMedium, fontSize: 9, color: Colors.white },
 });
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -534,21 +535,13 @@ export function TeamCalendarDrawer({
     setLoading(true);
     try {
       if (viewMode === "day") {
-        const { jobs: loaded, crew: loadedCrew } = await fetchRange(
-          detailerId,
-          dayStart(selectedDate),
-          dayEnd(selectedDate)
-        );
-        setJobs(loaded);
-        setCrew(loadedCrew);
+        const result = await fetchRange(detailerId, dayStart(selectedDate), dayEnd(selectedDate));
+        setJobs(result.jobs);
+        setCrew(result.crew);
       } else {
-        const { jobs: loaded, crew: loadedCrew } = await fetchRange(
-          detailerId,
-          weekStart,
-          dayEnd(addDays(weekStart, 6))
-        );
-        setJobs(loaded);
-        setCrew(loadedCrew);
+        const result = await fetchRange(detailerId, weekStart, dayEnd(addDays(weekStart, 6)));
+        setJobs(result.jobs);
+        setCrew(result.crew);
       }
     } catch (err) {
       console.warn("[TeamCalendar] loadJobs error", err);
@@ -560,13 +553,13 @@ export function TeamCalendarDrawer({
     if (visible) loadJobs();
   }, [visible, loadJobs]);
 
-  // Reset to today when drawer opens
   useEffect(() => {
     if (visible) {
       const today = new Date();
       setSelectedDate(today);
       setWeekStart(getWeekStart(today));
       setViewMode("day");
+      setFilterCrewId(null);
     }
   }, [visible]);
 
@@ -575,61 +568,69 @@ export function TeamCalendarDrawer({
     setViewMode("day");
   }
 
-  function handleGoToday() {
+  function switchToWeek() {
+    setWeekStart(getWeekStart(selectedDate));
+    setViewMode("week");
+  }
+
+  function goToday() {
     const today = new Date();
     setSelectedDate(today);
     setWeekStart(getWeekStart(today));
   }
 
-  const dayLabel = isToday(selectedDate)
-    ? `Today · ${selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-    : formatDayHeader(selectedDate);
+  // Right action for DrawerHeader: Week ↔ Today toggle
+  const headerRightAction = (
+    <TouchableOpacity
+      style={styles.modeToggle}
+      onPress={viewMode === "day" ? switchToWeek : goToday}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.modeToggleText}>{viewMode === "day" ? "Week" : "Today"}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <DrawerModal visible={visible} onRequestClose={onRequestClose}>
-      {/* ── Top navigation ── */}
-      <View style={styles.headerRow}>
-        {viewMode === "day" ? (
-          <>
-            <TouchableOpacity style={styles.navArrow} onPress={() => setSelectedDate((d) => addDays(d, -1))} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={20} color={Colors.light.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{dayLabel}</Text>
-            <TouchableOpacity
-              style={styles.weekBtn}
-              onPress={() => { setWeekStart(getWeekStart(selectedDate)); setViewMode("week"); }}
-            >
-              <Text style={styles.weekBtnText}>Week</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity style={styles.navArrow} onPress={() => setWeekStart((w) => addDays(w, -7))} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={20} color={Colors.light.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{formatWeekRange(weekStart)}</Text>
-            <TouchableOpacity style={styles.weekBtn} onPress={handleGoToday}>
-              <Text style={styles.weekBtnText}>Today</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        {viewMode === "week" && (
-          <TouchableOpacity
-            style={[styles.navArrow, { marginLeft: 4 }]}
-            onPress={() => setWeekStart((w) => addDays(w, 7))}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textPrimary} />
-          </TouchableOpacity>
-        )}
-        {viewMode === "day" && (
-          <TouchableOpacity style={styles.navArrow} onPress={() => setSelectedDate((d) => addDays(d, 1))} activeOpacity={0.7}>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textPrimary} />
-          </TouchableOpacity>
-        )}
+      {/* Shared drawer header — title + close + view-mode toggle */}
+      <DrawerHeader
+        title="Team Calendar"
+        onClose={onRequestClose}
+        rightAction={headerRightAction}
+      />
+
+      {/* Date / week navigation row */}
+      <View style={styles.navRow}>
+        <TouchableOpacity
+          style={styles.navArrow}
+          activeOpacity={0.7}
+          onPress={() =>
+            viewMode === "day"
+              ? setSelectedDate((d) => addDays(d, -1))
+              : setWeekStart((w) => addDays(w, -7))
+          }
+        >
+          <Ionicons name="chevron-back" size={18} color={Colors.light.textPrimary} />
+        </TouchableOpacity>
+
+        <Text style={styles.navLabel}>
+          {viewMode === "day" ? formatDayLabel(selectedDate) : formatWeekRange(weekStart)}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.navArrow}
+          activeOpacity={0.7}
+          onPress={() =>
+            viewMode === "day"
+              ? setSelectedDate((d) => addDays(d, 1))
+              : setWeekStart((w) => addDays(w, 7))
+          }
+        >
+          <Ionicons name="chevron-forward" size={18} color={Colors.light.textPrimary} />
+        </TouchableOpacity>
       </View>
 
-      {/* ── Crew filter chips ── */}
+      {/* Crew filter chips */}
       {crew.length > 0 && (
         <ScrollView
           horizontal
@@ -652,7 +653,7 @@ export function TeamCalendarDrawer({
                 style={[styles.chip, isSelected && { backgroundColor: color, borderColor: color }]}
                 onPress={() => setFilterCrewId(isSelected ? null : m.id)}
               >
-                <View style={[styles.crewDot, { backgroundColor: isSelected ? "#fff" : color }]} />
+                <View style={[styles.crewDot, { backgroundColor: isSelected ? Colors.white : color }]} />
                 <Text style={[styles.chipText, isSelected && { color: Colors.white }]}>
                   {m.name.split(" ")[0]}
                 </Text>
@@ -664,13 +665,12 @@ export function TeamCalendarDrawer({
 
       <View style={styles.divider} />
 
-      {/* ── Content ── */}
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={Colors.foamBlue} />
         </View>
       ) : viewMode === "day" ? (
-        <DayView jobs={jobs} filterCrewId={filterCrewId} />
+        <DayView jobs={jobs} crew={crew} filterCrewId={filterCrewId} />
       ) : (
         <WeekView
           weekStart={weekStart}
@@ -686,39 +686,39 @@ export function TeamCalendarDrawer({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  headerRow: {
+  modeToggle: { paddingHorizontal: 4, paddingVertical: 4 },
+  modeToggleText: { fontFamily: Typography.bodyMedium, fontSize: 14, color: Colors.foamBlue },
+  navRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.mdSm,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
     gap: 8,
   },
   navArrow: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: Colors.light.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  headerTitle: {
+  navLabel: {
     flex: 1,
     fontFamily: Typography.bodySemiBold,
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.light.textPrimary,
     textAlign: "center",
   },
-  weekBtn: { paddingHorizontal: 10, paddingVertical: 6, flexShrink: 0 },
-  weekBtnText: { fontFamily: Typography.bodyMedium, fontSize: 14, color: Colors.foamBlue },
-  chipScroll: { maxHeight: 52, backgroundColor: Colors.light.surface },
+  chipScroll: { maxHeight: 50, backgroundColor: Colors.light.surface },
   chipRow: {
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: "center",
   },
   chip: {
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Colors.light.borderSubtle,

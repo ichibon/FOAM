@@ -137,12 +137,15 @@ export default function PayrollScreen() {
 
         const { data: profileData, error: profileErr } = await supabase
           .from("detailer_profiles")
-          .select("id")
+          .select("id, default_commission_rate")
           .eq("user_id", user.id)
           .single();
         if (profileErr || !profileData) throw profileErr ?? new Error("no profile");
 
         const profileId: string = profileData.id;
+        const defaultRate: number =
+          (profileData as { id: string; default_commission_rate?: number | null })
+            .default_commission_rate ?? 38;
         const meta = getPeriodMeta(p);
         setPeriodLabel(meta.label);
         setPayoutDate(meta.payoutDate);
@@ -205,7 +208,7 @@ export default function PayrollScreen() {
         }
 
         const rateMap: Record<string, number> = {};
-        for (const tm of teamMembers) rateMap[tm.id] = tm.commission_rate ?? 38;
+        for (const tm of teamMembers) rateMap[tm.id] = tm.commission_rate ?? defaultRate;
 
         // Aggregate earnings per crew member
         const earningsMap: Record<

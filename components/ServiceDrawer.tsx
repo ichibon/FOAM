@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { DrawerModal } from "@/components/DrawerModal";
 import { DrawerHeader } from "@/components/DrawerHeader";
 import { DrawerFooter } from "@/components/DrawerFooter";
@@ -63,8 +62,6 @@ const MINUTE_OPTIONS = [
 ];
 
 // ─── DurationPicker ───────────────────────────────────────────────────────────
-// iOS/Android: native Picker inside a bottom-sheet Modal (standard UIPickerView pattern)
-// Web: custom modal list with tappable options
 
 interface DurationOption {
   value: number;
@@ -83,118 +80,57 @@ function DurationPicker({
   onSelect: (v: number) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [tempValue, setTempValue] = useState(selectedValue);
 
-  function handleOpen() {
-    setTempValue(selectedValue);
-    setOpen(true);
-  }
-
-  const trigger = (
-    <TouchableOpacity style={styles.selectBtn} onPress={handleOpen} activeOpacity={0.7}>
-      <Text style={styles.selectBtnText}>{selectedLabel}</Text>
-      <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
-    </TouchableOpacity>
-  );
-
-  if (Platform.OS === "web") {
-    return (
-      <>
-        {trigger}
-        <Modal
-          visible={open}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setOpen(false)}
-          statusBarTranslucent
-        >
-          <TouchableOpacity
-            style={styles.pickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setOpen(false)}
-          >
-            <View style={styles.webPickerSheet}>
-              <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-                {options.map((opt) => {
-                  const isSelected = opt.value === selectedValue;
-                  return (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        onSelect(opt.value);
-                        setOpen(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.pickerOptionText,
-                          isSelected && styles.pickerOptionTextSelected,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                      {isSelected && (
-                        <LucideIcon name="Check" size={16} color={Colors.foamBlue} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      </>
-    );
-  }
-
-  // Native: slide-up sheet with UIPickerView-style scroll wheel
   return (
     <>
-      {trigger}
+      <TouchableOpacity style={styles.selectBtn} onPress={() => setOpen(true)} activeOpacity={0.7}>
+        <Text style={styles.selectBtnText}>{selectedLabel}</Text>
+        <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
+      </TouchableOpacity>
       <Modal
         visible={open}
         transparent
-        animationType="slide"
-        onRequestClose={() => {
-          onSelect(tempValue);
-          setOpen(false);
-        }}
+        animationType={Platform.OS === "web" ? "fade" : "slide"}
+        onRequestClose={() => setOpen(false)}
         statusBarTranslucent
       >
         <TouchableOpacity
           style={styles.pickerBackdrop}
           activeOpacity={1}
-          onPress={() => {
-            onSelect(tempValue);
-            setOpen(false);
-          }}
-        />
-        <View style={styles.nativePickerSheet}>
-          <View style={styles.nativePickerHeader}>
-            <View style={styles.nativePickerHandle} />
-            <TouchableOpacity
-              style={styles.nativePickerDoneBtn}
-              onPress={() => {
-                onSelect(tempValue);
-                setOpen(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.nativePickerDoneText}>Done</Text>
-            </TouchableOpacity>
+          onPress={() => setOpen(false)}
+        >
+          <View style={Platform.OS === "web" ? styles.webPickerSheet : styles.nativePickerSheet}>
+            {Platform.OS !== "web" && <View style={styles.nativePickerHandle} />}
+            <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+              {options.map((opt) => {
+                const isSelected = opt.value === selectedValue;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      onSelect(opt.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        isSelected && styles.pickerOptionTextSelected,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    {isSelected && (
+                      <LucideIcon name="Check" size={16} color={Colors.foamBlue} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-          <Picker
-            selectedValue={tempValue}
-            onValueChange={(v) => setTempValue(v as number)}
-            style={styles.nativePicker}
-          >
-            {options.map((opt) => (
-              <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-            ))}
-          </Picker>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </>
   );
@@ -611,39 +547,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: Platform.OS === "ios" ? 24 : 8,
-  },
-  nativePickerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.borderSubtle,
+    maxHeight: 300,
   },
   nativePickerHandle: {
-    position: "absolute",
-    alignSelf: "center",
-    left: 0,
-    right: 0,
-    top: 8,
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.light.borderDefault,
-    marginHorizontal: "auto",
-  },
-  nativePickerDoneBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  nativePickerDoneText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.bodyM,
-    color: Colors.foamBlue,
-  },
-  nativePicker: {
-    width: "100%",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 4,
   },
 
   vehicleSection: {

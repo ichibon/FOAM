@@ -25,6 +25,14 @@ export default function OperatorLayout() {
   const { user, pendingApproval } = useAuth();
   const [hasTeam, setHasTeam] = useState(false);
 
+  // Redirect pending operators whenever pendingApproval changes or the
+  // layout mounts, ensuring deep-links to any tab screen are blocked.
+  useEffect(() => {
+    if (pendingApproval) {
+      router.replace("/operator/pending");
+    }
+  }, [pendingApproval]);
+
   useEffect(() => {
     if (!user) return;
     fetchHasTeam();

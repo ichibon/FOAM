@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type TabId = "invite" | "code";
-type RoleId = "team_member" | "manager";
+type RoleId = "team_member";
 type InputMode = "phone" | "email";
 
 interface Recipient {
@@ -254,14 +254,6 @@ export default function AddTeamMemberScreen() {
                   icon="User"
                   selected={role === "team_member"}
                   onSelect={() => setRole("team_member")}
-                />
-                <RoleCard
-                  id="manager"
-                  label="Team Manager"
-                  description="Manage crew, view schedule, access reports"
-                  icon="UserCheck"
-                  selected={role === "manager"}
-                  onSelect={() => setRole("manager")}
                 />
               </View>
             </View>

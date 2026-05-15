@@ -1,6 +1,7 @@
 # Data Model
-**Version 1.4 — Updated May 2026**
+**Version 1.5 — Updated May 15, 2026**
 
+Changes from v1.4 marked with `[v1.5]`
 Changes from v1.3 marked with `[v1.4]`
 Changes from v1.2 marked with `[v1.3]`
 Changes from v1.1 marked with `[v1.2]`
@@ -8,8 +9,8 @@ Changes from v1.0 marked with `[v1.1]`
 
 Built on Supabase (PostgreSQL 17). All tables use UUID primary keys. Row-level security enforced at the database layer via Supabase RLS policies. Role-based access enforced at both application and database layers.
 
-**Migrations applied through v1.4:**
-`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes`
+**Migrations applied through v1.5:**
+`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes` → `v2_1_role_model_manager_removal`
 
 ---
 
@@ -23,8 +24,10 @@ phone                     text
 full_name                 text
 avatar_url                text
 role                      text NOT NULL
-  -- 'customer' | 'operator' | 'manager' | 'team_member' | 'superadmin'
+  -- 'customer' | 'operator' | 'team_member' | 'superadmin'
   -- superadmin: FOAM ops only — not exposed in the app
+  -- [v1.5] 'manager' removed as a JWT role. Team management is a UI layer
+  --         within the 'operator' role, gated by detailer_profiles.has_team.
 first_payment_celebrated  boolean DEFAULT false
   -- [v1.1] confetti trigger — fires once on operator's first received payment
 created_at                timestamptz DEFAULT now()
@@ -60,6 +63,10 @@ accepts_walkins     boolean DEFAULT false
 
 -- Multi-unit / fleet
 is_multi_unit       boolean DEFAULT false  -- [v1.3] fleet or franchise operator
+has_team            boolean DEFAULT false
+  -- [v1.5] true when operator has at least one active team member.
+  --         Unlocks Team Tab in bottom nav and command center view on Today Tab.
+  --         Set to true on first team_members insert; false when last member removed.
 
 -- Stripe & payments
 stripe_account_id   text
@@ -491,22 +498,17 @@ created_at  timestamptz DEFAULT now()
 ### business_locations
 Physical locations for fixed and hybrid operators.
 ```sql
-id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id      uuid REFERENCES detailer_profiles(id)
-name             text
-address          text
-lat              decimal
-lng              decimal
-bay_count        integer DEFAULT 1
-accepts_walkins  boolean DEFAULT false
-hours            jsonb
-phone            text
-  -- Optional contact phone for this location; captured during onboarding.
-is_active        boolean DEFAULT true
-crew_member_ids  jsonb DEFAULT '[]'
-  -- Array of team_member UUIDs assigned to this location.
-  -- Populated during onboarding (Assign Crew step) and editable from operator dashboard.
-created_at       timestamptz DEFAULT now()
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+detailer_id     uuid REFERENCES detailer_profiles(id)
+name            text
+address         text
+lat             decimal
+lng             decimal
+bay_count       integer DEFAULT 1
+accepts_walkins boolean DEFAULT false
+hours           jsonb
+is_active       boolean DEFAULT true
+created_at      timestamptz DEFAULT now()
 ```
 
 ### business_assets
@@ -517,11 +519,6 @@ detailer_id uuid REFERENCES detailer_profiles(id)
 asset_type  text   -- 'van' | 'trailer' | 'truck' | 'other'
 name        text
 is_active   boolean DEFAULT true
-metadata    jsonb
-  -- Operator-entered van details: { license_plate, home_base, radius_miles,
-  --   availability: [{key,day,enabled,open,close}], equipment_notes }
-  -- Stored on the asset record so van metadata moves with the asset row.
-  -- Populated during onboarding (Build step) and editable from operator dashboard.
 created_at  timestamptz DEFAULT now()
 ```
 
@@ -532,23 +529,6 @@ id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
 asset_id        uuid REFERENCES business_assets(id)
 team_member_id  uuid REFERENCES team_members(id)
 assigned_date   date
-created_at      timestamptz DEFAULT now()
-```
-
-### operator_invites
-Pending invitations sent by an operator to a prospective crew member.
-```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-detailer_id     uuid REFERENCES detailer_profiles(id)
-contact         text NOT NULL        -- phone number or email address
-contact_type    text NOT NULL        -- 'phone' | 'email'
-role            text NOT NULL DEFAULT 'team_member'
-  -- 'team_member' | 'manager'
-commission_rate decimal(5,2)         -- percentage, e.g. 0.38 = 38%
-unit_id         uuid                 -- optional: pre-assigns to a specific asset or location
-unit_type       text                 -- 'van' | 'location' (paired with unit_id)
-status          text NOT NULL DEFAULT 'pending'
-  -- 'pending' | 'accepted' | 'expired'
 created_at      timestamptz DEFAULT now()
 ```
 
@@ -886,3 +866,4 @@ ops_audit_log (many) ──── (1) users (performed_by)   [v1.4 — NEW]
 ---
 
 *Last updated: May 2026. Cross-reference ARCHITECTURE.md for edge functions, PAYMENT_POLICY.md for fee logic, CAPABILITY_LAYER.md for system integrations.*
+

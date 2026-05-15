@@ -27,7 +27,7 @@ if (typeof global.crypto === "undefined" || !global.crypto.subtle) {
   };
 }
 
-export type UserRole = "customer" | "operator" | "manager" | "team_member";
+export type UserRole = "customer" | "operator" | "team_member" | "superadmin";
 
 export interface FoamUser {
   id: string;

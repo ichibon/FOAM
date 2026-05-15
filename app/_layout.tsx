@@ -29,7 +29,6 @@ function onboardingEntryFor(role: UserRole): string {
   switch (role) {
     case "customer": return "/onboarding/customer/vehicle";
     case "operator": return "/onboarding/operator/build";
-    case "manager": return "/onboarding/operator/build";
     case "team_member": return "/onboarding/crew/invite";
     default: return "/auth/role-select";
   }
@@ -39,7 +38,6 @@ function mainTabFor(role: UserRole): string {
   switch (role) {
     case "customer": return "/customer/discover";
     case "operator": return "/operator/today";
-    case "manager": return "/operator/today";
     case "team_member": return "/team_member/jobs";
     default: return "/onboarding/splash";
   }

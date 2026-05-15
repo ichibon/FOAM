@@ -1,4 +1,4 @@
-export type UserRole = "customer" | "operator" | "manager" | "team_member";
+export type UserRole = "customer" | "operator" | "team_member" | "superadmin";
 export type VehicleType = "sedan" | "suv" | "truck" | "van" | "coupe" | "other";
 export type BookingStatus =
   | "requested"

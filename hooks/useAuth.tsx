@@ -35,7 +35,7 @@ async function checkPendingApproval(
   role: UserRole | null,
   client: SupabaseClient
 ): Promise<boolean> {
-  if (role === "operator" || role === "manager") {
+  if (role === "operator") {
     const { data } = await client
       .from("detailer_profiles")
       .select("approval_status")

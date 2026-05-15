@@ -1,4 +1,6 @@
 import { useState } from "react";
+import type { ComponentProps } from "react";
+import type { AssetType } from "@/types/database";
 import {
   View,
   Text,
@@ -27,6 +29,13 @@ export interface AddVehicleDrawerProps {
 const RADIUS_MIN = 5;
 const RADIUS_MAX = 50;
 
+const ASSET_TYPES: Array<{ value: AssetType; label: string; icon: ComponentProps<typeof Ionicons>["name"] }> = [
+  { value: "van",     label: "Van",     icon: "car-outline" },
+  { value: "truck",   label: "Truck",   icon: "car-sport-outline" },
+  { value: "trailer", label: "Trailer", icon: "trail-sign-outline" },
+  { value: "other",   label: "Other",   icon: "construct-outline" },
+];
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function AddVehicleDrawer({
@@ -35,6 +44,7 @@ export function AddVehicleDrawer({
   detailerId,
   onAdded,
 }: AddVehicleDrawerProps) {
+  const [assetType, setAssetType] = useState<AssetType>("van");
   const [name, setName] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
   const [address, setAddress] = useState("");
@@ -44,6 +54,7 @@ export function AddVehicleDrawer({
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
+    setAssetType("van");
     setName("");
     setLicensePlate("");
     setAddress("");
@@ -71,7 +82,7 @@ export function AddVehicleDrawer({
       const { error: dbErr } = await supabase.from("business_assets").insert({
         detailer_id: detailerId,
         name: name.trim(),
-        asset_type: "van",
+        asset_type: assetType,
         license_plate: licensePlate.trim() || null,
         home_base_address: address.trim() || null,
         service_radius_miles: serviceRadius,
@@ -97,7 +108,10 @@ export function AddVehicleDrawer({
 
   return (
     <DrawerModal visible={visible} onRequestClose={handleClose}>
-      <DrawerHeader title="Add Van" onClose={handleClose} />
+      <DrawerHeader
+        title={`Add ${ASSET_TYPES.find((t) => t.value === assetType)?.label ?? "Asset"}`}
+        onClose={handleClose}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -105,9 +119,38 @@ export function AddVehicleDrawer({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Van Name */}
+        {/* Asset Type Selector */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Van name</Text>
+          <Text style={styles.labelCaps}>Type</Text>
+          <View style={styles.typeRow}>
+            {ASSET_TYPES.map((t) => {
+              const isSelected = assetType === t.value;
+              return (
+                <TouchableOpacity
+                  key={t.value}
+                  style={[styles.typeChip, isSelected && styles.typeChipActive]}
+                  onPress={() => setAssetType(t.value)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons
+                    name={t.icon}
+                    size={14}
+                    color={isSelected ? Colors.white : Colors.light.textSecondary}
+                  />
+                  <Text style={[styles.typeChipText, isSelected && styles.typeChipTextActive]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Asset Name */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>
+            {ASSET_TYPES.find((t) => t.value === assetType)?.label ?? "Asset"} name
+          </Text>
           <TextInput
             style={styles.input}
             placeholder="e.g. Van 1, Marcus's Rig, Team Blue"
@@ -259,6 +302,21 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   fieldGroup: { gap: 6 },
+  typeRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  typeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.surface,
+  },
+  typeChipActive: { backgroundColor: Colors.foamBlue, borderColor: Colors.foamBlue },
+  typeChipText: { fontFamily: Typography.bodyMedium, fontSize: 13, color: Colors.light.textSecondary },
+  typeChipTextActive: { color: Colors.white },
   label: {
     fontFamily: Typography.bodyMedium,
     fontSize: 13,

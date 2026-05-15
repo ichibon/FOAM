@@ -176,7 +176,6 @@ export function UnitsSelectionDrawer({
                   iconName="car-outline"
                   message="No vans added yet."
                   hint="Add your first van to accept mobile bookings."
-                  onAdd={() => setAddVanOpen(true)}
                 />
               ) : (
                 <View style={styles.unitList}>
@@ -239,7 +238,6 @@ export function UnitsSelectionDrawer({
                   iconName="business-outline"
                   message="No locations added yet."
                   hint="Add a fixed location to accept bay bookings."
-                  onAdd={() => setAddLocationOpen(true)}
                 />
               ) : (
                 <View style={styles.unitList}>
@@ -317,22 +315,16 @@ function EmptyUnitCard({
   iconName,
   message,
   hint,
-  onAdd,
 }: {
   iconName: IoniconName;
   message: string;
   hint: string;
-  onAdd: () => void;
 }) {
   return (
     <View style={emptyStyles.card}>
       <Ionicons name={iconName} size={30} color={Colors.light.textDisabled} />
       <Text style={emptyStyles.message}>{message}</Text>
       <Text style={emptyStyles.hint}>{hint}</Text>
-      <TouchableOpacity style={emptyStyles.addBtn} onPress={onAdd} activeOpacity={0.8}>
-        <Ionicons name="add" size={14} color={Colors.foamBlue} />
-        <Text style={emptyStyles.addBtnText}>Add Now</Text>
-      </TouchableOpacity>
     </View>
   );
 }

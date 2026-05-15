@@ -204,12 +204,16 @@ export default function NewBookingScreen() {
     try {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("service_packages")
         .select("id,name,base_price,duration_mins,description")
         .eq("detailer_id", detailerId)
         .eq("is_active", true)
         .order("display_order");
+      if (error) {
+        console.warn("[NewBooking] reloadPackages db error", error.message);
+        return;
+      }
       const rawPkgs: RawServicePackage[] = (data as RawServicePackage[] | null) ?? [];
       setPackages(
         rawPkgs.map((p) => ({

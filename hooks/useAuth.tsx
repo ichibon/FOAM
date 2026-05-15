@@ -86,10 +86,9 @@ async function fetchUserProfile(
     if (pendingRole && VALID_SSO_ROLES.includes(pendingRole as UserRole)) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
 
-      await client.from("users").upsert(
-        { id: userId, role: pendingRole },
-        { onConflict: "id" }
-      );
+      await client.from("users")
+        .update({ role: pendingRole })
+        .eq("id", userId);
 
       if (pendingRole === "customer") {
         await client.from("customer_profiles").upsert(
@@ -137,10 +136,9 @@ async function fetchUserProfile(
     if (pendingRole && VALID_SSO_ROLES.includes(pendingRole as UserRole)) {
       try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
 
-      await client.from("users").upsert(
-        { id: userId, role: pendingRole },
-        { onConflict: "id" }
-      );
+      await client.from("users")
+        .update({ role: pendingRole })
+        .eq("id", userId);
 
       if (pendingRole === "customer") {
         await client.from("customer_profiles").upsert(

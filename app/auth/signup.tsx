@@ -14,10 +14,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase, UserRole } from "@/lib/supabase";
 import { signInWithGoogle, signInWithApple } from "@/lib/auth";
-import { useAuth, PENDING_SSO_ROLE_KEY } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "@/components/LucideIcon";
 
 const VALID_ROLES: UserRole[] = ["customer", "operator", "team_member"];
@@ -71,26 +70,19 @@ export default function SignupScreen() {
     setError(null);
     setLoading(true);
     try {
-      // Write role BEFORE SSO so fetchUserProfile (firing via onAuthStateChange)
-      // can consume it. Do NOT remove or overwrite the key after SSO — let
-      // fetchUserProfile be the sole consumer to avoid a race condition.
-      await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithGoogle();
-      // Detect silent cancel (user closed browser without authenticating).
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
         setLoading(false);
         return;
       }
-      // Force a profile refresh as a safety net — onAuthStateChange may not fire
-      // if the session is unchanged (re-attempt with valid session). refreshAuth
-      // triggers fetchUserProfile which consumes the pending role key from AsyncStorage.
-      // Race-free: handleGoogle doesn't write to DB or remove the key directly.
-      await refreshAuth();
+      await writeRoleAndNavigate(
+        user.id,
+        user.user_metadata?.full_name ?? "",
+        user.email ?? ""
+      );
       setLoading(false);
     } catch (err: unknown) {
-      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const msg = toErrorMessage(err, "Google sign-in failed. Please try again.");
       if (msg !== "BROWSER_CLOSED") setError(msg);
       setLoading(false);
@@ -102,22 +94,20 @@ export default function SignupScreen() {
     setError(null);
     setLoading(true);
     try {
-      await AsyncStorage.setItem(PENDING_SSO_ROLE_KEY, role);
       await signInWithApple();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
         setLoading(false);
         return;
       }
-      // Safety net: refreshAuth triggers fetchUserProfile which consumes the
-      // pending role key. Covers the case where onAuthStateChange didn't fire.
-      await refreshAuth();
+      await writeRoleAndNavigate(
+        user.id,
+        user.user_metadata?.full_name ?? "",
+        user.email ?? ""
+      );
       setLoading(false);
     } catch (err: unknown) {
-      try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
       const code = toErrorCode(err);
-      // ERR_REQUEST_CANCELED / 1001 = user tapped Cancel — return silently
       if (code !== "ERR_REQUEST_CANCELED" && code !== "1001") {
         setError(toErrorMessage(err, "Apple sign-in failed. Please try again."));
       }
@@ -137,7 +127,11 @@ export default function SignupScreen() {
     const { data: { user: existingUser } } = await supabase.auth.getUser();
 
     if (existingUser) {
-      await writeRoleAndNavigate(existingUser.id, existingUser.user_metadata?.full_name ?? "");
+      await writeRoleAndNavigate(
+        existingUser.id,
+        existingUser.user_metadata?.full_name ?? "",
+        existingUser.email ?? ""
+      );
       setLoading(false);
       return;
     }
@@ -172,17 +166,22 @@ export default function SignupScreen() {
       return;
     }
 
-    await writeRoleAndNavigate(userId, fullName.trim());
+    await writeRoleAndNavigate(userId, fullName.trim(), email.trim());
     setLoading(false);
   }
 
-  async function writeRoleAndNavigate(userId: string, displayName: string): Promise<boolean> {
+  async function writeRoleAndNavigate(userId: string, displayName: string, email: string): Promise<boolean> {
     if (!role) return false;
 
     const { error: userError } = await supabase
       .from("users")
       .upsert(
-        { id: userId, role, display_name: displayName || undefined },
+        {
+          id: userId,
+          role,
+          display_name: displayName || undefined,
+          email: email || undefined,
+        },
         { onConflict: "id" }
       );
     if (userError) {
@@ -210,9 +209,6 @@ export default function SignupScreen() {
         return false;
       }
     }
-
-    // Ensure the pending-role key is removed regardless of which async path wrote the DB.
-    try { await AsyncStorage.removeItem(PENDING_SSO_ROLE_KEY); } catch {}
 
     await refreshAuth();
 

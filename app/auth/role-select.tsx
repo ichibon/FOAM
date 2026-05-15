@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { supabase, UserRole } from "@/lib/supabase";
 import { LucideIcon } from "@/components/LucideIcon";
+import { useAuth } from "@/hooks/useAuth";
 
 type LucideIconName = "Car" | "Briefcase" | "Users";
 
@@ -45,6 +46,7 @@ const roles: {
 export default function RoleSelectScreen() {
   const [loading, setLoading] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
+  const { refreshAuth } = useAuth();
 
   async function handleRoleSelect(role: UserRole) {
     setLoading(true);
@@ -60,8 +62,7 @@ export default function RoleSelectScreen() {
 
       const { error: roleError } = await supabase
         .from("users")
-        .update({ role })
-        .eq("id", user.id);
+        .upsert({ id: user.id, role }, { onConflict: "id" });
       if (roleError) throw roleError;
 
       if (role === "customer") {
@@ -69,7 +70,6 @@ export default function RoleSelectScreen() {
           .from("customer_profiles")
           .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
         if (profileError) throw profileError;
-        router.replace("/onboarding/customer/vehicle");
       } else if (role === "operator") {
         const { error: profileError } = await supabase
           .from("detailer_profiles")
@@ -78,10 +78,9 @@ export default function RoleSelectScreen() {
             { onConflict: "user_id", ignoreDuplicates: false }
           );
         if (profileError) throw profileError;
-        router.replace("/onboarding/operator/build");
-      } else if (role === "team_member") {
-        router.replace("/onboarding/crew/invite");
       }
+
+      await refreshAuth();
     } catch (err) {
       console.warn("[RoleSelect] write failed", err);
       setWriteError("Something went wrong. Please try again.");

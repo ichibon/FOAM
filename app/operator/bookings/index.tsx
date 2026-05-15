@@ -463,7 +463,7 @@ export default function OperatorBookingsScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.emptyGhostBtn}
-              onPress={() => Alert.alert("Service Menu", "Coming soon.")}
+              onPress={() => router.push("/operator/bookings/services")}
               activeOpacity={0.75}
             >
               <Text style={styles.emptyGhostBtnText}>Build my service menu</Text>

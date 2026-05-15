@@ -23,5 +23,5 @@ export type { AddVehicleDrawerProps } from "./AddVehicleDrawer";
 export { AddLocationDrawer } from "./AddLocationDrawer";
 export type { AddLocationDrawerProps } from "./AddLocationDrawer";
 
-export { AddServiceDrawer } from "./AddServiceDrawer";
-export type { AddServiceDrawerProps } from "./AddServiceDrawer";
+export { ServiceDrawer } from "./ServiceDrawer";
+export type { ServiceDrawerProps, ServiceDrawerService } from "./ServiceDrawer";

@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
-import { AddServiceDrawer } from "@/components/AddServiceDrawer";
+import { ServiceDrawer } from "@/components/ServiceDrawer";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
@@ -787,11 +787,11 @@ export default function NewBookingScreen() {
       </KeyboardAvoidingView>
 
       {detailerId ? (
-        <AddServiceDrawer
+        <ServiceDrawer
           visible={addServiceVisible}
           onRequestClose={() => setAddServiceVisible(false)}
           detailerId={detailerId}
-          onAdded={handleServiceAdded}
+          onSaved={(saved) => handleServiceAdded(saved.id)}
         />
       ) : null}
 

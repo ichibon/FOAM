@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.md,
     marginTop: Spacing.xs,
   },
   retryText: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     height: 48,
     width: "100%",
     backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.md,
     marginTop: Spacing.xs,
   },
   emptyAddBtnText: {

@@ -298,15 +298,16 @@ export default function OperatorProfileScreen() {
           <View style={styles.rowGroup}>
             <SettingsRow
               iconName="Landmark"
-              iconBg="rgba(51,157,199,0.12)"
-              iconColor={Colors.foamBlue}
+              iconBg="rgba(217,119,6,0.12)"
+              iconColor={Colors.warningLight}
               title="Bank & Payout"
               subtitle={
                 <View style={styles.payoutRow}>
-                  <View style={styles.payoutDot} />
-                  <Text style={styles.rowSubtitle}>{"\u2022\u2022\u2022\u2022\u00A04492 \u00B7 Payouts active"}</Text>
+                  <View style={[styles.payoutDot, { backgroundColor: Colors.warningLight }]} />
+                  <Text style={styles.rowSubtitle}>Not connected \u00B7 Tap to set up</Text>
                 </View>
               }
+              onPress={() => router.push("/operator/onboarding/stripe-connect")}
             />
             <SettingsRow
               iconName="Crown"

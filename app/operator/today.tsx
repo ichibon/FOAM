@@ -1397,7 +1397,7 @@ const styles = StyleSheet.create({
   },
   emptyPrimaryBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: Spacing.sm, height: 48, borderRadius: Radius.pill,
+    gap: Spacing.sm, height: 48, borderRadius: Radius.md,
     backgroundColor: Colors.foamBlue,
     ...Shadows.light.level1,
   },
@@ -1406,7 +1406,7 @@ const styles = StyleSheet.create({
   },
   emptyGhostBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: Spacing.sm, height: 48, borderRadius: Radius.pill,
+    gap: Spacing.sm, height: 48, borderRadius: Radius.md,
     backgroundColor: Colors.transparent,
   },
   emptyGhostBtnText: {

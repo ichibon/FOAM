@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
   retryBtn: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.foamBlue,
   },
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: Spacing.xl,
     backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
     marginTop: Spacing.sm,

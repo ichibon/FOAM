@@ -33,7 +33,7 @@ interface RawBookingRow {
   crew_member_id: string | null;
   service_packages: { name: string } | null;
   vehicles: { make: string | null; model: string | null } | null;
-  booking_contacts: { full_name: string | null; vehicle_make: string | null; vehicle_model: string | null } | null;
+  booking_contacts?: { full_name: string | null; vehicle_make: string | null; vehicle_model: string | null } | null;
 }
 
 interface TeamMemberRow {
@@ -309,7 +309,7 @@ export default function BusinessScreen() {
           supabase
             .from("bookings")
             .select(
-              "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), vehicles(make,model), booking_contacts(full_name,vehicle_make,vehicle_model)"
+              "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), vehicles(make,model)"
             )
             .eq("detailer_id", profileId)
             .gte("scheduled_at", start)
@@ -326,7 +326,7 @@ export default function BusinessScreen() {
             ? supabase
                 .from("bookings")
                 .select(
-                  "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), vehicles(make,model), booking_contacts(full_name,vehicle_make,vehicle_model)"
+                  "id, status, subtotal, tip_amount, total, scheduled_at, crew_member_id, service_packages(name), vehicles(make,model)"
                 )
                 .eq("detailer_id", profileId)
                 .gte("scheduled_at", (() => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); })())
@@ -399,7 +399,7 @@ export default function BusinessScreen() {
 
         const jobs: TodayJob[] = jobSource.map((b) => {
           const customerName =
-            b.booking_contacts?.full_name ?? "Customer";
+            b.booking_contacts?.full_name ?? "Walk-in";
           const veh = b.vehicles;
           const contact = b.booking_contacts;
           const vehicleDesc = veh

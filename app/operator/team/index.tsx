@@ -154,7 +154,7 @@ export default function TeamRosterScreen() {
       const [membersRes, todayBookingsRes, weekBookingsRes] = await Promise.all([
         supabase
           .from("team_members")
-          .select("id, display_name, is_active, commission_rate, created_at, users!crew_members_user_id_fkey(full_name, phone)")
+          .select("id, display_name, is_active, commission_rate, created_at, users(full_name, phone)")
           .eq("manager_id", pid)
           .order("created_at", { ascending: true }),
         supabase

@@ -64,6 +64,7 @@ interface CustomerOption {
 }
 
 type CustomerMode = "search" | "create";
+type BookingLocationType = "mobile" | "location";
 type SubmitState = "idle" | "saving" | "success" | "error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -118,6 +119,9 @@ export default function NewBookingScreen() {
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Booking location type: mobile (go to customer) or fixed location (customer comes in)
+  const [bookingLocationType, setBookingLocationType] = useState<BookingLocationType>("mobile");
 
   // Customer mode: search existing or create new
   const [customerMode, setCustomerMode] = useState<CustomerMode>("search");
@@ -300,6 +304,15 @@ export default function NewBookingScreen() {
     setNewCustomerName("");
     setNewCustomerPhone("");
     setNewCustomerEmail("");
+  }
+
+  function switchToMobile() {
+    setBookingLocationType("mobile");
+  }
+
+  function switchToLocation() {
+    setBookingLocationType("location");
+    setServiceAddress("");
   }
 
   // ── Resolve or create customer, then create booking ──────────────────────────
@@ -505,6 +518,53 @@ export default function NewBookingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+
+          {/* ── Booking type ── */}
+          <SectionCard>
+            <Text style={styles.cardSectionLabel}>BOOKING TYPE</Text>
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity
+                style={[styles.modeTab, bookingLocationType === "mobile" && styles.modeTabActive]}
+                onPress={switchToMobile}
+                activeOpacity={0.75}
+              >
+                <View style={styles.modeTabInner}>
+                  <Ionicons
+                    name="car-outline"
+                    size={14}
+                    color={bookingLocationType === "mobile" ? Colors.light.textPrimary : Colors.light.textSecondary}
+                  />
+                  <Text style={[styles.modeTabText, bookingLocationType === "mobile" && styles.modeTabTextActive]}>
+                    Mobile
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeTab, bookingLocationType === "location" && styles.modeTabActive]}
+                onPress={switchToLocation}
+                activeOpacity={0.75}
+              >
+                <View style={styles.modeTabInner}>
+                  <Ionicons
+                    name="storefront-outline"
+                    size={14}
+                    color={bookingLocationType === "location" ? Colors.light.textPrimary : Colors.light.textSecondary}
+                  />
+                  <Text style={[styles.modeTabText, bookingLocationType === "location" && styles.modeTabTextActive]}>
+                    Physical Location
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.hintBox}>
+              <Ionicons name="information-circle-outline" size={15} color={Colors.light.textTertiary} />
+              <Text style={styles.hintText}>
+                {bookingLocationType === "mobile"
+                  ? "Mobile: you travel to the customer's location."
+                  : "Physical location: customer comes to your shop."}
+              </Text>
+            </View>
+          </SectionCard>
 
           {/* ── Customer section ── */}
           <SectionCard>
@@ -796,15 +856,19 @@ export default function NewBookingScreen() {
           {/* ── Address & Notes ── */}
           <SectionCard>
             <Text style={styles.cardSectionLabel}>DETAILS</Text>
-            <FieldLabel>Service address</FieldLabel>
-            <TextInput
-              style={styles.textInput}
-              value={serviceAddress}
-              onChangeText={setServiceAddress}
-              placeholder="123 Main St, Atlanta, GA"
-              placeholderTextColor={Colors.light.textTertiary}
-            />
-            <View style={{ height: Spacing.mdSm }} />
+            {bookingLocationType === "mobile" && (
+              <>
+                <FieldLabel>Service address</FieldLabel>
+                <TextInput
+                  style={styles.textInput}
+                  value={serviceAddress}
+                  onChangeText={setServiceAddress}
+                  placeholder="123 Main St, Atlanta, GA"
+                  placeholderTextColor={Colors.light.textTertiary}
+                />
+                <View style={{ height: Spacing.mdSm }} />
+              </>
+            )}
             <FieldLabel>Notes for crew</FieldLabel>
             <TextInput
               style={[styles.textInput, styles.textArea]}
@@ -984,6 +1048,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,
+  },
+  modeTabInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   modeTabActive: {
     backgroundColor: Colors.light.surface,

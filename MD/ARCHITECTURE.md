@@ -1,6 +1,5 @@
 # FOAM — Architecture
-**Version 1.4 — Updated May 15, 2026**
-Changes from v1.3 marked with `[v1.4]`
+**Version 1.3 — Updated May 9, 2026**
 Changes from v1.2 marked with `[v1.3]`
 Changes from v1.1 marked with `[v1.2]`
 Changes from v1.0 marked with `[v1.1]`
@@ -65,7 +64,7 @@ FOAM is built on four principles that drive every technical decision:
 | File Storage | Supabase Storage | Job photos, profile images, damage documentation, business documents — all stored in Supabase buckets with access controlled by RLS. |
 | Push Notifications | Expo Notifications | Cross-platform push delivery through Expo's notification service. Handles iOS APNs and Android FCM from a single API. |
 | SMS | Twilio | Appointment reminders and booking confirmations via SMS. Falls back for customers who miss push notifications. |
-| Maps & Routing | Google Maps API | Address validation, distance matrix for travel time buffers, place autocomplete for service location entry. |
+| Maps & Routing | Google Maps API | Three active surfaces: (1) Places Autocomplete on all address input fields — returns structured address, lat, lng, and zip from a single API response; (2) Distance Matrix API for travel time buffers between jobs; (3) Geocoding API for coordinate resolution. All address capture in the app must go through Places Autocomplete — manual text entry is not permitted for geo fields. |
 | Weather Data | Tomorrow.io | Precipitation data by zip code and timestamp for Rain Coverage claim evaluation. Historical and forecast access. |
 | Development | Replit | Cloud-based development environment. Handles hosting and deployment without a dedicated DevOps setup. |
 | UI Design | UXPilot | AI-assisted wireframing and UI generation for React Native screens. |
@@ -75,9 +74,9 @@ FOAM is built on four principles that drive every technical decision:
 
 ## Application Architecture
 
-### Single App, Three Role-Based Experiences [v1.4 — updated]
+### Single App, Four Role-Based Experiences
 
-One React Native app. One download. Three distinct navigation experiences driven by the authenticated user's role. The operator navigator adapts its UI based on team configuration — it does not fork into a separate role.
+One React Native app. One download. Four completely distinct navigation experiences driven by the authenticated user's role.
 
 ```
 App Entry
@@ -92,18 +91,18 @@ App Entry
             │       └── Profile Tab
             │
             ├── role: 'operator'      → Operator Navigator
-            │       │
-            │       │   [Base — all operators]
-            │       ├── Today Tab     (job list / bay view / unified — per operation_type)
+            │       ├── Today Tab     (unified calendar — mobile + fixed)
             │       ├── Bookings Tab
             │       ├── Customers Tab
             │       ├── Business Tab
             │       └── Profile Tab
-            │       │
-            │       │   [Team layer — unlocked when has_team = true]
-            │       └── Team Tab      (crew schedule, assignment, commission rules)
-            │               Today Tab expands → command center view
-            │               Business Tab expands → payroll + per-member revenue
+            │
+            ├── role: 'manager'       → Manager Navigator
+            │       ├── Today Tab     (team + own jobs overview)
+            │       ├── Team Tab      (assign jobs, track members)
+            │       ├── Bookings Tab
+            │       ├── Business Tab
+            │       └── Profile Tab
             │
             └── role: 'team_member'   → Team Member Navigator
                     ├── My Jobs Tab
@@ -113,12 +112,9 @@ App Entry
 
 Role is stored in the `users` table and embedded in the Supabase JWT as a custom claim. The React Native app reads the claim on auth and routes to the correct navigator.
 
-**[v1.4] Role model decision — operator vs. manager:**
-`manager` is not a separate JWT role. Every operator who manages a team is still `role: 'operator'` at the database and auth level — they own a `detailer_profiles` record, they receive Stripe Connect payouts, and they are the legal entity running the business. The manager experience is a UI layer that activates when `detailer_profiles.has_team = true`. This keeps the schema clean, eliminates the ambiguity of whether a "pure manager" (one who doesn't personally take jobs) needs to be an operator first, and ensures the Team tab and command center view are additive — not a separate product path.
+### Operator Configuration Layer
 
-### Operator Configuration Layer [v1.4 — updated]
-
-Within the `operator` role, the app behavior adapts based on two fields on the `detailer_profiles` table: `operation_type` and `has_team`.
+Within the `operator` role, the app behavior adapts based on `operation_type` on the `detailer_profiles` table:
 
 ```
 operator.operation_type
@@ -132,18 +128,7 @@ operator.operation_type
     └── 'hybrid'   → Show all of the above
                      Unified calendar with mobile + fixed job types
                      Channel revenue breakdown in Business tab
-
-operator.has_team
-    │
-    ├── false      → Standard operator nav (Today / Bookings / Customers / Business / Profile)
-    │
-    └── true       → Team layer unlocked
-                     Team Tab added to bottom nav
-                     Today Tab → command center view (crew status, unassigned jobs, live alerts)
-                     Business Tab → adds payroll summary + per-member revenue breakdown
 ```
-
-`operation_type` and `has_team` are independent flags. A fixed location operator can have a team. A mobile solo operator cannot. A hybrid operator running multiple vans with crew has both `operation_type: 'hybrid'` and `has_team: true`.
 
 ### Two Booking Flows
 
@@ -269,18 +254,18 @@ booking_vehicles (1) ─── (many) booking_photos            [v1.1 — photos
 
 Full schema with all columns: see DATA_MODEL.md
 
-### Data Separation by Role [v1.4 — updated]
+### Data Separation by Role
 
 Data access is partitioned at the RLS level — not the application level:
 
-| Data | Customer Sees | Operator Sees | Operator w/ Team Sees | Crew Sees |
-|------|--------------|---------------|-----------------------|-----------|
-| Own booking details | ✅ | ✅ | ✅ | ✅ (assigned only) |
-| Other customers' bookings | ❌ | ❌ | ❌ | ❌ |
-| Detailer revenue data | ❌ | ✅ | ✅ (total + per-member) | ❌ (unless granted) |
-| Crew member list | ❌ | ❌ | ✅ | Own record only |
-| Customer vehicle notes | ❌ | ✅ | ✅ | Conditional (operator setting) |
-| Business documents | ❌ | ✅ (own) | ✅ (own) | ❌ |
+| Data | Customer Sees | Detailer Sees | Crew Sees |
+|------|--------------|---------------|-----------|
+| Own booking details | ✅ | ✅ | ✅ (assigned only) |
+| Other customers' bookings | ❌ | ❌ | ❌ |
+| Detailer revenue data | ❌ | ✅ | ❌ (unless granted) |
+| Crew member list | ❌ | ✅ | Own record only |
+| Customer vehicle notes | ❌ | ✅ | Conditional (owner setting) |
+| Business documents | ❌ | ✅ (own) | ❌ |
 
 ---
 
@@ -759,4 +744,3 @@ None of these are needed at launch. All are achievable without changing the core
 | FOAM_DECISIONS_OVERVIEW.md | All confirmed product and business decisions |
 | AI_RULES.md | How Claude is used in development |
 | AI_CONFIDENCE_MODEL.md | How to weight AI architectural recommendations |
-

@@ -1,5 +1,5 @@
 # Data Model
-**Version 1.5 — Updated May 15, 2026**
+**Version 1.5 — Updated May 2026**
 
 Changes from v1.4 marked with `[v1.5]`
 Changes from v1.3 marked with `[v1.4]`
@@ -10,7 +10,7 @@ Changes from v1.0 marked with `[v1.1]`
 Built on Supabase (PostgreSQL 17). All tables use UUID primary keys. Row-level security enforced at the database layer via Supabase RLS policies. Role-based access enforced at both application and database layers.
 
 **Migrations applied through v1.5:**
-`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes` → `v2_1_role_model_manager_removal`
+`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes` → `v2_1_booking_geo_zip`
 
 ---
 
@@ -24,10 +24,8 @@ phone                     text
 full_name                 text
 avatar_url                text
 role                      text NOT NULL
-  -- 'customer' | 'operator' | 'team_member' | 'superadmin'
+  -- 'customer' | 'operator' | 'manager' | 'team_member' | 'superadmin'
   -- superadmin: FOAM ops only — not exposed in the app
-  -- [v1.5] 'manager' removed as a JWT role. Team management is a UI layer
-  --         within the 'operator' role, gated by detailer_profiles.has_team.
 first_payment_celebrated  boolean DEFAULT false
   -- [v1.1] confetti trigger — fires once on operator's first received payment
 created_at                timestamptz DEFAULT now()
@@ -63,10 +61,6 @@ accepts_walkins     boolean DEFAULT false
 
 -- Multi-unit / fleet
 is_multi_unit       boolean DEFAULT false  -- [v1.3] fleet or franchise operator
-has_team            boolean DEFAULT false
-  -- [v1.5] true when operator has at least one active team member.
-  --         Unlocks Team Tab in bottom nav and command center view on Today Tab.
-  --         Set to true on first team_members insert; false when last member removed.
 
 -- Stripe & payments
 stripe_account_id   text
@@ -301,6 +295,11 @@ estimated_duration_mins   integer
 service_address           text
 service_lat               decimal
 service_lng               decimal
+service_zip               text
+  -- [v1.5] extracted from Google Places API response at booking creation.
+  -- Never parsed from service_address string. Populated automatically
+  -- via Places Autocomplete on all address input surfaces.
+  -- Powers geographic analytics: GMV by zip, engagement by region.
 bay_number                integer   -- fixed location bay assignment
 location_id               uuid REFERENCES business_locations(id)
 asset_id                  uuid REFERENCES business_assets(id)
@@ -799,6 +798,7 @@ Fast read view for booking + payment status. Uses SECURITY INVOKER — RLS of th
 ```sql
 SELECT b.id, b.customer_id, b.detailer_id, b.status, b.scheduled_at,
        b.service_type, b.estimated_duration_mins, b.service_address,
+       b.service_zip, b.service_lat, b.service_lng,
        b.created_at, p.amount, p.platform_fee, p.payout_amount,
        p.status AS payment_status
 FROM bookings b LEFT JOIN payments p ON p.booking_id = b.id
@@ -865,5 +865,4 @@ ops_audit_log (many) ──── (1) users (performed_by)   [v1.4 — NEW]
 
 ---
 
-*Last updated: May 2026. Cross-reference ARCHITECTURE.md for edge functions, PAYMENT_POLICY.md for fee logic, CAPABILITY_LAYER.md for system integrations.*
-
+*Last updated: May 2026 (v1.5). Cross-reference ARCHITECTURE.md for edge functions, PAYMENT_POLICY.md for fee logic, CAPABILITY_LAYER.md for system integrations.*

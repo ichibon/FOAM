@@ -370,6 +370,13 @@ export default function OperatorBookingsScreen() {
         {/* Title */}
         <View style={styles.titleRow}>
           <Text style={styles.headerTitle}>Bookings</Text>
+          <TouchableOpacity
+            style={styles.bookBtn}
+            onPress={() => router.push("/operator/bookings/new")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.bookBtnText}>Book A Service</Text>
+          </TouchableOpacity>
         </View>
 
         {/* List / Calendar toggle */}
@@ -520,9 +527,25 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.light.borderSubtle,
   },
   titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.mdLg,
     paddingBottom: Spacing.mdSm,
+  },
+  bookBtn: {
+    height: 36,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyS,
+    color: Colors.white,
   },
   headerTitle: {
     fontFamily: Typography.bodySemiBold,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ComponentProps } from "react";
 import type { AssetType } from "@/types/database";
 import {
@@ -24,6 +24,15 @@ export interface AddVehicleDrawerProps {
   onRequestClose: () => void;
   detailerId: string;
   onAdded?: () => void;
+  initialData?: {
+    id: string;
+    name: string;
+    asset_type: string;
+    license_plate?: string | null;
+    home_base_address?: string | null;
+    service_radius_miles?: number | null;
+    equipment_notes?: string | null;
+  };
 }
 
 const RADIUS_MIN = 5;
@@ -43,6 +52,7 @@ export function AddVehicleDrawer({
   onRequestClose,
   detailerId,
   onAdded,
+  initialData,
 }: AddVehicleDrawerProps) {
   const [assetType, setAssetType] = useState<AssetType>("van");
   const [name, setName] = useState("");
@@ -63,8 +73,22 @@ export function AddVehicleDrawer({
     setError(null);
   }
 
+  useEffect(() => {
+    if (!visible) return;
+    if (initialData) {
+      setAssetType((initialData.asset_type as AssetType) || "van");
+      setName(initialData.name || "");
+      setLicensePlate(initialData.license_plate ?? "");
+      setAddress(initialData.home_base_address ?? "");
+      setServiceRadius(initialData.service_radius_miles ?? 15);
+      setNotes(initialData.equipment_notes ?? "");
+      setError(null);
+    } else {
+      reset();
+    }
+  }, [visible, initialData]);
+
   function handleClose() {
-    reset();
     onRequestClose();
   }
 
@@ -79,20 +103,33 @@ export function AddVehicleDrawer({
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
-      const { error: dbErr } = await supabase.from("business_assets").insert({
-        detailer_id: detailerId,
-        name: name.trim(),
-        asset_type: assetType,
-        license_plate: licensePlate.trim() || null,
-        home_base_address: address.trim() || null,
-        service_radius_miles: serviceRadius,
-        equipment_notes: notes.trim() || null,
-        is_active: true,
-      });
+      if (initialData) {
+        const { error: dbErr } = await supabase
+          .from("business_assets")
+          .update({
+            name: name.trim(),
+            asset_type: assetType,
+            license_plate: licensePlate.trim() || null,
+            home_base_address: address.trim() || null,
+            service_radius_miles: serviceRadius,
+            equipment_notes: notes.trim() || null,
+          })
+          .eq("id", initialData.id);
+        if (dbErr) throw dbErr;
+      } else {
+        const { error: dbErr } = await supabase.from("business_assets").insert({
+          detailer_id: detailerId,
+          name: name.trim(),
+          asset_type: assetType,
+          license_plate: licensePlate.trim() || null,
+          home_base_address: address.trim() || null,
+          service_radius_miles: serviceRadius,
+          equipment_notes: notes.trim() || null,
+          is_active: true,
+        });
+        if (dbErr) throw dbErr;
+      }
 
-      if (dbErr) throw dbErr;
-
-      reset();
       onAdded?.();
       onRequestClose();
     } catch (err: unknown) {
@@ -109,7 +146,7 @@ export function AddVehicleDrawer({
   return (
     <DrawerModal visible={visible} onRequestClose={handleClose}>
       <DrawerHeader
-        title={`Add ${ASSET_TYPES.find((t) => t.value === assetType)?.label ?? "Asset"}`}
+        title={`${initialData ? "Edit" : "Add"} ${ASSET_TYPES.find((t) => t.value === assetType)?.label ?? "Asset"}`}
         onClose={handleClose}
       />
 
@@ -284,7 +321,7 @@ export function AddVehicleDrawer({
           {saving ? (
             <ActivityIndicator color={Colors.white} size="small" />
           ) : (
-            <Text style={styles.saveBtnText}>Save Van</Text>
+            <Text style={styles.saveBtnText}>{initialData ? "Save Changes" : "Save Van"}</Text>
           )}
         </TouchableOpacity>
       </DrawerFooter>

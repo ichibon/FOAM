@@ -21,6 +21,10 @@ interface VanSummary {
   id: string;
   name: string;
   asset_type: string;
+  license_plate?: string | null;
+  home_base_address?: string | null;
+  service_radius_miles?: number | null;
+  equipment_notes?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -31,6 +35,7 @@ interface LocationSummary {
   address: string;
   bay_count: number;
   accepts_walkins: boolean;
+  location_hours?: Record<string, { open: string; close: string } | null> | null;
   is_active: boolean;
   created_at: string;
 }
@@ -46,6 +51,8 @@ export default function LocationsVansScreen() {
   const [storedDetailerId, setStoredDetailerId] = useState<string>("");
   const [addVanOpen, setAddVanOpen] = useState(false);
   const [addLocationOpen, setAddLocationOpen] = useState(false);
+  const [editingVan, setEditingVan] = useState<VanSummary | null>(null);
+  const [editingLocation, setEditingLocation] = useState<LocationSummary | null>(null);
 
   const loadUnits = useCallback(async () => {
     setLoading(true);
@@ -67,13 +74,13 @@ export default function LocationsVansScreen() {
       const [{ data: assetsData }, { data: locsData }] = await Promise.all([
         supabase
           .from("business_assets")
-          .select("id, name, asset_type, is_active, created_at")
+          .select("id, name, asset_type, license_plate, home_base_address, service_radius_miles, equipment_notes, is_active, created_at")
           .eq("detailer_id", profile.id)
           .order("is_active", { ascending: false })
           .order("created_at"),
         supabase
           .from("business_locations")
-          .select("id, name, address, bay_count, accepts_walkins, is_active, created_at")
+          .select("id, name, address, bay_count, accepts_walkins, location_hours, is_active, created_at")
           .eq("detailer_id", profile.id)
           .order("is_active", { ascending: false })
           .order("created_at"),
@@ -242,7 +249,7 @@ export default function LocationsVansScreen() {
                       <View style={styles.unitCardActions}>
                         <TouchableOpacity
                           style={styles.editButton}
-                          onPress={() => router.push("/onboarding/operator/build")}
+                          onPress={() => setEditingVan(van)}
                           activeOpacity={0.7}
                         >
                           <LucideIcon name="Pencil" size={16} color={Colors.light.textSecondary} />
@@ -333,7 +340,7 @@ export default function LocationsVansScreen() {
                       <View style={styles.unitCardActions}>
                         <TouchableOpacity
                           style={styles.editButton}
-                          onPress={() => router.push("/onboarding/operator/build")}
+                          onPress={() => setEditingLocation(loc)}
                           activeOpacity={0.7}
                         >
                           <LucideIcon name="Pencil" size={16} color={Colors.light.textSecondary} />
@@ -372,11 +379,25 @@ export default function LocationsVansScreen() {
         detailerId={storedDetailerId}
         onAdded={() => { setAddVanOpen(false); void loadUnits(); }}
       />
+      <AddVehicleDrawer
+        visible={editingVan !== null}
+        onRequestClose={() => setEditingVan(null)}
+        detailerId={storedDetailerId}
+        initialData={editingVan ?? undefined}
+        onAdded={() => { setEditingVan(null); void loadUnits(); }}
+      />
       <AddLocationDrawer
         visible={addLocationOpen}
         onRequestClose={() => setAddLocationOpen(false)}
         detailerId={storedDetailerId}
         onAdded={() => { setAddLocationOpen(false); void loadUnits(); }}
+      />
+      <AddLocationDrawer
+        visible={editingLocation !== null}
+        onRequestClose={() => setEditingLocation(null)}
+        detailerId={storedDetailerId}
+        initialData={editingLocation ?? undefined}
+        onAdded={() => { setEditingLocation(null); void loadUnits(); }}
       />
     </SafeAreaView>
   );

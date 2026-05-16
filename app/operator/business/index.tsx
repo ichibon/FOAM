@@ -513,13 +513,6 @@ export default function BusinessScreen() {
               <Text style={styles.emptyBody}>
                 Create your first booking to start tracking revenue.
               </Text>
-              <TouchableOpacity
-                style={styles.emptyCta}
-                onPress={() => router.push("/operator/bookings/new")}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.emptyCtaText}>New Booking</Text>
-              </TouchableOpacity>
             </View>
           ) : (
             <>
@@ -1007,20 +1000,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 260,
     lineHeight: 21,
-  },
-  emptyCta: {
-    height: 48,
-    paddingHorizontal: Spacing.xl,
-    backgroundColor: Colors.foamBlue,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: Spacing.sm,
-  },
-  emptyCtaText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.bodyM,
-    color: Colors.white,
   },
   payoutCard: { gap: Spacing.mdSm },
   payoutLabel: {

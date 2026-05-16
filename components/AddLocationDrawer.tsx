@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,14 @@ export interface AddLocationDrawerProps {
   onRequestClose: () => void;
   detailerId: string;
   onAdded?: () => void;
+  initialData?: {
+    id: string;
+    name: string;
+    address: string;
+    bay_count: number;
+    accepts_walkins: boolean;
+    location_hours?: Record<string, { open: string; close: string } | null> | null;
+  };
 }
 
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -44,6 +52,7 @@ export function AddLocationDrawer({
   onRequestClose,
   detailerId,
   onAdded,
+  initialData,
 }: AddLocationDrawerProps) {
   const [locationName, setLocationName] = useState("");
   const [address, setAddress] = useState("");
@@ -66,8 +75,29 @@ export function AddLocationDrawer({
     setError(null);
   }
 
+  useEffect(() => {
+    if (!visible) return;
+    if (initialData) {
+      setLocationName(initialData.name);
+      setAddress(initialData.address);
+      setBayCount(initialData.bay_count);
+      setAcceptsWalkins(initialData.accepts_walkins);
+      if (initialData.location_hours) {
+        const hrs = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
+        for (const { key } of DAYS) {
+          hrs[key] = !!initialData.location_hours[key];
+        }
+        setHoursEnabled(hrs);
+      } else {
+        setHoursEnabled({ mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false });
+      }
+      setError(null);
+    } else {
+      reset();
+    }
+  }, [visible, initialData]);
+
   function handleClose() {
-    reset();
     onRequestClose();
   }
 
@@ -92,19 +122,31 @@ export function AddLocationDrawer({
         hours[key] = hoursEnabled[key] ? { open: "09:00", close: "18:00" } : null;
       }
 
-      const { error: dbErr } = await supabase.from("business_locations").insert({
-        detailer_id: detailerId,
-        name: locationName.trim(),
-        address: address.trim(),
-        bay_count: bayCount,
-        accepts_walkins: acceptsWalkins,
-        location_hours: hours,
-        is_active: true,
-      });
+      if (initialData) {
+        const { error: dbErr } = await supabase
+          .from("business_locations")
+          .update({
+            name: locationName.trim(),
+            address: address.trim(),
+            bay_count: bayCount,
+            accepts_walkins: acceptsWalkins,
+            location_hours: hours,
+          })
+          .eq("id", initialData.id);
+        if (dbErr) throw dbErr;
+      } else {
+        const { error: dbErr } = await supabase.from("business_locations").insert({
+          detailer_id: detailerId,
+          name: locationName.trim(),
+          address: address.trim(),
+          bay_count: bayCount,
+          accepts_walkins: acceptsWalkins,
+          location_hours: hours,
+          is_active: true,
+        });
+        if (dbErr) throw dbErr;
+      }
 
-      if (dbErr) throw dbErr;
-
-      reset();
       onAdded?.();
       onRequestClose();
     } catch (err: unknown) {
@@ -120,7 +162,7 @@ export function AddLocationDrawer({
 
   return (
     <DrawerModal visible={visible} onRequestClose={handleClose}>
-      <DrawerHeader title="Add Location" onClose={handleClose} />
+      <DrawerHeader title={initialData ? "Edit Location" : "Add Location"} onClose={handleClose} />
 
       <ScrollView
         style={styles.scroll}
@@ -258,7 +300,7 @@ export function AddLocationDrawer({
           {saving ? (
             <ActivityIndicator color={Colors.white} size="small" />
           ) : (
-            <Text style={styles.saveBtnText}>Save Location</Text>
+            <Text style={styles.saveBtnText}>{initialData ? "Save Changes" : "Save Location"}</Text>
           )}
         </TouchableOpacity>
       </DrawerFooter>

@@ -320,6 +320,13 @@ export default function NewBookingScreen() {
     });
   }
 
+  // Auto-select when only one van or location exists — no need to show the picker
+  useEffect(() => {
+    if (bookingSources.length === 1) {
+      setSelectedSource(bookingSources[0]);
+    }
+  }, [bookingSources]);
+
   useEffect(() => {
     if (!customerSearch.trim()) {
       setFilteredCustomers([]);
@@ -570,8 +577,8 @@ export default function NewBookingScreen() {
           keyboardShouldPersistTaps="handled"
         >
 
-          {/* ── Booking source ── */}
-          <SectionCard>
+          {/* ── Booking source — only shown when there's a real choice to make ── */}
+          {bookingSources.length > 1 && <SectionCard>
             <Text style={styles.cardSectionLabel}>BOOKED AT</Text>
             <TouchableOpacity
               style={styles.sourcePickerField}
@@ -666,7 +673,7 @@ export default function NewBookingScreen() {
                 )}
               </View>
             )}
-          </SectionCard>
+          </SectionCard>}
 
           {/* ── Customer section ── */}
           <SectionCard>

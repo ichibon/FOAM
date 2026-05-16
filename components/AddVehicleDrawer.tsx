@@ -28,10 +28,12 @@ export interface AddVehicleDrawerProps {
     id: string;
     name: string;
     asset_type: string;
-    license_plate?: string | null;
-    home_base_address?: string | null;
-    service_radius_miles?: number | null;
-    equipment_notes?: string | null;
+    metadata?: {
+      license_plate?: string | null;
+      home_base?: string | null;
+      radius_miles?: number | null;
+      equipment_notes?: string | null;
+    } | null;
   };
 }
 
@@ -78,10 +80,10 @@ export function AddVehicleDrawer({
     if (initialData) {
       setAssetType((initialData.asset_type as AssetType) || "van");
       setName(initialData.name || "");
-      setLicensePlate(initialData.license_plate ?? "");
-      setAddress(initialData.home_base_address ?? "");
-      setServiceRadius(initialData.service_radius_miles ?? 15);
-      setNotes(initialData.equipment_notes ?? "");
+      setLicensePlate(initialData.metadata?.license_plate ?? "");
+      setAddress(initialData.metadata?.home_base ?? "");
+      setServiceRadius(initialData.metadata?.radius_miles ?? 15);
+      setNotes(initialData.metadata?.equipment_notes ?? "");
       setError(null);
     } else {
       reset();
@@ -103,17 +105,17 @@ export function AddVehicleDrawer({
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
+      const meta = {
+        license_plate: licensePlate.trim() || null,
+        home_base: address.trim() || null,
+        radius_miles: serviceRadius,
+        equipment_notes: notes.trim() || null,
+      };
+
       if (initialData) {
         const { error: dbErr } = await supabase
           .from("business_assets")
-          .update({
-            name: name.trim(),
-            asset_type: assetType,
-            license_plate: licensePlate.trim() || null,
-            home_base_address: address.trim() || null,
-            service_radius_miles: serviceRadius,
-            equipment_notes: notes.trim() || null,
-          })
+          .update({ name: name.trim(), asset_type: assetType, metadata: meta })
           .eq("id", initialData.id);
         if (dbErr) throw dbErr;
       } else {
@@ -121,10 +123,7 @@ export function AddVehicleDrawer({
           detailer_id: detailerId,
           name: name.trim(),
           asset_type: assetType,
-          license_plate: licensePlate.trim() || null,
-          home_base_address: address.trim() || null,
-          service_radius_miles: serviceRadius,
-          equipment_notes: notes.trim() || null,
+          metadata: meta,
           is_active: true,
         });
         if (dbErr) throw dbErr;

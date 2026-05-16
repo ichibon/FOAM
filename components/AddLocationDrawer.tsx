@@ -29,7 +29,7 @@ export interface AddLocationDrawerProps {
     address: string;
     bay_count: number;
     accepts_walkins: boolean;
-    location_hours?: Record<string, { open: string; close: string } | null> | null;
+    hours?: Record<string, { open: string; close: string } | null> | null;
   };
 }
 
@@ -82,10 +82,10 @@ export function AddLocationDrawer({
       setAddress(initialData.address);
       setBayCount(initialData.bay_count);
       setAcceptsWalkins(initialData.accepts_walkins);
-      if (initialData.location_hours) {
+      if (initialData.hours) {
         const hrs = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
         for (const { key } of DAYS) {
-          hrs[key] = !!initialData.location_hours[key];
+          hrs[key] = !!initialData.hours[key];
         }
         setHoursEnabled(hrs);
       } else {
@@ -130,7 +130,7 @@ export function AddLocationDrawer({
             address: address.trim(),
             bay_count: bayCount,
             accepts_walkins: acceptsWalkins,
-            location_hours: hours,
+            hours,
           })
           .eq("id", initialData.id);
         if (dbErr) throw dbErr;
@@ -141,7 +141,7 @@ export function AddLocationDrawer({
           address: address.trim(),
           bay_count: bayCount,
           accepts_walkins: acceptsWalkins,
-          location_hours: hours,
+          hours,
           is_active: true,
         });
         if (dbErr) throw dbErr;

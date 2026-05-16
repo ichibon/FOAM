@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -51,6 +52,9 @@ interface RosterMember {
   currentJobName: string | null;
   nextJobName: string | null;
   weekRevenue: number;
+  isFlagged: boolean;
+  flaggedJobName: string | null;
+  flaggedJobTime: string | null;
 }
 
 type ScreenState = "loading" | "fetch_error" | "main";
@@ -65,6 +69,15 @@ function initials(name: string): string {
 
 function fmtCurrency(n: number): string {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
 function todayBounds(): { start: string; end: string } {
@@ -96,22 +109,25 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
   day: "numeric",
 });
 
-// ─── Status helpers ────────────────────────────────────────────────────────────
+// ─── Status badge helpers ──────────────────────────────────────────────────────
 
-function statusLabel(s: MemberStatus): string {
+function statusLabel(s: MemberStatus, isFlagged: boolean): string {
+  if (isFlagged) return "Flagged";
   if (s === "on_job") return "On Job";
   if (s === "available") return "Available";
   if (s === "off_today") return "Off Today";
   return "Inactive";
 }
 
-function statusBgColor(s: MemberStatus): string {
-  if (s === "on_job") return "rgba(22,163,74,0.10)";
+function statusBgColor(s: MemberStatus, isFlagged: boolean): string {
+  if (isFlagged) return "rgba(217,119,6,0.08)";
+  if (s === "on_job") return "rgba(22,163,74,0.08)";
   if (s === "available") return Colors.foamBlueSubtle;
   return Colors.light.bgSecondary;
 }
 
-function statusTextColor(s: MemberStatus): string {
+function statusTextColor(s: MemberStatus, isFlagged: boolean): string {
+  if (isFlagged) return Colors.warningLight;
   if (s === "on_job") return Colors.successLight;
   if (s === "available") return Colors.foamBlue;
   return Colors.light.textTertiary;
@@ -123,7 +139,6 @@ export default function TeamRosterScreen() {
   const { user } = useAuth();
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [members, setMembers] = useState<RosterMember[]>([]);
-  const [profileId, setProfileId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -146,8 +161,6 @@ export default function TeamRosterScreen() {
       }
 
       const pid: string = profileData.id;
-      setProfileId(pid);
-
       const { start: todayStart, end: todayEnd } = todayBounds();
       const { start: weekStart, end: weekEnd } = weekBounds();
 
@@ -190,11 +203,11 @@ export default function TeamRosterScreen() {
       }
 
       const roster: RosterMember[] = rawMembers.map((m) => {
-        const name =
-          m.display_name ?? m.users?.full_name ?? "Team Member";
+        const name = m.display_name ?? m.users?.full_name ?? "Team Member";
         const memberTodayBookings = todayBookings.filter((b) => b.crew_member_id === m.id);
         const completedToday = memberTodayBookings.filter((b) => b.status === "completed").length;
         const inProgressBooking = memberTodayBookings.find((b) => b.status === "in_progress");
+        const flaggedBooking = memberTodayBookings.find((b) => b.status === "flagged");
 
         let status: MemberStatus;
         if (!m.is_active) {
@@ -220,6 +233,9 @@ export default function TeamRosterScreen() {
           currentJobName: inProgressBooking?.service_packages?.name ?? null,
           nextJobName: nextBooking?.service_packages?.name ?? null,
           weekRevenue: weekRevenueMap[m.id] ?? 0,
+          isFlagged: !!flaggedBooking,
+          flaggedJobName: flaggedBooking?.service_packages?.name ?? null,
+          flaggedJobTime: flaggedBooking ? fmtTime(flaggedBooking.scheduled_at) : null,
         };
       });
 
@@ -236,17 +252,31 @@ export default function TeamRosterScreen() {
     }, [load])
   );
 
-  const shadow = Shadows.light.level1;
+  const cardShadow = Platform.OS === "web"
+    ? ({ boxShadow: "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.05)" } as object)
+    : Shadows.light.level1;
+
+  const headerContent = (
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.title}>Team</Text>
+        <Text style={styles.dateLabel}>{TODAY_DATE.toUpperCase()}</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.addBtn}
+        onPress={() => router.push("/operator/team/add")}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="add" size={14} color={Colors.foamBlue} />
+        <Text style={styles.addBtnText}>Add Member</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   if (screenState === "loading") {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Team</Text>
-            <Text style={styles.dateLabel}>{TODAY_DATE.toUpperCase()}</Text>
-          </View>
-        </View>
+        {headerContent}
         <View style={styles.center}>
           <ActivityIndicator color={Colors.foamBlue} />
         </View>
@@ -257,12 +287,7 @@ export default function TeamRosterScreen() {
   if (screenState === "fetch_error") {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Team</Text>
-            <Text style={styles.dateLabel}>{TODAY_DATE.toUpperCase()}</Text>
-          </View>
-        </View>
+        {headerContent}
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={40} color={Colors.light.textTertiary} />
           <Text style={styles.errorText}>Couldn't load your team</Text>
@@ -276,29 +301,7 @@ export default function TeamRosterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Team</Text>
-          <Text style={styles.dateLabel}>{TODAY_DATE.toUpperCase()}</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerIconBtn}
-            onPress={() => router.push("/operator/business/payroll")}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="cash-outline" size={20} color={Colors.light.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => router.push("/operator/team/add")}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={16} color={Colors.foamBlue} />
-            <Text style={styles.addBtnText}>Add Member</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {headerContent}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -325,182 +328,192 @@ export default function TeamRosterScreen() {
 
             <View style={styles.onboardingCard}>
               <View style={styles.onboardingStep}>
-                <View style={styles.stepNum}>
-                  <Text style={styles.stepNumText}>1</Text>
-                </View>
+                <View style={styles.stepNum}><Text style={styles.stepNumText}>1</Text></View>
                 <Text style={styles.stepText}>Add a crew member by phone or email</Text>
               </View>
               <View style={styles.onboardingStep}>
-                <View style={styles.stepNum}>
-                  <Text style={styles.stepNumText}>2</Text>
-                </View>
+                <View style={styles.stepNum}><Text style={styles.stepNumText}>2</Text></View>
                 <Text style={styles.stepText}>Set their commission rate and permissions</Text>
               </View>
               <View style={styles.onboardingStep}>
-                <View style={styles.stepNum}>
-                  <Text style={styles.stepNumText}>3</Text>
-                </View>
+                <View style={styles.stepNum}><Text style={styles.stepNumText}>3</Text></View>
                 <Text style={styles.stepText}>Assign them to their first job</Text>
               </View>
             </View>
-
-            <TouchableOpacity
-              style={styles.inviteDashedBtn}
-              onPress={() => router.push("/operator/team/add")}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={14} color={Colors.light.textPrimary} />
-              <Text style={styles.inviteDashedText}>Invite a team member</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           <>
-            {members.map((m) => (
-              <TouchableOpacity
-                key={m.id}
-                style={[styles.memberCard, shadow, m.status === "inactive" && styles.memberCardDimmed]}
-                onPress={() => router.push(`/operator/team/${m.id}`)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.memberTop}>
-                  <View style={[styles.avatar, m.status === "inactive" && styles.avatarInactive]}>
-                    <Text style={[styles.avatarText, m.status === "inactive" && styles.avatarTextInactive]}>
-                      {m.initials}
-                    </Text>
-                  </View>
-                  <View style={styles.memberInfo}>
-                    <View style={styles.memberNameRow}>
-                      <Text style={[styles.memberName, m.status === "inactive" && styles.memberNameInactive]}>
-                        {m.name}
+            {members.map((m) => {
+              const isOffToday = m.status === "off_today" || m.status === "inactive";
+              const hasNoJobs = m.totalJobsToday === 0 && m.isActive;
+              const progressPct = m.totalJobsToday > 0
+                ? Math.round((m.completedJobsToday / m.totalJobsToday) * 100)
+                : 0;
+
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[
+                    styles.memberCard,
+                    cardShadow,
+                    m.isFlagged && styles.memberCardFlagged,
+                    isOffToday && styles.memberCardDimmed,
+                  ]}
+                  onPress={() => router.push(`/operator/team/${m.id}`)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.memberTop}>
+                    {/* Avatar */}
+                    <View style={[styles.avatar, isOffToday && styles.avatarOff]}>
+                      <Text style={[styles.avatarText, isOffToday && styles.avatarTextOff]}>
+                        {m.initials}
                       </Text>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          { backgroundColor: statusBgColor(m.status) },
-                        ]}
-                      >
-                        <Text style={[styles.statusText, { color: statusTextColor(m.status) }]}>
-                          {statusLabel(m.status)}
-                        </Text>
-                      </View>
                     </View>
 
-                    <Text style={styles.memberRole}>Team Member</Text>
-
-                    {m.currentJobName && (
-                      <Text style={styles.currentJobText}>On job: {m.currentJobName}</Text>
-                    )}
-
-                    {!m.currentJobName && m.nextJobName && (
-                      <Text style={styles.currentJobText}>Up next: {m.nextJobName}</Text>
-                    )}
-
-                    {m.status !== "inactive" && m.totalJobsToday > 0 && (
-                      <View style={styles.progressWrap}>
-                        <View style={styles.progressBg}>
-                          <View
-                            style={[
-                              styles.progressFill,
-                              {
-                                width: `${Math.round(
-                                  (m.completedJobsToday / m.totalJobsToday) * 100
-                                )}%`,
-                              },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.progressLabel}>
-                          {m.completedJobsToday} of {m.totalJobsToday} job
-                          {m.totalJobsToday !== 1 ? "s" : ""} done today
+                    {/* Info column */}
+                    <View style={styles.memberInfo}>
+                      {/* Name + status badge */}
+                      <View style={styles.memberNameRow}>
+                        <Text style={[styles.memberName, isOffToday && styles.memberNameOff]}>
+                          {m.name}
                         </Text>
+                        <View style={[styles.statusBadge, { backgroundColor: statusBgColor(m.status, m.isFlagged) }]}>
+                          <Text style={[styles.statusText, { color: statusTextColor(m.status, m.isFlagged) }]}>
+                            {statusLabel(m.status, m.isFlagged)}
+                          </Text>
+                        </View>
                       </View>
-                    )}
 
-                    {m.status === "available" && m.totalJobsToday > 0 && !m.currentJobName && !m.nextJobName && (
-                      <Text style={styles.noJobsText}>Scheduled today — not yet started</Text>
-                    )}
+                      {/* Specialty / placeholder */}
+                      <Text style={styles.memberSpecialty}>Detailer · 4.9 ★</Text>
 
-                    {m.status === "off_today" && (
-                      <Text style={styles.noJobsText}>No jobs assigned today</Text>
-                    )}
-
-                    {m.status === "inactive" && (
-                      <Text style={styles.noJobsText}>Inactive account</Text>
-                    )}
+                      {/* Flagged state: warning banner + View Issue */}
+                      {m.isFlagged ? (
+                        <View style={styles.flaggedSection}>
+                          <View style={styles.flagBanner}>
+                            <Ionicons name="warning" size={14} color={Colors.warningLight} />
+                            <Text style={styles.flagBannerText}>
+                              {m.flaggedJobName
+                                ? `Issue flagged on ${m.flaggedJobName}${m.flaggedJobTime ? ` · ${m.flaggedJobTime}` : ""}`
+                                : "Issue flagged on a job today"}
+                            </Text>
+                          </View>
+                          <View style={styles.flagActionRow}>
+                            <TouchableOpacity
+                              style={styles.viewIssueBtn}
+                              onPress={() => router.push(`/operator/team/${m.id}`)}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={styles.viewIssueBtnText}>View Issue</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ) : hasNoJobs ? (
+                        /* No jobs assigned today */
+                        <View style={styles.noJobsSection}>
+                          <Text style={styles.noJobsText}>No jobs assigned today</Text>
+                          <View style={styles.noJobsActionRow}>
+                            <TouchableOpacity
+                              style={styles.assignJobBtn}
+                              onPress={() => router.push("/operator/bookings/unassigned")}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={styles.assignJobBtnText}>Assign Job</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ) : (
+                        /* Progress bar */
+                        <View style={styles.progressSection}>
+                          <View style={styles.progressBg}>
+                            <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+                          </View>
+                          <Text style={styles.progressLabel}>
+                            {m.completedJobsToday} of {m.totalJobsToday} job{m.totalJobsToday !== 1 ? "s" : ""} done today
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                </View>
 
-                <View style={styles.memberFooter}>
-                  <Text style={styles.memberStats}>
-                    {m.totalJobsToday} job{m.totalJobsToday !== 1 ? "s" : ""} today
-                    {m.weekRevenue > 0 ? ` · ${fmtCurrency(m.weekRevenue)} this week` : ""}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={14} color={Colors.light.textTertiary} />
-                </View>
-              </TouchableOpacity>
-            ))}
+                  {/* Footer stats */}
+                  <View style={styles.memberFooter}>
+                    <Text style={styles.memberStats}>
+                      {m.totalJobsToday} job{m.totalJobsToday !== 1 ? "s" : ""} today
+                      {m.weekRevenue > 0 ? ` · ${fmtCurrency(m.weekRevenue)} this week` : ""}
+                      {" · 0 reviews"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
 
+            {/* Invite card */}
             <TouchableOpacity
-              style={[styles.inviteCard]}
+              style={[styles.inviteCard, cardShadow]}
               onPress={() => router.push("/operator/team/add")}
               activeOpacity={0.7}
             >
-              <Ionicons name="add-circle-outline" size={20} color={Colors.foamBlue} />
+              <Ionicons name="add" size={16} color={Colors.foamBlue} />
               <Text style={styles.inviteCardText}>Invite a team member</Text>
             </TouchableOpacity>
+
+            {/* Business tools */}
+            <View style={styles.businessSection}>
+              <Text style={styles.businessLabel}>BUSINESS TOOLS</Text>
+              <TouchableOpacity
+                style={[styles.linkCard, cardShadow]}
+                activeOpacity={0.7}
+                onPress={() => router.push("/operator/business/payroll")}
+              >
+                <View style={styles.linkLeft}>
+                  <View style={styles.linkIcon}>
+                    <Ionicons name="cash-outline" size={20} color={Colors.foamBlue} />
+                  </View>
+                  <View>
+                    <Text style={styles.linkTitle}>Payroll Summary</Text>
+                    <Text style={styles.linkSub}>Per-member earnings & payout totals</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.light.textTertiary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.linkCard, cardShadow]}
+                activeOpacity={0.7}
+                onPress={() => router.push("/operator/business/commission")}
+              >
+                <View style={styles.linkLeft}>
+                  <View style={styles.linkIcon}>
+                    <Ionicons name="settings-outline" size={20} color={Colors.foamBlue} />
+                  </View>
+                  <View>
+                    <Text style={styles.linkTitle}>Commission Rules</Text>
+                    <Text style={styles.linkSub}>Default rate, per-member overrides & tips</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.light.textTertiary} />
+              </TouchableOpacity>
+            </View>
           </>
         )}
-
-        <View style={styles.businessSection}>
-          <Text style={styles.businessLabel}>BUSINESS TOOLS</Text>
-
-          <TouchableOpacity
-            style={[styles.linkCard, shadow]}
-            activeOpacity={0.7}
-            onPress={() => router.push("/operator/business/payroll")}
-          >
-            <View style={styles.linkLeft}>
-              <View style={styles.linkIcon}>
-                <Ionicons name="cash-outline" size={20} color={Colors.foamBlue} />
-              </View>
-              <View>
-                <Text style={styles.linkTitle}>Payroll Summary</Text>
-                <Text style={styles.linkSub}>Per-member earnings & payout totals</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={Colors.light.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.linkCard, shadow]}
-            activeOpacity={0.7}
-            onPress={() => router.push("/operator/business/commission")}
-          >
-            <View style={styles.linkLeft}>
-              <View style={styles.linkIcon}>
-                <Ionicons name="settings-outline" size={20} color={Colors.foamBlue} />
-              </View>
-              <View>
-                <Text style={styles.linkTitle}>Commission Rules</Text>
-                <Text style={styles.linkSub}>Default rate, per-member overrides & tips</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={Colors.light.textTertiary} />
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.bgPrimary },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.mdLg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.mdLg,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderSubtle,
@@ -508,41 +521,33 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: Typography.bodySemiBold,
-    fontSize: Typography.size.h4,
+    fontSize: 22,
     color: Colors.light.textPrimary,
+    marginBottom: 2,
   },
   dateLabel: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.label,
     color: Colors.light.textTertiary,
     letterSpacing: Typography.tracking.label,
-    marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
   },
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    paddingBottom: 2,
   },
   addBtnText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.foamBlue,
   },
+
+  // Layout
   scrollContent: {
     padding: Spacing.md,
     gap: Spacing.mdSm,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   center: {
     flex: 1,
@@ -550,6 +555,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.mdSm,
   },
+
+  // Error
   errorText: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
@@ -567,22 +574,18 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyM,
     color: Colors.white,
   },
+
+  // Empty state
   emptyWrapper: {
     paddingTop: Spacing.xl2,
     paddingBottom: Spacing.lg,
     gap: Spacing.lg,
   },
-  emptyState: {
-    alignItems: "center",
-    gap: Spacing.mdSm,
-  },
+  emptyState: { alignItems: "center", gap: Spacing.mdSm },
   emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 80, height: 80, borderRadius: 40,
     backgroundColor: Colors.foamBlueSubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center", justifyContent: "center",
     marginBottom: Spacing.xs,
   },
   emptyTitle: {
@@ -621,50 +624,22 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadows.light.level1,
   },
-  onboardingStep: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing.mdSm,
-  },
+  onboardingStep: { flexDirection: "row", alignItems: "flex-start", gap: Spacing.mdSm },
   stepNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 24, height: 24, borderRadius: 12,
     backgroundColor: Colors.foamBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 1,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0, marginTop: 1,
   },
-  stepNumText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 13,
-    color: Colors.white,
-  },
+  stepNumText: { fontFamily: Typography.bodySemiBold, fontSize: 13, color: Colors.white },
   stepText: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textPrimary,
-    flex: 1,
-    lineHeight: 22,
+    flex: 1, lineHeight: 22,
   },
-  inviteDashedBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
-    height: 44,
-    borderRadius: Radius.pill,
-    borderWidth: 2,
-    borderColor: Colors.light.borderDefault,
-    borderStyle: "dashed",
-    backgroundColor: "transparent",
-  },
-  inviteDashedText: {
-    fontFamily: Typography.bodyMedium,
-    fontSize: Typography.size.bodyM,
-    color: Colors.light.textPrimary,
-  },
+
+  // Member card
   memberCard: {
     backgroundColor: Colors.light.surface,
     borderRadius: Radius.lg,
@@ -673,52 +648,63 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     gap: Spacing.mdSm,
   },
+  memberCardFlagged: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warningLight,
+  },
   memberCardDimmed: { opacity: 0.6 },
   memberTop: { flexDirection: "row", gap: Spacing.mdSm },
+
+  // Avatar
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.foamBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center", justifyContent: "center",
     flexShrink: 0,
   },
-  avatarInactive: { backgroundColor: Colors.light.borderDefault },
+  avatarOff: { backgroundColor: Colors.light.borderDefault },
   avatarText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,
     color: Colors.white,
   },
-  avatarTextInactive: { color: Colors.light.textTertiary },
+  avatarTextOff: { color: Colors.light.textTertiary },
+
+  // Member info
   memberInfo: { flex: 1, gap: 4 },
   memberNameRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: Spacing.sm,
+    marginBottom: 2,
   },
   memberName: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,
     color: Colors.light.textPrimary,
+    flex: 1,
   },
-  memberNameInactive: { color: Colors.light.textTertiary },
+  memberNameOff: { color: Colors.light.textTertiary },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: Radius.pill,
+    flexShrink: 0,
   },
   statusText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.label,
   },
-  currentJobText: {
+  memberSpecialty: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textSecondary,
+    marginBottom: Spacing.mdSm,
   },
-  progressWrap: { gap: 3, marginTop: 2 },
+
+  // Progress
+  progressSection: { gap: 4 },
   progressBg: {
     height: 4,
     backgroundColor: Colors.light.bgSecondary,
@@ -735,22 +721,65 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.caption,
     color: Colors.light.textTertiary,
   },
-  memberRole: {
-    fontFamily: Typography.body,
-    fontSize: Typography.size.bodyS,
-    color: Colors.light.textTertiary,
-  },
+
+  // No jobs state
+  noJobsSection: { gap: Spacing.sm },
   noJobsText: {
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
     fontStyle: "italic",
-    marginTop: 2,
   },
-  memberFooter: {
+  noJobsActionRow: { alignItems: "flex-end" },
+  assignJobBtn: {
+    height: 32,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  assignJobBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyS,
+    color: Colors.foamBlue,
+  },
+
+  // Flagged state
+  flaggedSection: { gap: Spacing.sm },
+  flagBanner: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: Spacing.sm,
+    padding: 10,
+    backgroundColor: "rgba(217,119,6,0.08)",
+    borderRadius: Radius.sm,
+  },
+  flagBannerText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.warningLight,
+    flex: 1,
+  },
+  flagActionRow: { alignItems: "flex-end" },
+  viewIssueBtn: {
+    height: 32,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.errorLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewIssueBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+  },
+
+  // Footer
+  memberFooter: {
     paddingTop: Spacing.mdSm,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderSubtle,
@@ -760,6 +789,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.caption,
     color: Colors.light.textTertiary,
   },
+
+  // Invite card
   inviteCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -771,13 +802,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.borderDefault,
     borderStyle: "dashed",
     padding: Spacing.md,
-    marginTop: Spacing.xs,
   },
   inviteCardText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.bodyM,
     color: Colors.foamBlue,
   },
+
+  // Business section
   businessSection: { gap: Spacing.mdSm, marginTop: Spacing.sm },
   businessLabel: {
     fontFamily: Typography.bodyMedium,
@@ -797,12 +829,9 @@ const styles = StyleSheet.create({
   },
   linkLeft: { flexDirection: "row", alignItems: "center", gap: Spacing.mdSm, flex: 1 },
   linkIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
+    width: 40, height: 40, borderRadius: Radius.md,
     backgroundColor: Colors.foamBlueSubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center", justifyContent: "center",
   },
   linkTitle: {
     fontFamily: Typography.bodySemiBold,

@@ -17,12 +17,35 @@ import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design
 
 type TabId = "invite" | "code";
 type InputMode = "phone" | "email";
+type RoleId = "team_member" | "team_manager";
 
 interface Recipient {
   id: string;
   value: string;
   mode: InputMode;
 }
+
+interface RoleOption {
+  id: RoleId;
+  label: string;
+  description: string;
+  capabilities: string[];
+}
+
+const ROLES: RoleOption[] = [
+  {
+    id: "team_member",
+    label: "Team Member",
+    description: "Can view and complete assigned jobs",
+    capabilities: ["Assigned jobs", "Before/after photos", "Earnings view"],
+  },
+  {
+    id: "team_manager",
+    label: "Team Manager",
+    description: "Full access to team and business data",
+    capabilities: ["All jobs", "Assign crew", "Business reports"],
+  },
+];
 
 const SHARE_CODE = "FOAM-K7X2";
 
@@ -36,6 +59,7 @@ export default function AddTeamMemberScreen() {
   const [activeTab, setActiveTab] = useState<TabId>("invite");
   const [currentInput, setCurrentInput] = useState("");
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [selectedRole, setSelectedRole] = useState<RoleId>("team_member");
   const [commissionRate, setCommissionRate] = useState("38");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +110,7 @@ export default function AddTeamMemberScreen() {
         detailer_id: profile.id,
         contact: r.value,
         contact_type: detectMode(r.value),
-        role: "team_member",
+        role: selectedRole,
         commission_rate: commissionRate ? parseFloat(commissionRate) : null,
         status: "pending",
       }));
@@ -229,26 +253,45 @@ export default function AddTeamMemberScreen() {
 
             <View style={styles.sectionBlock}>
               <Text style={styles.sectionLabel}>ROLE</Text>
-              <View style={styles.roleCard}>
-                <View style={styles.roleIconCircle}>
-                  <Ionicons name="person-outline" size={20} color={Colors.foamBlue} />
-                </View>
-                <View style={styles.roleTextBlock}>
-                  <Text style={styles.roleLabel}>Team Member</Text>
-                  <Text style={styles.roleDescription}>
-                    Clock in, complete assigned jobs, track earnings
-                  </Text>
-                  <View style={styles.roleCapabilities}>
-                    {["Assigned jobs", "Before/after photos", "Earnings view"].map((cap) => (
-                      <View key={cap} style={styles.roleCap}>
-                        <Text style={styles.roleCapText}>{cap}</Text>
+              <View style={styles.roleList}>
+                {ROLES.map((role) => {
+                  const isSelected = selectedRole === role.id;
+                  return (
+                    <TouchableOpacity
+                      key={role.id}
+                      style={[styles.roleCard, isSelected && styles.roleCardSelected]}
+                      onPress={() => setSelectedRole(role.id)}
+                      activeOpacity={0.85}
+                    >
+                      {isSelected && (
+                        <View style={styles.roleCheckmark}>
+                          <Ionicons name="checkmark" size={11} color={Colors.white} />
+                        </View>
+                      )}
+                      <Text style={[styles.roleLabel, isSelected && styles.roleLabelSelected]}>
+                        {role.label}
+                      </Text>
+                      <Text style={styles.roleDescription}>{role.description}</Text>
+                      <View style={styles.roleCapabilities}>
+                        {role.capabilities.map((cap) => (
+                          <View
+                            key={cap}
+                            style={[styles.roleCap, isSelected && styles.roleCapSelected]}
+                          >
+                            <Text
+                              style={[
+                                styles.roleCapText,
+                                isSelected && styles.roleCapTextSelected,
+                              ]}
+                            >
+                              {cap}
+                            </Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.radioSelected}>
-                  <View style={styles.radioDot} />
-                </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -484,63 +527,64 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.foamBlue,
   },
+  roleList: { gap: 10 },
   roleCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: Colors.foamBlueSubtle,
-    borderRadius: Radius.md,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
     padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    gap: 4,
+    ...Shadows.light.level1,
+  },
+  roleCardSelected: {
     borderWidth: 2,
     borderColor: Colors.foamBlue,
   },
-  roleIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(51,157,199,0.20)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  roleTextBlock: { flex: 1, gap: 4 },
-  roleLabel: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 14,
-    color: Colors.foamBlue,
-  },
-  roleDescription: {
-    fontFamily: Typography.body,
-    fontSize: 12,
-    color: Colors.light.textTertiary,
-    lineHeight: 16,
-  },
-  roleCapabilities: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
-  roleCap: {
-    backgroundColor: Colors.foamBlueSubtle,
-    borderRadius: Radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: "rgba(51,157,199,0.25)",
-  },
-  roleCapText: { fontFamily: Typography.bodyMedium, fontSize: 11, color: Colors.foamBlue },
-  radioSelected: {
+  roleCheckmark: {
+    position: "absolute",
+    top: 14,
+    right: 14,
     width: 20,
     height: 20,
     borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlue,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 2,
   },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.foamBlue,
+  roleLabel: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyL,
+    color: Colors.light.textPrimary,
+    marginBottom: 2,
+  },
+  roleLabelSelected: {
+    color: Colors.light.textPrimary,
+  },
+  roleDescription: {
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  roleCapabilities: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  roleCap: {
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  roleCapSelected: {
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  roleCapText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+  },
+  roleCapTextSelected: {
+    color: Colors.foamBlue,
   },
   fieldHint: {
     fontFamily: Typography.body,

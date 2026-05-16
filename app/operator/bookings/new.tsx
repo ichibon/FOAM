@@ -39,6 +39,18 @@ interface RawCustomerRow {
   users: { id: string; full_name: string | null; phone: string | null } | null;
 }
 
+interface RawAssetRow {
+  id: string;
+  name: string;
+  asset_type: string;
+}
+
+interface RawLocationRow {
+  id: string;
+  name: string;
+  address: string | null;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type VehicleSizeKey = "sedan" | "suv" | "truck" | "van";
@@ -64,8 +76,16 @@ interface CustomerOption {
 }
 
 type CustomerMode = "search" | "create";
-type BookingLocationType = "mobile" | "location";
+type BookingSourceType = "asset" | "location";
 type SubmitState = "idle" | "saving" | "success" | "error";
+
+interface BookingSourceOption {
+  id: string;
+  type: BookingSourceType;
+  name: string;
+  address?: string | null;
+  assetType?: string;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,8 +140,10 @@ export default function NewBookingScreen() {
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // Booking location type: mobile (go to customer) or fixed location (customer comes in)
-  const [bookingLocationType, setBookingLocationType] = useState<BookingLocationType>("mobile");
+  // Booking source: which van or physical location this booking is for
+  const [bookingSources, setBookingSources] = useState<BookingSourceOption[]>([]);
+  const [selectedSource, setSelectedSource] = useState<BookingSourceOption | null>(null);
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
 
   // Customer mode: search existing or create new
   const [customerMode, setCustomerMode] = useState<CustomerMode>("search");
@@ -167,7 +189,7 @@ export default function NewBookingScreen() {
       const dId: string = (profileData as { id: string }).id;
       setDetailerId(dId);
 
-      const [pkgRes, custRes] = await Promise.all([
+      const [pkgRes, custRes, assetRes, locationRes] = await Promise.all([
         supabase
           .from("service_packages")
           .select("id,name,base_price,duration_mins,description,vehicle_size_pricing(vehicle_type,price_adjustment)")
@@ -179,6 +201,18 @@ export default function NewBookingScreen() {
           .select("customer_id, users!bookings_customer_id_fkey(id,full_name,phone)")
           .eq("detailer_id", dId)
           .limit(300),
+        supabase
+          .from("business_assets")
+          .select("id,name,asset_type")
+          .eq("detailer_id", dId)
+          .eq("is_active", true)
+          .order("name"),
+        supabase
+          .from("business_locations")
+          .select("id,name,address")
+          .eq("detailer_id", dId)
+          .eq("is_active", true)
+          .order("name"),
       ]);
 
       const rawPkgs: RawServicePackage[] = (pkgRes.data as RawServicePackage[] | null) ?? [];
@@ -208,6 +242,22 @@ export default function NewBookingScreen() {
         }
       }
       setCustomers(custs);
+
+      const sources: BookingSourceOption[] = [
+        ...((assetRes.data as RawAssetRow[] | null) ?? []).map((a) => ({
+          id: a.id,
+          type: "asset" as BookingSourceType,
+          name: a.name,
+          assetType: a.asset_type,
+        })),
+        ...((locationRes.data as RawLocationRow[] | null) ?? []).map((l) => ({
+          id: l.id,
+          type: "location" as BookingSourceType,
+          name: l.name,
+          address: l.address,
+        })),
+      ];
+      setBookingSources(sources);
     } catch (err) {
       console.warn("[NewBooking] fetchData error", err);
     } finally {
@@ -306,13 +356,10 @@ export default function NewBookingScreen() {
     setNewCustomerEmail("");
   }
 
-  function switchToMobile() {
-    setBookingLocationType("mobile");
-  }
-
-  function switchToLocation() {
-    setBookingLocationType("location");
-    setServiceAddress("");
+  function selectSource(src: BookingSourceOption) {
+    setSelectedSource(src);
+    setShowSourcePicker(false);
+    if (src.type === "location") setServiceAddress("");
   }
 
   // ── Resolve or create customer, then create booking ──────────────────────────
@@ -386,6 +433,8 @@ export default function NewBookingScreen() {
           notes: notes.trim() || null,
           tip_amount: 0,
           is_recurring: false,
+          asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+          location_id: selectedSource?.type === "location" ? selectedSource.id : null,
         });
 
         if (bookingError) {
@@ -449,6 +498,8 @@ export default function NewBookingScreen() {
           notes: notes.trim() || null,
           tip_amount: 0,
           is_recurring: false,
+          asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+          location_id: selectedSource?.type === "location" ? selectedSource.id : null,
         });
 
         if (bookingError) {
@@ -519,51 +570,102 @@ export default function NewBookingScreen() {
           keyboardShouldPersistTaps="handled"
         >
 
-          {/* ── Booking type ── */}
+          {/* ── Booking source ── */}
           <SectionCard>
-            <Text style={styles.cardSectionLabel}>BOOKING TYPE</Text>
-            <View style={styles.modeToggleRow}>
-              <TouchableOpacity
-                style={[styles.modeTab, bookingLocationType === "mobile" && styles.modeTabActive]}
-                onPress={switchToMobile}
-                activeOpacity={0.75}
-              >
-                <View style={styles.modeTabInner}>
+            <Text style={styles.cardSectionLabel}>BOOKED AT</Text>
+            <TouchableOpacity
+              style={styles.sourcePickerField}
+              onPress={() => setShowSourcePicker((v) => !v)}
+              activeOpacity={0.8}
+            >
+              {selectedSource ? (
+                <View style={styles.sourcePickerSelected}>
                   <Ionicons
-                    name="car-outline"
-                    size={14}
-                    color={bookingLocationType === "mobile" ? Colors.light.textPrimary : Colors.light.textSecondary}
+                    name={selectedSource.type === "asset" ? "car-outline" : "storefront-outline"}
+                    size={18}
+                    color={Colors.foamBlue}
                   />
-                  <Text style={[styles.modeTabText, bookingLocationType === "mobile" && styles.modeTabTextActive]}>
-                    Mobile
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sourcePickerName}>{selectedSource.name}</Text>
+                    <Text style={styles.sourcePickerSub}>
+                      {selectedSource.type === "asset" ? "Mobile" : selectedSource.address ?? "Physical Location"}
+                    </Text>
+                  </View>
                 </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modeTab, bookingLocationType === "location" && styles.modeTabActive]}
-                onPress={switchToLocation}
-                activeOpacity={0.75}
-              >
-                <View style={styles.modeTabInner}>
-                  <Ionicons
-                    name="storefront-outline"
-                    size={14}
-                    color={bookingLocationType === "location" ? Colors.light.textPrimary : Colors.light.textSecondary}
-                  />
-                  <Text style={[styles.modeTabText, bookingLocationType === "location" && styles.modeTabTextActive]}>
-                    Physical Location
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.hintBox}>
-              <Ionicons name="information-circle-outline" size={15} color={Colors.light.textTertiary} />
-              <Text style={styles.hintText}>
-                {bookingLocationType === "mobile"
-                  ? "Mobile: you travel to the customer's location."
-                  : "Physical location: customer comes to your shop."}
-              </Text>
-            </View>
+              ) : (
+                <Text style={styles.sourcePickerPlaceholder}>Select van or location…</Text>
+              )}
+              <Ionicons
+                name={showSourcePicker ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={Colors.light.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {showSourcePicker && (
+              <View style={styles.sourcePickerList}>
+                {bookingSources.length === 0 ? (
+                  <View style={styles.sourcePickerEmpty}>
+                    <Text style={styles.sourcePickerEmptyText}>
+                      No vans or locations set up yet. Add them in Business Settings.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {bookingSources.some((s) => s.type === "asset") && (
+                      <Text style={styles.sourcePickerGroupLabel}>MOBILE FLEET</Text>
+                    )}
+                    {bookingSources.filter((s) => s.type === "asset").map((src) => (
+                      <TouchableOpacity
+                        key={src.id}
+                        style={[
+                          styles.sourcePickerItem,
+                          selectedSource?.id === src.id && styles.sourcePickerItemActive,
+                        ]}
+                        onPress={() => selectSource(src)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons name="car-outline" size={16} color={selectedSource?.id === src.id ? Colors.foamBlue : Colors.light.textSecondary} />
+                        <Text style={[styles.sourcePickerItemText, selectedSource?.id === src.id && styles.sourcePickerItemTextActive]}>
+                          {src.name}
+                        </Text>
+                        {selectedSource?.id === src.id && (
+                          <Ionicons name="checkmark" size={16} color={Colors.foamBlue} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+
+                    {bookingSources.some((s) => s.type === "location") && (
+                      <Text style={[styles.sourcePickerGroupLabel, { marginTop: Spacing.sm }]}>SHOP LOCATIONS</Text>
+                    )}
+                    {bookingSources.filter((s) => s.type === "location").map((src) => (
+                      <TouchableOpacity
+                        key={src.id}
+                        style={[
+                          styles.sourcePickerItem,
+                          selectedSource?.id === src.id && styles.sourcePickerItemActive,
+                        ]}
+                        onPress={() => selectSource(src)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons name="storefront-outline" size={16} color={selectedSource?.id === src.id ? Colors.foamBlue : Colors.light.textSecondary} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.sourcePickerItemText, selectedSource?.id === src.id && styles.sourcePickerItemTextActive]}>
+                            {src.name}
+                          </Text>
+                          {src.address && (
+                            <Text style={styles.sourcePickerItemSub}>{src.address}</Text>
+                          )}
+                        </View>
+                        {selectedSource?.id === src.id && (
+                          <Ionicons name="checkmark" size={16} color={Colors.foamBlue} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
           </SectionCard>
 
           {/* ── Customer section ── */}
@@ -856,7 +958,7 @@ export default function NewBookingScreen() {
           {/* ── Address & Notes ── */}
           <SectionCard>
             <Text style={styles.cardSectionLabel}>DETAILS</Text>
-            {bookingLocationType === "mobile" && (
+            {(selectedSource === null || selectedSource.type === "asset") && (
               <>
                 <FieldLabel>Service address</FieldLabel>
                 <TextInput
@@ -1048,11 +1150,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,
-  },
-  modeTabInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
   },
   modeTabActive: {
     backgroundColor: Colors.light.surface,
@@ -1391,5 +1488,100 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     textAlign: "center",
     maxWidth: 260,
+  },
+  sourcePickerField: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.light.surface,
+    gap: Spacing.sm,
+  },
+  sourcePickerSelected: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.mdSm,
+  },
+  sourcePickerName: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  sourcePickerSub: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginTop: 1,
+  },
+  sourcePickerPlaceholder: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textTertiary,
+  },
+  sourcePickerList: {
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+    ...(Platform.OS === "web"
+      ? ({ boxShadow: "0 4px 6px -1px rgba(0,0,0,0.07)" } as object)
+      : Shadows.light.level2),
+  },
+  sourcePickerGroupLabel: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 10,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.7,
+    paddingHorizontal: Spacing.mdSm,
+    paddingTop: Spacing.mdSm,
+    paddingBottom: Spacing.xs,
+    backgroundColor: Colors.light.bgSecondary,
+  },
+  sourcePickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.mdSm,
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: Spacing.mdSm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.surface,
+  },
+  sourcePickerItemActive: {
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  sourcePickerItemText: {
+    flex: 1,
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  sourcePickerItemTextActive: {
+    color: Colors.foamBlue,
+    fontFamily: Typography.bodySemiBold,
+  },
+  sourcePickerItemSub: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginTop: 1,
+  },
+  sourcePickerEmpty: {
+    padding: Spacing.md,
+    backgroundColor: Colors.light.surface,
+  },
+  sourcePickerEmptyText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

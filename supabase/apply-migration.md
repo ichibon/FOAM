@@ -13,16 +13,7 @@ direct database connection.
 
 ## Pending migrations (apply in order)
 
-The following have **not** yet been applied to the live database:
-
-| File | What it does |
-|------|-------------|
-| `20260515000002_v2_1_role_model_manager_removal.sql` | Adds `has_team` column to `detailer_profiles` + trigger to keep it in sync with `team_members` |
-| `20260515000003_booking_contacts_walkin.sql` | Creates `booking_contacts` table for walk-in bookings; adds `contact_id` FK to `bookings`; makes `customer_id`/`vehicle_id` nullable |
-| `20260515000004_business_schema.sql` | Adds `default_commission_rate` to `detailer_profiles`; creates `crew_time_entries` table with RLS |
-| `20260515000005_vehicle_size_pricing.sql` | Creates `vehicle_size_pricing` table with RLS — stores per-vehicle-type price overrides and upcharges for service packages |
-| `20260516000000_fix_bookings_rls.sql` | **Fixes 42P17 infinite recursion** — drops all existing `bookings` policies and recreates non-recursive equivalents; enables walk-in bookings with `contact_id` |
-| `20260516000001_bookings_add_asset_location.sql` | Adds `asset_id` (FK → business_assets) and `location_id` (FK → business_locations) to `bookings` — records which van or shop a booking was assigned to |
+None — all migrations have been applied. ✅
 
 ## Already applied migrations (do not re-run)
 
@@ -37,3 +28,9 @@ These are already in the live database. Running them again is safe (all use
 | `20260513000002_add_missing_operator_columns.sql` | ✅ |
 | `20260515000000_fix_users_rls_and_add_onboarding_complete.sql` | ✅ |
 | `20260515000001_add_metadata_to_business_assets.sql` | ✅ |
+| `20260515000002_v2_1_role_model_manager_removal.sql` | ✅ |
+| `20260515000003_booking_contacts_walkin.sql` | ✅ |
+| `20260515000004_business_schema.sql` | ✅ |
+| `20260515000005_vehicle_size_pricing.sql` | ✅ |
+| `20260516000000_fix_bookings_rls.sql` | ✅ |
+| `20260516000001_bookings_add_asset_location.sql` | ✅ |

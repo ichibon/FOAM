@@ -308,8 +308,7 @@ export default function NewBookingScreen() {
     if (!vType || pkg.vehicleSizePricing.length === 0) return pkg.price;
     const entry = pkg.vehicleSizePricing.find((e) => e.vehicleType === vType);
     if (!entry) return pkg.price;
-    if (vType === "sedan") return entry.priceAdjustment;
-    return pkg.price + entry.priceAdjustment;
+    return entry.priceAdjustment;
   }
 
   function handleServiceAdded(newPackageId: string) {

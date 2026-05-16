@@ -169,6 +169,7 @@ export function AddLocationDrawer({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Location Name */}
         <View style={styles.fieldGroup}>
@@ -285,25 +286,25 @@ export function AddLocationDrawer({
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
-      </ScrollView>
 
-      <DrawerFooter>
-        <TouchableOpacity
-          style={[
-            styles.saveBtn,
-            (saving || !locationName.trim() || !address.trim()) && { opacity: 0.6 },
-          ]}
-          onPress={handleSave}
-          disabled={saving || !locationName.trim() || !address.trim()}
-          activeOpacity={0.85}
-        >
-          {saving ? (
-            <ActivityIndicator color={Colors.white} size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>{initialData ? "Save Changes" : "Save Location"}</Text>
-          )}
-        </TouchableOpacity>
-      </DrawerFooter>
+        <DrawerFooter>
+          <TouchableOpacity
+            style={[
+              styles.saveBtn,
+              (saving || !locationName.trim() || !address.trim()) && { opacity: 0.6 },
+            ]}
+            onPress={handleSave}
+            disabled={saving || !locationName.trim() || !address.trim()}
+            activeOpacity={0.85}
+          >
+            {saving ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <Text style={styles.saveBtnText}>{initialData ? "Save Changes" : "Save Location"}</Text>
+            )}
+          </TouchableOpacity>
+        </DrawerFooter>
+      </ScrollView>
     </DrawerModal>
   );
 }

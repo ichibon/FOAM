@@ -154,6 +154,7 @@ export function AddVehicleDrawer({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Asset Type Selector */}
         <View style={styles.fieldGroup}>
@@ -308,22 +309,22 @@ export function AddVehicleDrawer({
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
-      </ScrollView>
 
-      <DrawerFooter>
-        <TouchableOpacity
-          style={[styles.saveBtn, (saving || !name.trim()) && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={saving || !name.trim()}
-          activeOpacity={0.85}
-        >
-          {saving ? (
-            <ActivityIndicator color={Colors.white} size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>{initialData ? "Save Changes" : "Save Van"}</Text>
-          )}
-        </TouchableOpacity>
-      </DrawerFooter>
+        <DrawerFooter>
+          <TouchableOpacity
+            style={[styles.saveBtn, (saving || !name.trim()) && { opacity: 0.6 }]}
+            onPress={handleSave}
+            disabled={saving || !name.trim()}
+            activeOpacity={0.85}
+          >
+            {saving ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <Text style={styles.saveBtnText}>{initialData ? "Save Changes" : "Save Van"}</Text>
+            )}
+          </TouchableOpacity>
+        </DrawerFooter>
+      </ScrollView>
     </DrawerModal>
   );
 }

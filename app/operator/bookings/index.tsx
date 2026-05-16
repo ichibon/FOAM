@@ -103,7 +103,7 @@ function formatDateShort(date: Date): string {
 
 function statusBadgeConfig(status: BookingStatus): { label: string; bg: string; color: string } {
   switch (status) {
-    case "requested":   return { label: "Requested",   bg: "rgba(217,119,6,0.08)",  color: Colors.warningLight };
+    case "requested":   return { label: "Upcoming",     bg: Colors.foamBlueSubtle,   color: Colors.foamBlue };
     case "confirmed":   return { label: "Upcoming",    bg: Colors.foamBlueSubtle,   color: Colors.foamBlue };
     case "in_progress": return { label: "In Progress", bg: Colors.foamBlueSubtle,   color: Colors.foamBlue };
     case "completed":   return { label: "Completed",   bg: "rgba(22,163,74,0.08)",  color: Colors.successLight };
@@ -386,7 +386,6 @@ export default function OperatorBookingsScreen() {
           <TouchableOpacity
             style={[styles.viewToggleBtn, viewMode === "calendar" && styles.viewToggleBtnActive]}
             onPress={() => {
-              setViewMode("calendar");
               Alert.alert("Coming Soon", "Calendar view is on the way.");
             }}
             activeOpacity={0.75}

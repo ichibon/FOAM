@@ -658,7 +658,9 @@ export default function BuildOperationScreen() {
             is_active: true,
             display_order: idx,
           }));
-          const { error } = await supabase.from("service_packages").insert(rows);
+          const { error } = await supabase
+            .from("service_packages")
+            .insert(rows as unknown as Parameters<ReturnType<typeof supabase.from>["insert"]>[0]);
           if (error) console.warn("[Build] service_packages insert failed", error);
         }
       }
@@ -780,15 +782,9 @@ export default function BuildOperationScreen() {
                       <Text style={styles.serviceCardName}>{svc.name}</Text>
                       <Text style={styles.serviceCardMeta}>${svc.basePrice} · {durLabel}</Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() =>
-                        setServices((prev) => prev.filter((s) => s.localId !== svc.localId))
-                      }
-                      activeOpacity={0.7}
-                      style={styles.serviceCardTrash}
-                    >
-                      <LucideIcon name="Trash2" size={16} color={Colors.light.textTertiary} />
-                    </TouchableOpacity>
+                    <View style={styles.serviceCardTrash}>
+                      <LucideIcon name="PencilLine" size={16} color={Colors.light.textTertiary} />
+                    </View>
                   </View>
                   {!!svc.description && (
                     <Text style={styles.serviceCardDesc} numberOfLines={2}>

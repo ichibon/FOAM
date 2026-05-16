@@ -53,7 +53,7 @@ function SettingsRow({ iconName, iconBg, iconColor, title, subtitle, onPress }: 
       activeOpacity={0.7}
     >
       <View style={[styles.rowIconCircle, { backgroundColor: iconBg }]}>
-        <LucideIcon name={iconName as any} size={20} color={iconColor} />
+        <LucideIcon name={iconName} size={20} color={iconColor} />
       </View>
       <View style={styles.rowContent}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -304,7 +304,7 @@ export default function OperatorProfileScreen() {
               subtitle={
                 <View style={styles.payoutRow}>
                   <View style={styles.payoutDot} />
-                  <Text style={styles.rowSubtitle}>Payouts via Stripe Connect</Text>
+                  <Text style={styles.rowSubtitle}>••••&nbsp;4492 · Payouts active</Text>
                 </View>
               }
             />

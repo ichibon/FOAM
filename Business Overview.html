@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <script>
+        window.FontAwesomeConfig = {
+          autoReplaceSvg: 'nest'
+        };
+      </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Business</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        foam: {
+                            blue: '#339DC7',
+                            hover: '#2B85A9',
+                            subtle: 'rgba(51, 157, 199, 0.10)',
+                        },
+                        text: {
+                            primary: '#0A0A0A',
+                            secondary: '#525252',
+                            tertiary: '#A3A3A3',
+                        },
+                        surface: {
+                            primary: '#FAFAFA',
+                            elevated: '#FFFFFF',
+                        },
+                        border: {
+                            subtle: '#E4E4E7',
+                            default: '#D4D4D8',
+                        },
+                        status: {
+                            success: '#16A34A',
+                            warning: '#D97706',
+                            error: '#DC2626',
+                        }
+                    },
+                    boxShadow: {
+                        'level-1': '0 1px 3px rgba(0,0,0,0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #FAFAFA; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-text-primary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-surface-primary relative m-0 p-0">
+
+    <header id="header" class="w-full px-4 pt-6 pb-4 bg-surface-primary sticky top-0 z-40">
+        <h1 class="font-sans text-[22px] font-semibold text-text-primary">Business</h1>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-4 pb-32 flex flex-col space-y-6">
+        
+        <section id="period-filter" class="w-full overflow-x-auto hide-scrollbar -mx-4 px-4 pb-2">
+            <div class="flex space-x-2 w-max">
+                <button data-period="today" class="period-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors">
+                    Today
+                </button>
+                <button data-period="week" class="period-btn px-4 py-2 rounded-[12px] bg-foam-blue text-white font-sans text-[13px] font-medium whitespace-nowrap">
+                    This Week
+                </button>
+                <button data-period="month" class="period-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors">
+                    This Month
+                </button>
+                <button data-period="alltime" class="period-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors">
+                    All Time
+                </button>
+            </div>
+        </section>
+
+        <section id="unit-filter" class="w-full overflow-x-auto hide-scrollbar -mx-4 px-4 pb-2">
+            <div class="flex space-x-2 w-max">
+                <button data-unit="all" class="unit-btn px-4 py-2 rounded-[12px] bg-foam-blue text-white font-sans text-[13px] font-medium whitespace-nowrap flex items-center gap-1.5">
+                    All Units
+                </button>
+                <button data-unit="buckhead" class="unit-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-building text-[14px]"></i>
+                    Buckhead
+                </button>
+                <button data-unit="midtown" class="unit-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-building text-[14px]"></i>
+                    Midtown
+                </button>
+                <button data-unit="van1" class="unit-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-van-shuttle text-[14px]"></i>
+                    Van 1
+                </button>
+                <button data-unit="van2" class="unit-btn px-4 py-2 rounded-[12px] border border-border-default text-text-secondary font-sans text-[13px] font-medium whitespace-nowrap active:bg-surface-elevated transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-van-shuttle text-[14px]"></i>
+                    Van 2
+                </button>
+            </div>
+        </section>
+
+        <section id="earnings-summary" class="w-full">
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-5">
+                <div class="flex flex-col space-y-1">
+                    <span id="revenue-amount" class="font-serif text-[36px] font-bold text-text-primary leading-none">$3,240</span>
+                    <span id="revenue-label" class="font-sans text-[13px] text-text-tertiary mt-1">Total Revenue This Week</span>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-border-subtle flex gap-3">
+                    <span id="pending-amount" class="px-3 py-1.5 rounded-[6px] bg-status-warning/10 text-status-warning font-sans text-[13px] font-medium">
+                        $540 pending
+                    </span>
+                    <span id="confirmed-amount" class="px-3 py-1.5 rounded-[6px] bg-status-success/10 text-status-success font-sans text-[13px] font-medium">
+                        $2,700 confirmed
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section id="dynamic-chart-section" class="w-full bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="chart-period-label" class="font-sans text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Total Revenue — This Week</h2>
+                <div id="chart-legend" class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-3 h-3 rounded-sm bg-foam-blue"></div>
+                        <span class="font-sans text-[11px] text-text-tertiary">Service</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-3 h-3 rounded-sm bg-[#E1F0F7] border border-foam-blue"></div>
+                        <span class="font-sans text-[11px] text-text-tertiary">Tip</span>
+                    </div>
+                </div>
+            </div>
+            <div id="chart-container" class="w-full h-[200px] overflow-x-auto"></div>
+        </section>
+
+        <section id="by-unit-section" class="w-full space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-sans text-[16px] font-semibold text-text-primary">BY UNIT</h2>
+                <span class="font-sans text-[13px] text-text-tertiary">This Week</span>
+            </div>
+            
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 overflow-hidden">
+                <button data-unit-row="buckhead" class="w-full flex items-center justify-between p-4 border-b border-border-subtle min-h-[48px] active:bg-surface-primary transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-subtle flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-[14px] text-foam-blue"></i>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Buckhead Shop</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">12 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$1,420</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+
+                <button data-unit-row="midtown" class="w-full flex items-center justify-between p-4 border-b border-border-subtle min-h-[48px] active:bg-surface-primary transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-subtle flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-[14px] text-foam-blue"></i>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Midtown</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">8 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$890</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+
+                <button data-unit-row="van1" class="w-full flex items-center justify-between p-4 border-b border-border-subtle min-h-[48px] active:bg-surface-primary transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-subtle flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-van-shuttle text-[14px] text-foam-blue"></i>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Van 1</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">6 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$620</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+
+                <button data-unit-row="van2" class="w-full flex items-center justify-between p-4 min-h-[48px] active:bg-surface-primary transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-subtle flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-van-shuttle text-[14px] text-foam-blue"></i>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Van 2</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">4 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$310</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <section id="team-revenue-breakdown" class="w-full space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-sans text-[16px] font-semibold text-text-primary">BY TEAM MEMBER</h2>
+                <span class="font-sans text-[13px] text-text-tertiary">This Week</span>
+            </div>
+            
+            <div id="team-member-container" class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 overflow-hidden">
+                <div class="flex items-center justify-between p-4 border-b border-border-subtle min-h-[48px]">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-blue flex items-center justify-center flex-shrink-0">
+                            <span class="font-sans text-[13px] font-semibold text-white">JK</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Jordan K.</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">8 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$1,180</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 border-b border-border-subtle min-h-[48px]">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-blue flex items-center justify-center flex-shrink-0">
+                            <span class="font-sans text-[13px] font-semibold text-white">KM</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Kayla M.</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">7 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$940</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 border-b border-border-subtle min-h-[48px]">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-blue flex items-center justify-center flex-shrink-0">
+                            <span class="font-sans text-[13px] font-semibold text-white">DR</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Devon R.</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">6 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$720</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 min-h-[48px]">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-blue flex items-center justify-center flex-shrink-0">
+                            <span class="font-sans text-[13px] font-semibold text-white">MT</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">Marcus T.</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">4 jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$400</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button class="font-sans text-[13px] font-medium text-foam-blue">See All Team Members →</button>
+            </div>
+        </section>
+
+        <section id="recent-jobs" class="w-full space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-sans text-[16px] font-semibold text-text-primary">TODAY'S BREAKDOWN</h2>
+                <button class="font-sans text-[13px] font-medium text-foam-blue">See All</button>
+            </div>
+            
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 overflow-hidden">
+                <div class="flex items-start justify-between p-4 border-b border-border-subtle">
+                    <div class="flex flex-col space-y-1 flex-1">
+                        <span class="font-sans text-[14px] font-medium text-text-primary">Sarah J. · Tesla Model 3</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Premium Interior Detail</span>
+                    </div>
+                    <div class="flex flex-col items-end space-y-1.5 ml-3">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$120</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-[4px] bg-status-success/10 text-status-success font-sans text-[11px] font-medium">Paid</span>
+                            <span class="px-2 py-0.5 rounded-[4px] bg-foam-subtle text-foam-blue font-sans text-[11px] font-medium">Jordan</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start justify-between p-4 border-b border-border-subtle">
+                    <div class="flex flex-col space-y-1 flex-1">
+                        <span class="font-sans text-[14px] font-medium text-text-primary">Mike T. · Ford F-150</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Full Exterior Wash</span>
+                    </div>
+                    <div class="flex flex-col items-end space-y-1.5 ml-3">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$100</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-[4px] bg-status-success/10 text-status-success font-sans text-[11px] font-medium">Paid</span>
+                            <span class="px-2 py-0.5 rounded-[4px] bg-foam-subtle text-foam-blue font-sans text-[11px] font-medium">Kayla</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start justify-between p-4">
+                    <div class="flex flex-col space-y-1 flex-1">
+                        <span class="font-sans text-[14px] font-medium text-text-primary">Elena R. · BMW X5</span>
+                        <span class="font-sans text-[13px] text-text-secondary">Complete Detail Package</span>
+                    </div>
+                    <div class="flex flex-col items-end space-y-1.5 ml-3">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">$120</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-[4px] bg-status-warning/10 text-status-warning font-sans text-[11px] font-medium">Pending</span>
+                            <span class="px-2 py-0.5 rounded-[4px] bg-foam-subtle text-foam-blue font-sans text-[11px] font-medium">Devon</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="payout-section" class="w-full mt-4">
+            <div class="bg-surface-elevated rounded-[16px] border border-border-subtle shadow-level-1 p-5">
+                <span class="font-sans text-[12px] text-text-tertiary block mb-2">Next Payout</span>
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex flex-col space-y-1">
+                        <span id="payout-amount" class="font-sans text-[17px] font-semibold text-text-primary">Tomorrow · $3,240</span>
+                        <span class="font-sans text-[13px] text-text-secondary flex items-center mt-1">
+                            <i data-lucide="building-2" class="w-3.5 h-3.5 mr-1.5 opacity-70"></i>
+                            Chase ····4821
+                        </span>
+                    </div>
+                </div>
+                <button class="w-full h-[44px] border border-border-default text-foam-blue rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center active:bg-surface-primary transition-colors mb-3">
+                    View Payout History
+                </button>
+                <button class="w-full h-[44px] border border-border-default text-foam-blue rounded-[8px] font-sans text-[14px] font-semibold flex items-center justify-center active:bg-surface-primary transition-colors">
+                    Payroll Summary →
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <nav id="bottom-nav" class="fixed bottom-0 w-full bg-surface-elevated border-t border-border-subtle px-6 py-3 pb-8 z-50 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Today</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-users text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Team</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Bookings</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-foam-blue relative min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-solid fa-chart-line text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Business</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 text-text-tertiary hover:text-text-secondary transition-colors min-w-[44px] min-h-[44px] justify-center">
+            <i class="fa-regular fa-circle-user text-[20px]"></i>
+            <span class="font-sans text-[10px] font-medium">Profile</span>
+        </a>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+
+        let currentPeriod = 'week';
+        let currentUnit = 'all';
+
+        const unitData = {
+            all: {
+                revenue: '$3,240',
+                label: 'Total Revenue This Week',
+                pending: '$540',
+                confirmed: '$2,700',
+                payout: '$3,240',
+                teamMembers: [
+                    { initials: 'JK', name: 'Jordan K.', jobs: 8, amount: '$1,180' },
+                    { initials: 'KM', name: 'Kayla M.', jobs: 7, amount: '$940' },
+                    { initials: 'DR', name: 'Devon R.', jobs: 6, amount: '$720' },
+                    { initials: 'MT', name: 'Marcus T.', jobs: 4, amount: '$400' }
+                ]
+            },
+            buckhead: {
+                revenue: '$1,420',
+                label: 'Buckhead Shop — This Week',
+                pending: '$220',
+                confirmed: '$1,200',
+                payout: '$1,420',
+                teamMembers: [
+                    { initials: 'JK', name: 'Jordan K.', jobs: 5, amount: '$680' },
+                    { initials: 'KM', name: 'Kayla M.', jobs: 4, amount: '$490' },
+                    { initials: 'DR', name: 'Devon R.', jobs: 3, amount: '$250' }
+                ]
+            },
+            midtown: {
+                revenue: '$890',
+                label: 'Midtown — This Week',
+                pending: '$140',
+                confirmed: '$750',
+                payout: '$890',
+                teamMembers: [
+                    { initials: 'MT', name: 'Marcus T.', jobs: 4, amount: '$400' },
+                    { initials: 'KM', name: 'Kayla M.', jobs: 3, amount: '$340' },
+                    { initials: 'DR', name: 'Devon R.', jobs: 1, amount: '$150' }
+                ]
+            },
+            van1: {
+                revenue: '$620',
+                label: 'Van 1 — This Week',
+                pending: '$100',
+                confirmed: '$520',
+                payout: '$620',
+                teamMembers: [
+                    { initials: 'JK', name: 'Jordan K.', jobs: 3, amount: '$380' },
+                    { initials: 'DR', name: 'Devon R.', jobs: 2, amount: '$240' }
+                ]
+            },
+            van2: {
+                revenue: '$310',
+                label: 'Van 2 — This Week',
+                pending: '$80',
+                confirmed: '$230',
+                payout: '$310',
+                teamMembers: [
+                    { initials: 'KM', name: 'Kayla M.', jobs: 2, amount: '$200' },
+                    { initials: 'MT', name: 'Marcus T.', jobs: 2, amount: '$110' }
+                ]
+            }
+        };
+
+        const chartData = {
+            all: {
+                today: {
+                    x: ['Terrence', 'Alicia', 'Dante', 'Maya', 'Chris'],
+                    service: [90, 80, 100, 85, 95],
+                    tip: [30, 20, 20, 25, 28],
+                    label: 'Total Revenue — Today'
+                },
+                week: {
+                    x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    service: [520, 580, 480, 680, 540],
+                    tip: [100, 120, 90, 140, 110],
+                    label: 'Total Revenue — This Week'
+                },
+                month: {
+                    x: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    service: [2160, 2340, 2080, 2820],
+                    tip: [440, 480, 420, 580],
+                    label: 'Total Revenue — This Month'
+                },
+                alltime: {
+                    x: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                    service: [7200, 8400, 7800, 9600, 2820],
+                    tip: [1440, 1680, 1560, 1920, 580],
+                    label: 'Total Revenue — All Time'
+                }
+            },
+            buckhead: {
+                week: {
+                    x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    service: [220, 260, 200, 320, 240],
+                    tip: [45, 55, 40, 65, 50],
+                    label: 'Buckhead Shop — This Week'
+                }
+            },
+            midtown: {
+                week: {
+                    x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    service: [140, 160, 130, 200, 150],
+                    tip: [28, 32, 26, 40, 30],
+                    label: 'Midtown — This Week'
+                }
+            },
+            van1: {
+                week: {
+                    x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    service: [100, 110, 90, 110, 100],
+                    tip: [20, 22, 18, 22, 20],
+                    label: 'Van 1 — This Week'
+                }
+            },
+            van2: {
+                week: {
+                    x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    service: [60, 50, 60, 50, 50],
+                    tip: [12, 10, 12, 10, 10],
+                    label: 'Van 2 — This Week'
+                }
+            }
+        };
+
+        function updateTeamMembers(unit) {
+            const data = unitData[unit];
+            const container = document.getElementById('team-member-container');
+            
+            container.innerHTML = data.teamMembers.map((member, index) => `
+                <div class="flex items-center justify-between p-4 ${index < data.teamMembers.length - 1 ? 'border-b border-border-subtle' : ''} min-h-[48px]">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-foam-blue flex items-center justify-center flex-shrink-0">
+                            <span class="font-sans text-[13px] font-semibold text-white">${member.initials}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-sans text-[14px] font-semibold text-text-primary">${member.name}</span>
+                            <span class="font-sans text-[13px] text-text-tertiary">${member.jobs} jobs</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-sans text-[15px] font-semibold text-text-primary">${member.amount}</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-text-tertiary"></i>
+                    </div>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+
+        function updateSummary(unit) {
+            const data = unitData[unit];
+            document.getElementById('revenue-amount').textContent = data.revenue;
+            document.getElementById('revenue-label').textContent = data.label;
+            document.getElementById('pending-amount').textContent = data.pending + ' pending';
+            document.getElementById('confirmed-amount').textContent = data.confirmed + ' confirmed';
+            document.getElementById('payout-amount').textContent = 'Tomorrow · ' + data.payout;
+        }
+
+        function renderChart(period, unit) {
+            const chartDataSet = chartData[unit] || chartData.all;
+            const data = chartDataSet[period] || chartDataSet.week;
+            
+            const trace1 = {
+                type: 'bar',
+                x: data.x,
+                y: data.service,
+                name: 'Service',
+                marker: {
+                    color: '#339DC7',
+                    line: { width: 0 }
+                },
+                hovertemplate: '$%{y}<extra></extra>'
+            };
+
+            const trace2 = {
+                type: 'bar',
+                x: data.x,
+                y: data.tip,
+                name: 'Tip',
+                marker: {
+                    color: '#E1F0F7',
+                    line: { color: '#339DC7', width: 1 }
+                },
+                hovertemplate: '$%{y}<extra></extra>'
+            };
+
+            const layout = {
+                barmode: 'stack',
+                margin: { t: 10, r: 10, b: 30, l: 40 },
+                plot_bgcolor: 'transparent',
+                paper_bgcolor: 'transparent',
+                showlegend: false,
+                xaxis: {
+                    fixedrange: true,
+                    tickfont: {
+                        family: 'Inter, sans-serif',
+                        size: 11,
+                        color: '#A3A3A3'
+                    },
+                    showgrid: false,
+                    zeroline: false
+                },
+                yaxis: {
+                    fixedrange: true,
+                    tickfont: {
+                        family: 'Inter, sans-serif',
+                        size: 11,
+                        color: '#A3A3A3'
+                    },
+                    showgrid: true,
+                    gridcolor: '#E4E4E7',
+                    gridwidth: 1,
+                    zeroline: false,
+                    tickformat: '$'
+                },
+                bargap: 0.3
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false,
+                displaylogo: false
+            };
+
+            try {
+                Plotly.newPlot('chart-container', [trace1, trace2], layout, config);
+            } catch (e) {
+                console.error('Chart error:', e);
+            }
+            
+            document.getElementById('chart-period-label').textContent = data.label;
+        }
+
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.period-btn').forEach(b => {
+                    b.classList.remove('bg-foam-blue', 'text-white');
+                    b.classList.add('border', 'border-border-default', 'text-text-secondary');
+                });
+                
+                this.classList.remove('border', 'border-border-default', 'text-text-secondary');
+                this.classList.add('bg-foam-blue', 'text-white');
+                
+                const period = this.getAttribute('data-period');
+                currentPeriod = period;
+                
+                renderChart(period, currentUnit);
+            });
+        });
+
+        document.querySelectorAll('.unit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.unit-btn').forEach(b => {
+                    b.classList.remove('bg-foam-blue', 'text-white');
+                    b.classList.add('border', 'border-border-default', 'text-text-secondary');
+                });
+                
+                this.classList.remove('border', 'border-border-default', 'text-text-secondary');
+                this.classList.add('bg-foam-blue', 'text-white');
+                
+                const unit = this.getAttribute('data-unit');
+                currentUnit = unit;
+                
+                updateSummary(unit);
+                updateTeamMembers(unit);
+                renderChart(currentPeriod, unit);
+                
+                document.querySelectorAll('[data-unit-row]').forEach(row => {
+                    row.parentElement.classList.remove('border-2', 'border-foam-blue');
+                });
+                
+                if (unit !== 'all') {
+                    const unitRow = document.querySelector(`[data-unit-row="${unit}"]`);
+                    if (unitRow) {
+                        unitRow.parentElement.classList.add('border-2', 'border-foam-blue');
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-unit-row]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const unit = this.getAttribute('data-unit-row');
+                
+                document.querySelectorAll('.unit-btn').forEach(b => {
+                    b.classList.remove('bg-foam-blue', 'text-white');
+                    b.classList.add('border', 'border-border-default', 'text-text-secondary');
+                });
+                
+                const unitBtn = document.querySelector(`.unit-btn[data-unit="${unit}"]`);
+                if (unitBtn) {
+                    unitBtn.classList.remove('border', 'border-border-default', 'text-text-secondary');
+                    unitBtn.classList.add('bg-foam-blue', 'text-white');
+                }
+                
+                currentUnit = unit;
+                
+                updateSummary(unit);
+                updateTeamMembers(unit);
+                renderChart(currentPeriod, unit);
+                
+                document.querySelectorAll('[data-unit-row]').forEach(row => {
+                    row.parentElement.classList.remove('border-2', 'border-foam-blue');
+                });
+                
+                this.parentElement.classList.add('border-2', 'border-foam-blue');
+            });
+        });
+
+        window.addEventListener('load', function() {
+            renderChart('week', 'all');
+        });
+
+        setTimeout(function() {
+            renderChart('week', 'all');
+        }, 1200);
+    </script>
+
+</body></html>

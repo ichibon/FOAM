@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Modal,
   Switch,
-  KeyboardAvoidingView,
   Platform,
 } from "react-native";
 import { DrawerModal } from "@/components/DrawerModal";
@@ -285,17 +284,14 @@ export function ServiceDrawer({
     <DrawerModal visible={visible} onRequestClose={onRequestClose}>
       <DrawerHeader title={isEdit ? "Edit Service" : "New Service"} onClose={onRequestClose} />
 
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
       >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.form}>
           {/* Service name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Service name</Text>
@@ -408,25 +404,25 @@ export function ServiceDrawer({
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
 
-      <DrawerFooter>
-        <TouchableOpacity
-          style={[styles.saveBtn, (!canSave || saving) && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={!canSave || saving}
-          activeOpacity={0.85}
-        >
-          {saving ? (
-            <ActivityIndicator color={Colors.white} size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>
-              {isEdit ? "Save Changes" : "Add Service"}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </DrawerFooter>
+        <DrawerFooter>
+          <TouchableOpacity
+            style={[styles.saveBtn, (!canSave || saving) && { opacity: 0.6 }]}
+            onPress={handleSave}
+            disabled={!canSave || saving}
+            activeOpacity={0.85}
+          >
+            {saving ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <Text style={styles.saveBtnText}>
+                {isEdit ? "Save Changes" : "Add Service"}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </DrawerFooter>
+      </ScrollView>
     </DrawerModal>
   );
 }
@@ -434,13 +430,10 @@ export function ServiceDrawer({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  kav: { flex: 1 },
   scroll: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
+  form: {
     padding: Spacing.md,
     gap: 24,
-    paddingBottom: 24,
   },
   inputGroup: { gap: 6 },
   labelRow: {

@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Colors, Typography, Spacing, Radius, Layout } from "@/constants/design";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -270,6 +271,7 @@ export default function OperatorProfileScreen() {
               iconColor={Colors.foamBlue}
               title="Location & Hours"
               subtitle="Shop address, bays, open days"
+              onPress={() => router.push("/operator/locations-vans")}
             />
             <SettingsRow
               iconName="CalendarDays"
@@ -284,6 +286,7 @@ export default function OperatorProfileScreen() {
               iconColor={Colors.foamBlue}
               title="Service Menu"
               subtitle="Services and add-ons"
+              onPress={() => router.push("/operator/bookings/services")}
             />
           </View>
           <SectionDivider />

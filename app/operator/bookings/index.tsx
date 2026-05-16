@@ -461,14 +461,6 @@ export default function OperatorBookingsScreen() {
             >
               <Text style={styles.emptyPrimaryBtnText}>Share My Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.emptyGhostBtn}
-              onPress={() => router.push("/operator/bookings/services")}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.emptyGhostBtnText}>Build my service menu</Text>
-              <Ionicons name="arrow-forward" size={14} color={Colors.foamBlue} />
-            </TouchableOpacity>
           </View>
         </View>
       ) : filteredBookings.length === 0 ? (
@@ -753,14 +745,5 @@ const styles = StyleSheet.create({
   },
   emptyPrimaryBtnText: {
     fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.white,
-  },
-  emptyGhostBtn: {
-    height: 48, borderRadius: Radius.md,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: Spacing.xs,
-    backgroundColor: Colors.transparent,
-  },
-  emptyGhostBtnText: {
-    fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.foamBlue,
   },
 });

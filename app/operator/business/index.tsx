@@ -318,7 +318,7 @@ export default function BusinessScreen() {
 
           supabase
             .from("team_members")
-            .select("id, users(full_name), commission_rate")
+            .select("id, users!crew_members_user_id_fkey(full_name), commission_rate")
             .eq("manager_id", profileId)
             .eq("is_active", true),
 

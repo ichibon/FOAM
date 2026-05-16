@@ -51,6 +51,19 @@ interface AddedLocation {
   phone: string;
 }
 
+interface AddedService {
+  localId: string;
+  name: string;
+  basePrice: number;
+  hours: number;
+  minutes: number;
+  description: string;
+  vehiclePricing: boolean;
+  sedanPrice: string;
+  suvAddon: string;
+  truckAddon: string;
+  vanAddon: string;
+}
 
 const TIME_OPTIONS = [
   "6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM",
@@ -197,6 +210,21 @@ export default function BuildOperationScreen() {
   // Team members for location crew chips
   const [allTeamMembers, setAllTeamMembers] = useState<{ id: string; display_name: string; team_role: string }[]>([]);
   const [locCrewAssignments, setLocCrewAssignments] = useState<Record<string, Set<string>>>({});
+
+  // Service drawer state
+  const [showServiceDrawer, setShowServiceDrawer] = useState(false);
+  const [services, setServices] = useState<AddedService[]>([]);
+  const [svcName, setSvcName] = useState("");
+  const [svcBasePrice, setSvcBasePrice] = useState("");
+  const [svcHours, setSvcHours] = useState(1);
+  const [svcMinutes, setSvcMinutes] = useState(0);
+  const [svcDescription, setSvcDescription] = useState("");
+  const [svcVehiclePricing, setSvcVehiclePricing] = useState(false);
+  const [svcSedanPrice, setSvcSedanPrice] = useState("");
+  const [svcSuvAddon, setSvcSuvAddon] = useState("");
+  const [svcTruckAddon, setSvcTruckAddon] = useState("");
+  const [svcVanAddon, setSvcVanAddon] = useState("");
+  const [svcError, setSvcError] = useState<string | null>(null);
 
 
   const assetTypes: { id: AssetType; label: string }[] = [
@@ -538,6 +566,58 @@ export default function BuildOperationScreen() {
     setLocSaving(false);
   }
 
+  function resetServiceForm() {
+    setSvcName("");
+    setSvcBasePrice("");
+    setSvcHours(1);
+    setSvcMinutes(0);
+    setSvcDescription("");
+    setSvcVehiclePricing(false);
+    setSvcSedanPrice("");
+    setSvcSuvAddon("");
+    setSvcTruckAddon("");
+    setSvcVanAddon("");
+    setSvcError(null);
+  }
+
+  function openAddService() {
+    resetServiceForm();
+    setShowServiceDrawer(true);
+  }
+
+  function closeServiceDrawer() {
+    setShowServiceDrawer(false);
+  }
+
+  function handleAddService() {
+    if (!svcName.trim() || !svcBasePrice.trim()) {
+      setSvcError("Service name and base price are required.");
+      return;
+    }
+    const price = parseFloat(svcBasePrice);
+    if (isNaN(price) || price < 0) {
+      setSvcError("Enter a valid base price.");
+      return;
+    }
+    setServices((prev) => [
+      ...prev,
+      {
+        localId: `svc_${Date.now()}`,
+        name: svcName.trim(),
+        basePrice: price,
+        hours: svcHours,
+        minutes: svcMinutes,
+        description: svcDescription.trim(),
+        vehiclePricing: svcVehiclePricing,
+        sedanPrice: svcSedanPrice,
+        suvAddon: svcSuvAddon,
+        truckAddon: svcTruckAddon,
+        vanAddon: svcVanAddon,
+      },
+    ]);
+    setShowServiceDrawer(false);
+  }
+
   function toggleVanDay(idx: number) {
     setVanAvailability((prev) =>
       prev.map((d, i) => (i === idx ? { ...d, enabled: !d.enabled } : d))
@@ -563,13 +643,33 @@ export default function BuildOperationScreen() {
   }
 
   async function handleContinue() {
-    if (vans.length === 0 && locations.length === 0) return;
+    if (vans.length === 0 && locations.length === 0 && services.length === 0) return;
     setLoading(true);
+    try {
+      if (services.length > 0) {
+        const detailerId = await getDetailerProfileId();
+        if (detailerId) {
+          const rows = services.map((s, idx) => ({
+            detailer_id: detailerId,
+            name: s.name,
+            description: s.description || null,
+            duration_mins: s.hours * 60 + s.minutes,
+            base_price: s.basePrice,
+            is_active: true,
+            display_order: idx,
+          }));
+          const { error } = await supabase.from("service_packages").insert(rows);
+          if (error) console.warn("[Build] service_packages insert failed", error);
+        }
+      }
+    } catch (err) {
+      console.warn("[Build] handleContinue services failed", err);
+    }
     router.push("/onboarding/operator/assign-crew");
     setLoading(false);
   }
 
-  const hasUnits = vans.length > 0 || locations.length > 0;
+  const hasUnits = vans.length > 0 || locations.length > 0 || services.length > 0;
   const vanSaveEnabled = vanName.trim().length > 0 && vanHomeBase.trim().length > 0;
   const locSaveEnabled = locName.trim().length > 0 && locAddress.trim().length > 0;
 
@@ -666,6 +766,63 @@ export default function BuildOperationScreen() {
               })}
             </View>
 
+            {services.map((svc) => {
+              const durLabel =
+                svc.hours > 0 && svc.minutes > 0
+                  ? `~${svc.hours}h ${svc.minutes}m`
+                  : svc.hours > 0
+                  ? `~${svc.hours}h`
+                  : `~${svc.minutes}m`;
+              return (
+                <View key={svc.localId} style={styles.serviceCard}>
+                  <View style={styles.serviceCardTop}>
+                    <View style={styles.serviceCardInfo}>
+                      <Text style={styles.serviceCardName}>{svc.name}</Text>
+                      <Text style={styles.serviceCardMeta}>${svc.basePrice} · {durLabel}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setServices((prev) => prev.filter((s) => s.localId !== svc.localId))
+                      }
+                      activeOpacity={0.7}
+                      style={styles.serviceCardTrash}
+                    >
+                      <LucideIcon name="Trash2" size={16} color={Colors.light.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                  {!!svc.description && (
+                    <Text style={styles.serviceCardDesc} numberOfLines={2}>
+                      {svc.description}
+                    </Text>
+                  )}
+                  {svc.vehiclePricing && (
+                    <View style={styles.serviceCardChips}>
+                      {!!svc.sedanPrice && (
+                        <View style={styles.serviceChip}>
+                          <Text style={styles.serviceChipText}>Sedan ${svc.sedanPrice}</Text>
+                        </View>
+                      )}
+                      {!!svc.suvAddon && (
+                        <View style={styles.serviceChip}>
+                          <Text style={styles.serviceChipText}>SUV +${svc.suvAddon}</Text>
+                        </View>
+                      )}
+                      {!!svc.truckAddon && (
+                        <View style={styles.serviceChip}>
+                          <Text style={styles.serviceChipText}>Truck +${svc.truckAddon}</Text>
+                        </View>
+                      )}
+                      {!!svc.vanAddon && (
+                        <View style={styles.serviceChip}>
+                          <Text style={styles.serviceChipText}>Van +${svc.vanAddon}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
             <View style={styles.addMoreRow}>
               <TouchableOpacity
                 style={styles.addMoreButton}
@@ -683,6 +840,14 @@ export default function BuildOperationScreen() {
                 <LucideIcon name="Building2" size={16} color={Colors.foamBlue} />
                 <Text style={styles.addMoreText}>+ Add Another Location</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addMoreButton}
+                onPress={openAddService}
+                activeOpacity={0.8}
+              >
+                <LucideIcon name="Tag" size={16} color={Colors.foamBlue} />
+                <Text style={styles.addMoreText}>+ Add Another Service</Text>
+              </TouchableOpacity>
             </View>
 
           </View>
@@ -697,6 +862,10 @@ export default function BuildOperationScreen() {
             <TouchableOpacity style={styles.addLocButton} onPress={openAddLoc} activeOpacity={0.85}>
               <LucideIcon name="Building2" size={20} color={Colors.foamBlue} />
               <Text style={styles.addLocButtonText}>Add a Location</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addServiceButton} onPress={openAddService} activeOpacity={0.85}>
+              <LucideIcon name="Tag" size={20} color={Colors.foamBlue} />
+              <Text style={styles.addServiceButtonText}>Add a Service</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -716,7 +885,7 @@ export default function BuildOperationScreen() {
           )}
         </TouchableOpacity>
         {!hasUnits && (
-          <Text style={styles.footerHint}>Add at least one van or location to continue.</Text>
+          <Text style={styles.footerHint}>Add at least one van, location, or service to continue.</Text>
         )}
       </View>
 
@@ -1292,6 +1461,150 @@ export default function BuildOperationScreen() {
         </View>
       </DrawerModal>
 
+      {/* Add Service Drawer */}
+      <DrawerModal visible={showServiceDrawer} onRequestClose={closeServiceDrawer}>
+        <View style={styles.drawer}>
+          <DrawerHeader title="New Service" onClose={closeServiceDrawer} />
+          <ScrollView
+            style={styles.drawerScroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={{ paddingBottom: 32 }}
+          >
+            <View style={styles.drawerForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Service name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={svcName}
+                  onChangeText={setSvcName}
+                  placeholder="e.g., Exterior Wash, Full Detail"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Base price</Text>
+                <View style={styles.inputWithIcon}>
+                  <View style={styles.inputIconLeft}>
+                    <Text style={styles.inputPrefixText}>$</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.inputPaddingLeft]}
+                    value={svcBasePrice}
+                    onChangeText={setSvcBasePrice}
+                    placeholder="0.00"
+                    placeholderTextColor={Colors.light.textTertiary}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Estimated duration</Text>
+                <View style={styles.durationRow}>
+                  <View style={styles.durationPicker}>
+                    <TouchableOpacity
+                      style={styles.durationField}
+                      onPress={() => setSvcHours((h) => (h >= 12 ? 0 : h + 1))}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={styles.durationValue}>{svcHours}h</Text>
+                      <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.durationPicker}>
+                    <TouchableOpacity
+                      style={styles.durationField}
+                      onPress={() =>
+                        setSvcMinutes((m) => (m === 45 ? 0 : m + 15))
+                      }
+                      activeOpacity={0.75}
+                    >
+                      <Text style={styles.durationValue}>{svcMinutes}m</Text>
+                      <LucideIcon name="ChevronDown" size={14} color={Colors.light.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.inputLabel}>Description</Text>
+                  <Text style={styles.optionalLabel}>Optional</Text>
+                </View>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={svcDescription}
+                  onChangeText={setSvcDescription}
+                  placeholder="What's included in this service?"
+                  placeholderTextColor={Colors.light.textTertiary}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.sectionDivider} />
+
+              <View style={styles.vehiclePricingRow}>
+                <Text style={styles.inputLabel}>Different pricing by vehicle size</Text>
+                <Switch
+                  value={svcVehiclePricing}
+                  onValueChange={setSvcVehiclePricing}
+                  trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
+                  thumbColor={Colors.white}
+                />
+              </View>
+
+              {svcVehiclePricing && (
+                <View style={styles.vehicleSizeInputs}>
+                  {([
+                    { label: "Sedan", prefix: "$", value: svcSedanPrice, onChange: setSvcSedanPrice, placeholder: "220" },
+                    { label: "SUV", prefix: "+$", value: svcSuvAddon, onChange: setSvcSuvAddon, placeholder: "30" },
+                    { label: "Truck", prefix: "+$", value: svcTruckAddon, onChange: setSvcTruckAddon, placeholder: "40" },
+                    { label: "Van", prefix: "+$", value: svcVanAddon, onChange: setSvcVanAddon, placeholder: "50" },
+                  ] as { label: string; prefix: string; value: string; onChange: (v: string) => void; placeholder: string }[]).map((row) => (
+                    <View key={row.label} style={styles.vehicleSizeRow}>
+                      <Text style={styles.vehicleSizeLabel}>{row.label}</Text>
+                      <View style={styles.vehicleSizeInputWrap}>
+                        <View style={styles.inputIconLeft}>
+                          <Text style={styles.inputPrefixText}>{row.prefix}</Text>
+                        </View>
+                        <TextInput
+                          style={[styles.input, styles.vehicleSizeInput, { paddingLeft: row.prefix === "+$" ? 36 : 28 }]}
+                          value={row.value}
+                          onChangeText={row.onChange}
+                          placeholder={row.placeholder}
+                          placeholderTextColor={Colors.light.textTertiary}
+                          keyboardType="decimal-pad"
+                          textAlign="right"
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {svcError && <Text style={styles.drawerError}>{svcError}</Text>}
+
+            <DrawerFooter>
+              <TouchableOpacity
+                style={[styles.drawerButton, (!svcName.trim() || !svcBasePrice.trim()) && styles.buttonDisabled]}
+                onPress={handleAddService}
+                disabled={!svcName.trim() || !svcBasePrice.trim()}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.drawerButtonText}>Add Service</Text>
+              </TouchableOpacity>
+            </DrawerFooter>
+          </ScrollView>
+        </View>
+      </DrawerModal>
+
     </SafeAreaView>
   );
 }
@@ -1838,5 +2151,129 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: Spacing.md,
     marginBottom: 4,
+  },
+  addServiceButton: {
+    height: 48,
+    borderRadius: Radius.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: Colors.foamBlue,
+    backgroundColor: "transparent",
+  },
+  addServiceButtonText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 14,
+    color: Colors.foamBlue,
+  },
+  serviceCard: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    gap: 8,
+    ...Shadows.light.level1,
+  },
+  serviceCardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  serviceCardInfo: { flex: 1, gap: 2 },
+  serviceCardName: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 15,
+    color: Colors.light.textPrimary,
+  },
+  serviceCardMeta: {
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  serviceCardDesc: {
+    fontFamily: Typography.body,
+    fontSize: 13,
+    color: Colors.light.textTertiary,
+    lineHeight: 18,
+  },
+  serviceCardTrash: { padding: 4 },
+  serviceCardChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  serviceChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.bgPrimary,
+  },
+  serviceChipText: {
+    fontFamily: Typography.body,
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+  },
+  durationRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  durationPicker: { flex: 1 },
+  durationField: {
+    height: 52,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  durationValue: {
+    fontFamily: Typography.body,
+    fontSize: 15,
+    color: Colors.light.textPrimary,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  vehiclePricingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  vehicleSizeInputs: { gap: 12 },
+  vehicleSizeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  vehicleSizeLabel: {
+    fontFamily: Typography.body,
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    width: 60,
+  },
+  vehicleSizeInputWrap: {
+    position: "relative",
+    width: 140,
+  },
+  vehicleSizeInput: {
+    height: 48,
+    width: "100%",
+  },
+  inputPrefixText: {
+    fontFamily: Typography.body,
+    fontSize: 15,
+    color: Colors.light.textSecondary,
   },
 });

@@ -801,24 +801,19 @@ export default function BuildOperationScreen() {
                   )}
                   {svc.vehiclePricing && (
                     <View style={styles.serviceCardChips}>
-                      {!!svc.sedanPrice && (
-                        <View style={styles.serviceChip}>
-                          <Text style={styles.serviceChipText}>Sedan ${svc.sedanPrice}</Text>
-                        </View>
-                      )}
                       {!!svc.suvAddon && (
                         <View style={styles.serviceChip}>
-                          <Text style={styles.serviceChipText}>SUV +${svc.suvAddon}</Text>
+                          <Text style={styles.serviceChipText}>SUV ${svc.suvAddon}</Text>
                         </View>
                       )}
                       {!!svc.truckAddon && (
                         <View style={styles.serviceChip}>
-                          <Text style={styles.serviceChipText}>Truck +${svc.truckAddon}</Text>
+                          <Text style={styles.serviceChipText}>Truck ${svc.truckAddon}</Text>
                         </View>
                       )}
                       {!!svc.vanAddon && (
                         <View style={styles.serviceChip}>
-                          <Text style={styles.serviceChipText}>Van +${svc.vanAddon}</Text>
+                          <Text style={styles.serviceChipText}>Van ${svc.vanAddon}</Text>
                         </View>
                       )}
                     </View>
@@ -834,7 +829,7 @@ export default function BuildOperationScreen() {
                 activeOpacity={0.8}
               >
                 <LucideIcon name="Truck" size={16} color={Colors.foamBlue} />
-                <Text style={styles.addMoreText}>+ Add Another Van</Text>
+                <Text style={styles.addMoreText}>{vans.length > 0 ? "+ Add Another Van" : "+ Add a Van"}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addMoreButton}
@@ -842,7 +837,7 @@ export default function BuildOperationScreen() {
                 activeOpacity={0.8}
               >
                 <LucideIcon name="Building2" size={16} color={Colors.foamBlue} />
-                <Text style={styles.addMoreText}>+ Add Another Location</Text>
+                <Text style={styles.addMoreText}>{locations.length > 0 ? "+ Add Another Location" : "+ Add a Location"}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addMoreButton}
@@ -850,7 +845,7 @@ export default function BuildOperationScreen() {
                 activeOpacity={0.8}
               >
                 <LucideIcon name="Tag" size={16} color={Colors.foamBlue} />
-                <Text style={styles.addMoreText}>+ Add Another Service</Text>
+                <Text style={styles.addMoreText}>{services.length > 0 ? "+ Add Another Service" : "+ Add a Service"}</Text>
               </TouchableOpacity>
             </View>
 
@@ -861,7 +856,7 @@ export default function BuildOperationScreen() {
           <View style={styles.addButtonsRow}>
             <TouchableOpacity style={styles.addVanButton} onPress={openAddVan} activeOpacity={0.85}>
               <LucideIcon name="Truck" size={20} color={Colors.white} />
-              <Text style={styles.addVanButtonText}>Add a Van</Text>
+              <Text style={styles.addVanButtonText}>Add a Vehicle</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.addLocButton} onPress={openAddLoc} activeOpacity={0.85}>
               <LucideIcon name="Building2" size={20} color={Colors.foamBlue} />
@@ -1512,7 +1507,7 @@ export default function BuildOperationScreen() {
                   <View style={styles.durationPicker}>
                     <TouchableOpacity
                       style={styles.durationField}
-                      onPress={() => setSvcHours((h) => (h >= 12 ? 0 : h + 1))}
+                      onPress={() => setSvcHours((h) => (h >= 8 ? 1 : h + 1))}
                       activeOpacity={0.75}
                     >
                       <Text style={styles.durationValue}>{svcHours}h</Text>
@@ -1566,19 +1561,18 @@ export default function BuildOperationScreen() {
               {svcVehiclePricing && (
                 <View style={styles.vehicleSizeInputs}>
                   {([
-                    { label: "Sedan", prefix: "$", value: svcSedanPrice, onChange: setSvcSedanPrice, placeholder: "220" },
-                    { label: "SUV", prefix: "+$", value: svcSuvAddon, onChange: setSvcSuvAddon, placeholder: "30" },
-                    { label: "Truck", prefix: "+$", value: svcTruckAddon, onChange: setSvcTruckAddon, placeholder: "40" },
-                    { label: "Van", prefix: "+$", value: svcVanAddon, onChange: setSvcVanAddon, placeholder: "50" },
-                  ] as { label: string; prefix: string; value: string; onChange: (v: string) => void; placeholder: string }[]).map((row) => (
+                    { label: "SUV", value: svcSuvAddon, onChange: setSvcSuvAddon, placeholder: "0.00" },
+                    { label: "Truck", value: svcTruckAddon, onChange: setSvcTruckAddon, placeholder: "0.00" },
+                    { label: "Van", value: svcVanAddon, onChange: setSvcVanAddon, placeholder: "0.00" },
+                  ] as { label: string; value: string; onChange: (v: string) => void; placeholder: string }[]).map((row) => (
                     <View key={row.label} style={styles.vehicleSizeRow}>
                       <Text style={styles.vehicleSizeLabel}>{row.label}</Text>
                       <View style={styles.vehicleSizeInputWrap}>
                         <View style={styles.inputIconLeft}>
-                          <Text style={styles.inputPrefixText}>{row.prefix}</Text>
+                          <Text style={styles.inputPrefixText}>$</Text>
                         </View>
                         <TextInput
-                          style={[styles.input, styles.vehicleSizeInput, { paddingLeft: row.prefix === "+$" ? 36 : 28 }]}
+                          style={[styles.input, styles.vehicleSizeInput, { paddingLeft: 28 }]}
                           value={row.value}
                           onChangeText={row.onChange}
                           placeholder={row.placeholder}

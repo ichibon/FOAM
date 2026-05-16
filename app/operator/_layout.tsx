@@ -110,6 +110,7 @@ export default function OperatorLayout() {
       <Tabs.Screen name="alerts" options={{ href: null }} />
       <Tabs.Screen name="pending" options={{ href: null }} />
       <Tabs.Screen name="locations-vans" options={{ href: null }} />
+      <Tabs.Screen name="services" options={{ href: null }} />
       <Tabs.Screen name="onboarding/stripe-connect" options={{ href: null }} />
     </Tabs>
   );

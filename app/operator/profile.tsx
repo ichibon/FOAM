@@ -286,7 +286,7 @@ export default function OperatorProfileScreen() {
               iconColor={Colors.foamBlue}
               title="Service Menu"
               subtitle="Services and add-ons"
-              onPress={() => router.push("/operator/bookings/services")}
+              onPress={() => router.push("/operator/services")}
             />
           </View>
           <SectionDivider />

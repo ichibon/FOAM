@@ -7,7 +7,6 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -567,15 +566,12 @@ export default function NewBookingScreen() {
     <SafeAreaView style={styles.container}>
       <NavHeader onBack={() => router.back()} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
 
           {/* ── Booking source — only shown when there's a real choice to make ── */}
           {bookingSources.length > 1 && <SectionCard>
@@ -1013,8 +1009,32 @@ export default function NewBookingScreen() {
               <Text style={styles.errorBannerText}>{errorMsg}</Text>
             </View>
           )}
+
+          {/* ── CTA ── */}
+          <TouchableOpacity
+            style={[
+              styles.ctaBtn,
+              (submitState === "saving" ||
+                !selectedPackageId ||
+                (customerMode === "search" && !selectedCustomer) ||
+                (customerMode === "create" && !newCustomerName.trim())) && { opacity: 0.55 },
+            ]}
+            onPress={handleSubmit}
+            disabled={
+              submitState === "saving" ||
+              !selectedPackageId ||
+              (customerMode === "search" && !selectedCustomer) ||
+              (customerMode === "create" && !newCustomerName.trim())
+            }
+            activeOpacity={0.8}
+          >
+            {submitState === "saving" ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Text style={styles.ctaBtnText}>Create Booking</Text>
+            )}
+          </TouchableOpacity>
         </ScrollView>
-      </KeyboardAvoidingView>
 
       {detailerId ? (
         <ServiceDrawer
@@ -1035,32 +1055,6 @@ export default function NewBookingScreen() {
         }}
       />
 
-      {/* ── CTA footer ── */}
-      <View style={styles.ctaFooter}>
-        <TouchableOpacity
-          style={[
-            styles.ctaBtn,
-            (submitState === "saving" ||
-              !selectedPackageId ||
-              (customerMode === "search" && !selectedCustomer) ||
-              (customerMode === "create" && !newCustomerName.trim())) && { opacity: 0.55 },
-          ]}
-          onPress={handleSubmit}
-          disabled={
-            submitState === "saving" ||
-            !selectedPackageId ||
-            (customerMode === "search" && !selectedCustomer) ||
-            (customerMode === "create" && !newCustomerName.trim())
-          }
-          activeOpacity={0.8}
-        >
-          {submitState === "saving" ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <Text style={styles.ctaBtnText}>Create Booking</Text>
-          )}
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -1127,7 +1121,7 @@ const styles = StyleSheet.create({
   navSpacer: { width: 32 },
   scrollContent: {
     padding: Spacing.md,
-    paddingBottom: 120,
+    paddingBottom: Platform.OS === "ios" ? 40 : Spacing.xl,
     gap: Spacing.mdSm,
   },
   card: {
@@ -1451,17 +1445,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
     lineHeight: 18,
-  },
-  ctaFooter: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: Spacing.md,
-    paddingBottom: Platform.OS === "ios" ? 32 : Spacing.md,
-    backgroundColor: Colors.light.bgPrimary,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.borderSubtle,
   },
   ctaBtn: {
     height: 48,

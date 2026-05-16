@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -77,7 +77,7 @@ function SectionDivider() {
 }
 
 export default function OperatorProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [profile, setProfile] = useState<ProfileData>({
     displayName: "",
     businessName: "",
@@ -86,7 +86,6 @@ export default function OperatorProfileScreen() {
     reviewCount: 0,
   });
   const [loading, setLoading] = useState(true);
-  const detailerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     void loadProfile();
@@ -103,8 +102,6 @@ export default function OperatorProfileScreen() {
         .select("id, display_name, business_name")
         .eq("user_id", authUser.id)
         .maybeSingle();
-
-      if (dp?.id) detailerIdRef.current = dp.id;
 
       const displayName =
         dp?.display_name ||
@@ -304,7 +301,7 @@ export default function OperatorProfileScreen() {
               subtitle={
                 <View style={styles.payoutRow}>
                   <View style={styles.payoutDot} />
-                  <Text style={styles.rowSubtitle}>••••&nbsp;4492 · Payouts active</Text>
+                  <Text style={styles.rowSubtitle}>{"\u2022\u2022\u2022\u2022\u00A04492 \u00B7 Payouts active"}</Text>
                 </View>
               }
             />

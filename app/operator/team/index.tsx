@@ -214,8 +214,6 @@ export default function TeamRosterScreen() {
           status = "inactive";
         } else if (inProgressBooking) {
           status = "on_job";
-        } else if (memberTodayBookings.length === 0) {
-          status = "off_today";
         } else {
           status = "available";
         }
@@ -344,7 +342,7 @@ export default function TeamRosterScreen() {
         ) : (
           <>
             {members.map((m) => {
-              const isOffToday = m.status === "off_today" || m.status === "inactive";
+              const isOffToday = m.status === "inactive";
               const hasNoJobs = m.totalJobsToday === 0 && m.isActive;
               const progressPct = m.totalJobsToday > 0
                 ? Math.round((m.completedJobsToday / m.totalJobsToday) * 100)
@@ -440,7 +438,7 @@ export default function TeamRosterScreen() {
                   <View style={styles.memberFooter}>
                     <Text style={styles.memberStats}>
                       {m.totalJobsToday} job{m.totalJobsToday !== 1 ? "s" : ""} today
-                      {m.weekRevenue > 0 ? ` · ${fmtCurrency(m.weekRevenue)} this week` : ""}
+                      {` · ${fmtCurrency(m.weekRevenue)} this week`}
                       {" · 0 reviews"}
                     </Text>
                   </View>

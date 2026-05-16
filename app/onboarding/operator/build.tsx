@@ -661,11 +661,19 @@ export default function BuildOperationScreen() {
           const { error } = await supabase
             .from("service_packages")
             .insert(rows as unknown as Parameters<ReturnType<typeof supabase.from>["insert"]>[0]);
-          if (error) console.warn("[Build] service_packages insert failed", error);
+          if (error) {
+            console.warn("[Build] service_packages insert failed", error);
+            setLoading(false);
+            Alert.alert("Couldn't save services", "Please try again.");
+            return;
+          }
         }
       }
     } catch (err) {
       console.warn("[Build] handleContinue services failed", err);
+      setLoading(false);
+      Alert.alert("Couldn't save services", "Please try again.");
+      return;
     }
     router.push("/onboarding/operator/assign-crew");
     setLoading(false);

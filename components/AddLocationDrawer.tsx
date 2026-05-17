@@ -15,6 +15,7 @@ import { DrawerModal } from "@/components/DrawerModal";
 import { DrawerHeader } from "@/components/DrawerHeader";
 import { DrawerFooter } from "@/components/DrawerFooter";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
+import { AddressAutocomplete, AddressResult } from "@/components/AddressAutocomplete";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -189,22 +190,13 @@ export function AddLocationDrawer({
         {/* Address */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Address</Text>
-          <View style={styles.inputIconRow}>
-            <Ionicons
-              name="location-outline"
-              size={18}
-              color={Colors.foamBlue}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={[styles.input, styles.inputWithIcon]}
-              placeholder="Start typing your address..."
-              placeholderTextColor={Colors.light.textTertiary}
-              value={address}
-              onChangeText={setAddress}
-              returnKeyType="next"
-            />
-          </View>
+          <AddressAutocomplete
+            placeholder="Start typing your address..."
+            initialValue={address}
+            onAddressSelect={(result: AddressResult) => {
+              setAddress(result.formattedAddress);
+            }}
+          />
         </View>
 
         {/* Bay Count */}

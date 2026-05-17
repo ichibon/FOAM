@@ -16,6 +16,7 @@ import { DrawerModal } from "@/components/DrawerModal";
 import { DrawerHeader } from "@/components/DrawerHeader";
 import { DrawerFooter } from "@/components/DrawerFooter";
 import { Colors, Typography, Spacing, Radius } from "@/constants/design";
+import { AddressAutocomplete, AddressResult } from "@/components/AddressAutocomplete";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,22 +222,13 @@ export function AddVehicleDrawer({
         <View style={styles.fieldGroup}>
           <Text style={styles.labelCaps}>Home Base</Text>
           <Text style={styles.hint}>Where does this van start and end each day?</Text>
-          <View style={styles.inputIconRow}>
-            <Ionicons
-              name="location-outline"
-              size={18}
-              color={Colors.foamBlue}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={[styles.input, styles.inputWithIcon]}
-              placeholder="Start typing address..."
-              placeholderTextColor={Colors.light.textTertiary}
-              value={address}
-              onChangeText={setAddress}
-              returnKeyType="next"
-            />
-          </View>
+          <AddressAutocomplete
+            placeholder="Start typing address..."
+            initialValue={address}
+            onAddressSelect={(result: AddressResult) => {
+              setAddress(result.formattedAddress);
+            }}
+          />
         </View>
 
         {/* Service Radius */}

@@ -19,6 +19,9 @@
       "bundleIdentifier": "com.foamauto.app",
       "buildNumber": "1",
       "usesAppleSignIn": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyBo9YlL9-Pd1NEh09UcdcUoux9wO99P0ZU"
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "FOAM uses your camera to take before and after photos of detailing jobs.",
         "NSPhotoLibraryUsageDescription": "FOAM needs access to your photo library to upload job photos.",
@@ -28,6 +31,11 @@
       }
     },
     "android": {
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCv9FuHd37fLZtJmx_V6S-sU9G_5HcK8bg"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F2F3C"

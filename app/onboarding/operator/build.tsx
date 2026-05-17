@@ -20,6 +20,7 @@ import { DrawerModal } from "@/components/DrawerModal";
 import { DrawerHeader } from "@/components/DrawerHeader";
 import { DrawerFooter } from "@/components/DrawerFooter";
 import { LucideIcon } from "@/components/LucideIcon";
+import { AddressAutocomplete, AddressResult } from "@/components/AddressAutocomplete";
 
 type AssetType = "van" | "trailer" | "truck" | "other";
 interface DayAvailability {
@@ -969,19 +970,13 @@ export default function BuildOperationScreen() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Home base address</Text>
-                  <View style={styles.inputWithIcon}>
-                    <View style={styles.inputIconLeft}>
-                      <LucideIcon name="MapPin" size={18} color={Colors.foamBlue} />
-                    </View>
-                    <TextInput
-                      style={[styles.input, styles.inputPaddingLeft]}
-                      value={vanHomeBase}
-                      onChangeText={setVanHomeBase}
-                      placeholder="Where does this van start each day?"
-                      placeholderTextColor={Colors.light.textTertiary}
-                      autoCapitalize="words"
-                    />
-                  </View>
+                  <AddressAutocomplete
+                    placeholder="Where does this van start each day?"
+                    initialValue={vanHomeBase}
+                    onAddressSelect={(result: AddressResult) => {
+                      setVanHomeBase(result.formattedAddress);
+                    }}
+                  />
                 </View>
 
                 <View style={styles.radiusCard}>
@@ -1193,19 +1188,13 @@ export default function BuildOperationScreen() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Address</Text>
-                  <View style={styles.inputWithIcon}>
-                    <View style={styles.inputIconLeft}>
-                      <LucideIcon name="MapPin" size={18} color={Colors.foamBlue} />
-                    </View>
-                    <TextInput
-                      style={[styles.input, styles.inputPaddingLeft]}
-                      value={locAddress}
-                      onChangeText={setLocAddress}
-                      placeholder="Start typing your address..."
-                      placeholderTextColor={Colors.light.textTertiary}
-                      autoCapitalize="words"
-                    />
-                  </View>
+                  <AddressAutocomplete
+                    placeholder="Start typing your address..."
+                    initialValue={locAddress}
+                    onAddressSelect={(result: AddressResult) => {
+                      setLocAddress(result.formattedAddress);
+                    }}
+                  />
                 </View>
 
                 <View style={styles.sectionDivider} />

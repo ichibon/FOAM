@@ -28,3 +28,6 @@ export type { ServiceDrawerProps, ServiceDrawerService } from "./ServiceDrawer";
 
 export { DateTimeDrawer } from "./DateTimeDrawer";
 export type { DateTimeDrawerProps } from "./DateTimeDrawer";
+
+export { AddressAutocomplete } from "./AddressAutocomplete";
+export type { AddressResult } from "./AddressAutocomplete";

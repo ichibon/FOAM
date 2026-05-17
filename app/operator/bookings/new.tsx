@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import { ServiceDrawer } from "@/components/ServiceDrawer";
 import { DateTimeDrawer } from "@/components/DateTimeDrawer";
+import { AddressAutocomplete, AddressResult } from "@/components/AddressAutocomplete";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
@@ -165,6 +166,9 @@ export default function NewBookingScreen() {
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [dateTimeDrawerVisible, setDateTimeDrawerVisible] = useState(false);
   const [serviceAddress, setServiceAddress] = useState("");
+  const [serviceLat, setServiceLat] = useState<number | null>(null);
+  const [serviceLng, setServiceLng] = useState<number | null>(null);
+  const [serviceZip, setServiceZip] = useState("");
   const [notes, setNotes] = useState("");
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
@@ -963,12 +967,15 @@ export default function NewBookingScreen() {
             {(selectedSource === null || selectedSource.type === "asset") && (
               <>
                 <FieldLabel>Service address</FieldLabel>
-                <TextInput
-                  style={styles.textInput}
-                  value={serviceAddress}
-                  onChangeText={setServiceAddress}
+                <AddressAutocomplete
                   placeholder="123 Main St, Atlanta, GA"
-                  placeholderTextColor={Colors.light.textTertiary}
+                  initialValue={serviceAddress}
+                  onAddressSelect={(result: AddressResult) => {
+                    setServiceAddress(result.formattedAddress);
+                    setServiceLat(result.lat);
+                    setServiceLng(result.lng);
+                    setServiceZip(result.zip);
+                  }}
                 />
                 <View style={{ height: Spacing.mdSm }} />
               </>

@@ -17,11 +17,14 @@ interface AddressAutocompleteProps {
   restrictToUS?: boolean;
 }
 
-const GOOGLE_MAPS_KEY = Platform.select({
-  ios: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS,
-  android: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID,
-  default: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_DEV,
-}) ?? "";
+const GOOGLE_MAPS_KEY =
+  (Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS
+    : Platform.OS === "android"
+    ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID
+    : undefined) ||
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_DEV ||
+  "";
 
 export function AddressAutocomplete({
   onAddressSelect,
@@ -54,8 +57,8 @@ export function AddressAutocomplete({
           key: GOOGLE_MAPS_KEY,
           language: "en",
           components: restrictToUS ? "country:us" : undefined,
-          types: "address",
         }}
+        onFail={(error) => console.warn("[AddressAutocomplete] API error:", error)}
         styles={{
           container: { flex: 0, zIndex: 10 },
           textInputContainer: { width: "100%", backgroundColor: "transparent" },

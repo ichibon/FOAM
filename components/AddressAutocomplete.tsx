@@ -36,7 +36,6 @@ export function AddressAutocomplete({
         textInputProps={{
           defaultValue: initialValue,
           placeholderTextColor: Colors.light.textTertiary,
-          style: styles.input,
         }}
         fetchDetails
         onPress={(data, details = null) => {
@@ -59,20 +58,51 @@ export function AddressAutocomplete({
         }}
         styles={{
           container: { flex: 0, zIndex: 10 },
-          textInputContainer: { backgroundColor: "transparent" },
-          textInput: styles.input,
-          listView: styles.listView,
-          row: styles.row,
-          description: styles.description,
-          separator: styles.separator,
+          textInputContainer: { width: "100%", backgroundColor: "transparent" },
+          textInput: {
+            height: 48,
+            backgroundColor: Colors.light.bgPrimary,
+            borderRadius: Radius.md,
+            paddingHorizontal: 14,
+            fontSize: 15,
+            fontFamily: Typography.body,
+            color: Colors.light.textPrimary,
+            borderWidth: 1,
+            borderColor: Colors.light.borderSubtle,
+            marginBottom: 0,
+          },
+          listView: {
+            backgroundColor: Colors.light.surface,
+            borderRadius: Radius.md,
+            borderWidth: 1,
+            borderColor: Colors.light.borderSubtle,
+            marginTop: 4,
+            elevation: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+          },
+          row: {
+            backgroundColor: Colors.light.surface,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+          },
+          description: {
+            fontFamily: Typography.body,
+            fontSize: 14,
+            color: Colors.light.textPrimary,
+          },
+          separator: {
+            height: 1,
+            backgroundColor: Colors.light.borderSubtle,
+          },
           poweredContainer: { display: "none" },
         }}
         enablePoweredByContainer={false}
         keyboardShouldPersistTaps="handled"
-        listViewDisplayed="auto"
         minLength={3}
         debounce={300}
-        renderDescription={(row) => row.description}
       />
     </View>
   );
@@ -82,44 +112,5 @@ const styles = StyleSheet.create({
   container: {
     zIndex: 10,
     width: "100%",
-  },
-  input: {
-    height: 48,
-    backgroundColor: Colors.light.bgPrimary,
-    borderRadius: Radius.md,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: Typography.body,
-    color: Colors.light.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    marginBottom: 0,
-  },
-  listView: {
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    marginTop: 4,
-    elevation: 5,
-    zIndex: 100,
-    position: "absolute",
-    top: 50,
-    left: 0,
-    right: 0,
-  },
-  row: {
-    backgroundColor: Colors.light.surface,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  description: {
-    fontFamily: Typography.body,
-    fontSize: 14,
-    color: Colors.light.textPrimary,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.light.borderSubtle,
   },
 });

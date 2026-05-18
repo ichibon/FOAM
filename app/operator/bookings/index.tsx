@@ -24,6 +24,7 @@ interface RawBookingRow {
   scheduled_at: string;
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
+  customer_id: string | null;
   service_address: string | null;
   subtotal: number | null;
   total: number | null;
@@ -98,6 +99,21 @@ function formatDateShort(date: Date): string {
   if (diff === 1) return "Tomorrow";
   if (diff === -1) return "Yesterday";
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function groupBookingsByDate(
+  bookings: BookingCard[]
+): { dateKey: string; label: string; items: BookingCard[] }[] {
+  const map = new Map<string, { label: string; items: BookingCard[] }>();
+  for (const b of bookings) {
+    const d = b.scheduledAt;
+    const dateKey = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!map.has(dateKey)) {
+      map.set(dateKey, { label: formatDateShort(d), items: [] });
+    }
+    map.get(dateKey)!.items.push(b);
+  }
+  return [...map.entries()].map(([dateKey, v]) => ({ dateKey, ...v }));
 }
 
 function statusBadgeConfig(status: BookingStatus): { label: string; bg: string; color: string } {
@@ -237,7 +253,7 @@ export default function OperatorBookingsScreen() {
         supabase
           .from("bookings")
           .select(
-            "id, status, scheduled_at, estimated_duration_mins, crew_member_id," +
+            "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id," +
             "service_address, subtotal, total, tip_amount, notes," +
             "vehicles(make,model,year,color)," +
             "service_packages(name)," +
@@ -279,6 +295,25 @@ export default function OperatorBookingsScreen() {
 
       const rawBookings: RawBookingRow[] = (bookingsRes.data as RawBookingRow[] | null) ?? [];
 
+      // Batch-fetch registered customer names where booking_contacts is not set
+      const registeredIds = [
+        ...new Set(
+          rawBookings
+            .filter((b) => b.customer_id && !b.booking_contacts)
+            .map((b) => b.customer_id!)
+        ),
+      ];
+      const userNameMap: Record<string, string> = {};
+      if (registeredIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("id, full_name")
+          .in("id", registeredIds);
+        for (const u of (usersData as RawUser[] | null) ?? []) {
+          if (u.full_name) userNameMap[u.id] = u.full_name;
+        }
+      }
+
       const cards: BookingCard[] = rawBookings.map((b) => {
         const veh = b.vehicles;
         const contact = b.booking_contacts;
@@ -291,6 +326,9 @@ export default function OperatorBookingsScreen() {
         const isUnassigned =
           (b.status === "confirmed" || b.status === "requested") && !b.crew_member_id;
         const crew = b.crew_member_id ? cMap[b.crew_member_id] : undefined;
+        const customerName =
+          contact?.full_name ??
+          (b.customer_id ? userNameMap[b.customer_id] ?? "Customer" : "Customer");
 
         return {
           id: b.id,
@@ -299,7 +337,7 @@ export default function OperatorBookingsScreen() {
           scheduledAt,
           timeLabel: formatTime(scheduledAt),
           dateLabel: formatDateShort(scheduledAt),
-          customerName: b.booking_contacts?.full_name ?? "Customer",
+          customerName,
           vehicleDesc,
           packageName: b.service_packages?.name ?? "Service",
           crewMemberId: b.crew_member_id,
@@ -492,13 +530,18 @@ export default function OperatorBookingsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {filteredBookings.map((b) => (
-            <BookingListCard
-              key={b.id}
-              booking={b}
-              onPress={() => router.push(`/operator/bookings/${b.id}`)}
-              onAssignPress={() => router.push(`/operator/bookings/assign?bookingId=${b.id}`)}
-            />
+          {groupBookingsByDate(filteredBookings).map((group) => (
+            <View key={group.dateKey}>
+              <Text style={styles.dateGroupHeader}>{group.label}</Text>
+              {group.items.map((b) => (
+                <BookingListCard
+                  key={b.id}
+                  booking={b}
+                  onPress={() => router.push(`/operator/bookings/${b.id}`)}
+                  onAssignPress={() => router.push(`/operator/bookings/assign?bookingId=${b.id}`)}
+                />
+              ))}
+            </View>
           ))}
         </ScrollView>
       )}
@@ -666,9 +709,17 @@ const styles = StyleSheet.create({
   // ── List ──
   listContent: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.mdSm,
     paddingBottom: 120,
-    gap: Spacing.mdSm,
+  },
+  dateGroupHeader: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    letterSpacing: 0.3,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+    marginBottom: Spacing.xs,
   },
 
   // ── Booking card ──

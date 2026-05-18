@@ -23,6 +23,7 @@ interface RawBookingDetail {
   scheduled_at: string;
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
+  customer_id: string | null;
   contact_id: string | null;
   service_address: string | null;
   subtotal: number | null;
@@ -80,8 +81,8 @@ interface BookingDetail {
   customerInitials: string;
   customerPhone: string | null;
   serviceAddress: string | null;
-  hasWaterSupply: boolean;
-  hasElectricitySupply: boolean;
+  hasWaterSupply: boolean | null;
+  hasElectricitySupply: boolean | null;
   vehicleDesc: string;
   vehicleType: string | null;
   packageName: string;
@@ -188,7 +189,7 @@ export default function BookingDetailScreen() {
       const { data: raw, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, contact_id," +
+          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "vehicles(make,model,year,color,vehicle_type)," +
           "service_packages(name,description,duration_mins,base_price)," +
@@ -197,7 +198,7 @@ export default function BookingDetailScreen() {
         .eq("id", id)
         .single();
 
-      // Separate optional query for utility columns (gracefully ignored if not yet migrated)
+      // Separate optional query for utility columns (gracefully ignored if migration not yet applied)
       const { data: utilityData } = await supabase
         .from("bookings")
         .select("has_water_supply, has_electricity_supply")
@@ -209,7 +210,7 @@ export default function BookingDetailScreen() {
         return;
       }
 
-      const b = raw as RawBookingDetail;
+      const b = raw as unknown as RawBookingDetail;
       const scheduledAt = new Date(b.scheduled_at);
       const isUnassigned =
         (b.status === "confirmed" || b.status === "requested") && !b.crew_member_id;
@@ -239,9 +240,22 @@ export default function BookingDetailScreen() {
         }
       }
 
-      // Walk-in bookings use booking_contacts instead of users/vehicles
+      // Walk-in bookings use booking_contacts; registered customers use the users table
       const contact = b.booking_contacts;
-      const custName = contact?.full_name ?? "Customer";
+      let custName = contact?.full_name ?? null;
+      let custPhone = contact?.phone ?? null;
+
+      if (!custName && b.customer_id) {
+        const { data: regUser } = await supabase
+          .from("users")
+          .select("id, full_name, phone")
+          .eq("id", b.customer_id)
+          .single();
+        const u = regUser as { id: string; full_name: string | null; phone: string | null } | null;
+        custName = u?.full_name ?? null;
+        custPhone = u?.phone ?? custPhone;
+      }
+      custName = custName ?? "Customer";
 
       const vehicleDesc = b.vehicles
         ? [b.vehicles.year, b.vehicles.make, b.vehicles.model, b.vehicles.color]
@@ -262,10 +276,10 @@ export default function BookingDetailScreen() {
         isUnassigned,
         customerName: custName,
         customerInitials: getInitials(custName),
-        customerPhone: contact?.phone ?? null,
+        customerPhone: custPhone,
         serviceAddress: b.service_address,
-        hasWaterSupply: (utilityData as { has_water_supply?: boolean } | null)?.has_water_supply ?? false,
-        hasElectricitySupply: (utilityData as { has_electricity_supply?: boolean } | null)?.has_electricity_supply ?? false,
+        hasWaterSupply: (utilityData as { has_water_supply?: boolean | null } | null)?.has_water_supply ?? null,
+        hasElectricitySupply: (utilityData as { has_electricity_supply?: boolean | null } | null)?.has_electricity_supply ?? null,
         vehicleDesc,
         vehicleType: b.vehicles?.vehicle_type ?? null,
         packageName: b.service_packages?.name ?? "Service",
@@ -474,17 +488,29 @@ export default function BookingDetailScreen() {
                   <Text style={styles.infoRowText}>{formatDuration(booking.durationMins)}</Text>
                 </View>
               )}
-              {booking.hasWaterSupply && (
-                <View style={styles.infoRow}>
-                  <Ionicons name="water" size={14} color={Colors.foamBlue} />
-                  <Text style={[styles.infoRowText, { color: Colors.foamBlue }]}>Water connection provided</Text>
-                </View>
-              )}
-              {booking.hasElectricitySupply && (
-                <View style={styles.infoRow}>
-                  <Ionicons name="flash" size={14} color={Colors.successLight} />
-                  <Text style={[styles.infoRowText, { color: Colors.successLight }]}>Electricity connection provided</Text>
-                </View>
+              {(booking.hasWaterSupply !== null || booking.hasElectricitySupply !== null) && (
+                <>
+                  <View style={styles.infoRow}>
+                    <Ionicons
+                      name={booking.hasWaterSupply ? "water" : "water-outline"}
+                      size={14}
+                      color={booking.hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary}
+                    />
+                    <Text style={[styles.infoRowText, { color: booking.hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary }]}>
+                      {booking.hasWaterSupply ? "Water available" : "No water supply"}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Ionicons
+                      name={booking.hasElectricitySupply ? "flash" : "flash-outline"}
+                      size={14}
+                      color={booking.hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary}
+                    />
+                    <Text style={[styles.infoRowText, { color: booking.hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary }]}>
+                      {booking.hasElectricitySupply ? "Power available" : "No power supply"}
+                    </Text>
+                  </View>
+                </>
               )}
             </View>
             <Text style={styles.servicePrice}>${booking.basePrice.toFixed(0)}</Text>

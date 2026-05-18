@@ -38,6 +38,12 @@ interface RawCustomerRow {
   customer_id: string | null;
 }
 
+interface RawUserDetail {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+}
+
 interface RawAssetRow {
   id: string;
   name: string;
@@ -541,9 +547,9 @@ export default function NewBookingScreen() {
   const [serviceLng, setServiceLng] = useState<number | null>(null);
   const [serviceZip, setServiceZip] = useState("");
 
-  // Utility supply (mobile/van bookings only)
-  const [hasWaterSupply, setHasWaterSupply] = useState(false);
-  const [hasElectricitySupply, setHasElectricitySupply] = useState(false);
+  // Utility supply (van/asset bookings only; null = not asked)
+  const [hasWaterSupply, setHasWaterSupply] = useState<boolean | null>(null);
+  const [hasElectricitySupply, setHasElectricitySupply] = useState<boolean | null>(null);
 
   // Date & time
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
@@ -644,9 +650,28 @@ export default function NewBookingScreen() {
 
       setPackages(parsePackages(pkgRes.data));
 
-      // Registered customer lookup requires a users FK — currently walk-in only
-      // Customer list will be populated once the FK constraint is established
-      setCustomers([]);
+      // Two-step registered customer lookup (avoids needing an FK constraint)
+      const custIds = [
+        ...new Set(
+          ((custRes.data as RawCustomerRow[] | null) ?? [])
+            .map((r) => r.customer_id)
+            .filter((id): id is string => !!id)
+        ),
+      ];
+      if (custIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("id, full_name, phone")
+          .in("id", custIds);
+        const custs: CustomerOption[] = ((usersData as RawUserDetail[] | null) ?? []).map((u) => ({
+          userId: u.id,
+          name: u.full_name ?? "Unknown",
+          phone: u.phone ?? null,
+        }));
+        setCustomers(custs);
+      } else {
+        setCustomers([]);
+      }
 
       const sources: BookingSourceOption[] = [
         ...((assetRes.data as RawAssetRow[] | null) ?? []).map((a) => ({
@@ -1407,45 +1432,60 @@ export default function NewBookingScreen() {
           {selectedSource?.type === "asset" && (
             <>
               <View style={styles.sectionDivider} />
-              <FieldLabel>Customer supplies</FieldLabel>
+              <FieldLabel>Water supply available?</FieldLabel>
               <TouchableOpacity
                 style={styles.utilityToggleRow}
-                onPress={() => setHasWaterSupply((v) => !v)}
+                onPress={() => setHasWaterSupply((v) => v === null ? true : v === true ? false : null)}
                 activeOpacity={0.75}
               >
                 <View style={styles.utilityToggleLeft}>
                   <Ionicons
-                    name="water"
+                    name={hasWaterSupply ? "water" : "water-outline"}
                     size={18}
-                    color={hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary}
+                    color={hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary}
                   />
                   <View>
-                    <Text style={styles.utilityToggleLabel}>Water connection</Text>
+                    <Text style={styles.utilityToggleLabel}>
+                      {hasWaterSupply === true ? "Water available" : hasWaterSupply === false ? "No water supply" : "Not set"}
+                    </Text>
                     <Text style={styles.utilityToggleSub}>Customer provides access to water supply</Text>
                   </View>
                 </View>
-                <View style={[styles.utilityCheckbox, hasWaterSupply && styles.utilityCheckboxActive]}>
-                  {hasWaterSupply && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                <View style={[
+                  styles.utilityCheckbox,
+                  hasWaterSupply === true && styles.utilityCheckboxActive,
+                  hasWaterSupply === false && styles.utilityCheckboxFalse,
+                ]}>
+                  {hasWaterSupply === true && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                  {hasWaterSupply === false && <Ionicons name="close" size={13} color={Colors.light.textTertiary} />}
                 </View>
               </TouchableOpacity>
+              <FieldLabel>Power (electricity) available?</FieldLabel>
               <TouchableOpacity
                 style={styles.utilityToggleRow}
-                onPress={() => setHasElectricitySupply((v) => !v)}
+                onPress={() => setHasElectricitySupply((v) => v === null ? true : v === true ? false : null)}
                 activeOpacity={0.75}
               >
                 <View style={styles.utilityToggleLeft}>
                   <Ionicons
-                    name="flash"
+                    name={hasElectricitySupply ? "flash" : "flash-outline"}
                     size={18}
-                    color={hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary}
+                    color={hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary}
                   />
                   <View>
-                    <Text style={styles.utilityToggleLabel}>Electricity connection</Text>
+                    <Text style={styles.utilityToggleLabel}>
+                      {hasElectricitySupply === true ? "Power available" : hasElectricitySupply === false ? "No power supply" : "Not set"}
+                    </Text>
                     <Text style={styles.utilityToggleSub}>Customer provides access to power outlet</Text>
                   </View>
                 </View>
-                <View style={[styles.utilityCheckbox, hasElectricitySupply && styles.utilityCheckboxElecActive]}>
-                  {hasElectricitySupply && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                <View style={[
+                  styles.utilityCheckbox,
+                  hasElectricitySupply === true && styles.utilityCheckboxElecActive,
+                  hasElectricitySupply === false && styles.utilityCheckboxFalse,
+                ]}>
+                  {hasElectricitySupply === true && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                  {hasElectricitySupply === false && <Ionicons name="close" size={13} color={Colors.light.textTertiary} />}
                 </View>
               </TouchableOpacity>
             </>
@@ -1871,6 +1911,10 @@ const styles = StyleSheet.create({
   utilityCheckboxElecActive: {
     backgroundColor: Colors.successLight,
     borderColor: Colors.successLight,
+  },
+  utilityCheckboxFalse: {
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.bgSecondary,
   },
 
   // Source picker

@@ -98,6 +98,7 @@ interface JobCard {
   estDoneLabel?: string;
   hasIssue?: boolean;
   unitLabel: string | null;
+  unitId: string | null;
 }
 
 interface UnitPillItem {
@@ -640,10 +641,8 @@ export default function OperatorTodayScreen() {
           b.booking_contacts?.full_name ??
           (b.customer_id ? customerNameMap[b.customer_id] ?? "Customer" : "Customer");
 
-        const unitLabel =
-          (b.asset_id    ? unitNameMap[b.asset_id]    : null) ??
-          (b.location_id ? unitNameMap[b.location_id] : null) ??
-          null;
+        const unitId    = b.asset_id ?? b.location_id ?? null;
+        const unitLabel = unitId ? (unitNameMap[unitId] ?? null) : null;
 
         return {
           id: b.id,
@@ -660,6 +659,7 @@ export default function OperatorTodayScreen() {
           startedMinAgo: minAgo,
           estDoneLabel: estDone ? formatTime(estDone) : undefined,
           unitLabel,
+          unitId,
         };
       });
 
@@ -867,13 +867,19 @@ export default function OperatorTodayScreen() {
   });
   const allAssigned = stats.unassigned === 0;
 
-  // Filter jobs by selected unit (null = All)
+  // Filter jobs by selected unit (null = All) — filter by ID, not label name
   const displayJobs = selectedUnitId
-    ? todayJobs.filter((j) => {
-        const b = j as JobCard & { unitLabel: string | null };
-        return b.unitLabel === (units.find((u) => u.id === selectedUnitId)?.name ?? null);
-      })
+    ? todayJobs.filter((j) => j.unitId === selectedUnitId)
     : todayJobs;
+
+  // Stats update to reflect filtered jobs when a unit is selected
+  const filteredStats: OperatorStats = selectedUnitId
+    ? {
+        inProgress: displayJobs.filter((j) => j.status === "in_progress").length,
+        completed:  displayJobs.filter((j) => j.status === "completed").length,
+        unassigned: displayJobs.filter((j) => j.status === "confirmed" && !j.crew_member_id).length,
+      }
+    : stats;
 
   const unassignedJobs = displayJobs.filter(
     (j) => j.status === "confirmed" && !j.crew_member_id
@@ -914,7 +920,7 @@ export default function OperatorTodayScreen() {
 
           {/* Stats */}
           <StatsGrid
-            stats={stats}
+            stats={filteredStats}
             onUnassignedPress={() => router.push("/operator/bookings/unassigned")}
           />
 
@@ -1072,7 +1078,7 @@ export default function OperatorTodayScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabelCaps}>TODAY'S JOBS</Text>
           <StatsGrid
-            stats={stats}
+            stats={filteredStats}
             onUnassignedPress={() => router.push("/operator/bookings/unassigned")}
           />
 

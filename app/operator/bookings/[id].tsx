@@ -492,22 +492,30 @@ export default function BookingDetailScreen() {
                 <>
                   <View style={styles.infoRow}>
                     <Ionicons
-                      name={booking.hasWaterSupply ? "water" : "water-outline"}
+                      name={booking.hasWaterSupply === true ? "water" : "water-outline"}
                       size={14}
-                      color={booking.hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary}
+                      color={booking.hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary}
                     />
-                    <Text style={[styles.infoRowText, { color: booking.hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary }]}>
-                      {booking.hasWaterSupply ? "Water available" : "No water supply"}
+                    <Text style={[styles.infoRowText, { color: booking.hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary }]}>
+                      {booking.hasWaterSupply === true
+                        ? "Water available"
+                        : booking.hasWaterSupply === false
+                        ? "No water supply"
+                        : "Water not specified"}
                     </Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Ionicons
-                      name={booking.hasElectricitySupply ? "flash" : "flash-outline"}
+                      name={booking.hasElectricitySupply === true ? "flash" : "flash-outline"}
                       size={14}
-                      color={booking.hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary}
+                      color={booking.hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary}
                     />
-                    <Text style={[styles.infoRowText, { color: booking.hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary }]}>
-                      {booking.hasElectricitySupply ? "Power available" : "No power supply"}
+                    <Text style={[styles.infoRowText, { color: booking.hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary }]}>
+                      {booking.hasElectricitySupply === true
+                        ? "Power available"
+                        : booking.hasElectricitySupply === false
+                        ? "No power supply"
+                        : "Power not specified"}
                     </Text>
                   </View>
                 </>

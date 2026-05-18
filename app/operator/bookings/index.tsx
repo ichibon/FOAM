@@ -107,7 +107,7 @@ function groupBookingsByDate(
   const map = new Map<string, { label: string; items: BookingCard[] }>();
   for (const b of bookings) {
     const d = b.scheduledAt;
-    const dateKey = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     if (!map.has(dateKey)) {
       map.set(dateKey, { label: formatDateShort(d), items: [] });
     }

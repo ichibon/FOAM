@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  TextInput,
+  KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -14,6 +17,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import type { BookingStatus } from "@/types/database";
+import { DrawerModal } from "@/components/DrawerModal";
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { DrawerFooter } from "@/components/DrawerFooter";
+import { DateTimeDrawer } from "@/components/DateTimeDrawer";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
@@ -44,6 +51,7 @@ interface RawBookingDetail {
   contact_id: string | null;
   detailer_id: string;
   order_id: string | null;
+  package_id: string | null;
   service_address: string | null;
   subtotal: number | null;
   platform_fee: number | null;
@@ -94,6 +102,7 @@ function parseRawBooking(raw: unknown): RawBookingDetail {
     contact_id: nullableStr(r.contact_id),
     detailer_id: String(r.detailer_id ?? ""),
     order_id: nullableStr(r.order_id),
+    package_id: nullableStr(r.package_id),
     service_address: nullableStr(r.service_address),
     subtotal: nullableNum(r.subtotal),
     platform_fee: nullableNum(r.platform_fee),
@@ -153,6 +162,24 @@ interface RawUserRow {
   full_name: string | null;
 }
 
+interface RawCrewRow {
+  id: string;
+  display_name: string | null;
+  users: { full_name: string | null } | null;
+}
+
+interface EditPackageRow {
+  id: string;
+  name: string;
+  base_price: number;
+  duration_mins: number;
+}
+
+interface EditCrewOption {
+  id: string;
+  name: string;
+}
+
 // ─── Screen types ─────────────────────────────────────────────────────────────
 
 type ScreenState = "loading" | "fetch_error" | "main";
@@ -174,6 +201,7 @@ interface BookingDetail {
   hasElectricitySupply: boolean | null;
   vehicleDesc: string;
   vehicleType: string | null;
+  packageId: string | null;
   packageName: string;
   packageDescription: string | null;
   durationMins: number;
@@ -187,6 +215,7 @@ interface BookingDetail {
   crewMemberId: string | null;
   crewName: string | null;
   crewInitials: string | null;
+  detailerId: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -221,6 +250,24 @@ function formatDuration(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h} hr ${m} min` : `${h} hr${h > 1 ? "s" : ""}`;
+}
+
+function formatEditScheduledAt(iso: string | null): string {
+  if (!iso) return "Tap to set date & time";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "Tap to set date & time";
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h < 12 ? "AM" : "PM";
+    const dH = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    const dM = m.toString().padStart(2, "0");
+    return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()} · ${dH}:${dM} ${ampm}`;
+  } catch {
+    return "Tap to set date & time";
+  }
 }
 
 function statusBadgeConfig(status: BookingStatus, isUnassigned: boolean) {
@@ -268,6 +315,20 @@ export default function BookingDetailScreen() {
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // ── Edit sheet state ──────────────────────────────────────────────────────
+  const [editSheetVisible, setEditSheetVisible] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editScheduledAt, setEditScheduledAt] = useState<string | null>(null);
+  const [editCrewMemberId, setEditCrewMemberId] = useState<string | null>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editPackageId, setEditPackageId] = useState<string | null>(null);
+  const [editDateDrawerVisible, setEditDateDrawerVisible] = useState(false);
+  const [editPackages, setEditPackages] = useState<EditPackageRow[]>([]);
+  const [editCrewMembers, setEditCrewMembers] = useState<EditCrewOption[]>([]);
+  const [editDataLoading, setEditDataLoading] = useState(false);
+  const [editDataError, setEditDataError] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!user || !id) return;
     setScreenState("loading");
@@ -278,7 +339,7 @@ export default function BookingDetailScreen() {
       const { data: raw, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, detailer_id, order_id," +
+          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, detailer_id, order_id, package_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "has_water_supply, has_electricity_supply," +
           "vehicles(make,model,year,color,vehicle_type)," +
@@ -423,6 +484,53 @@ export default function BookingDetailScreen() {
         });
 
         orderVehicles = [primaryVehicle, ...siblings];
+      } else if (b.contact_id) {
+        // Fallback: order_id migration not yet applied — group siblings by
+        // contact_id + minute-level scheduled_at (mirrors the migration backfill).
+        const minuteStart = new Date(scheduledAt);
+        minuteStart.setSeconds(0, 0);
+        const minuteEnd = new Date(minuteStart.getTime() + 60_000);
+
+        const { data: siblingsData, error: siblingsErr } = await supabase
+          .from("bookings")
+          .select(
+            "id," +
+            "vehicles(make,model,year,color,vehicle_type)," +
+            "service_packages(name,description,duration_mins,base_price)," +
+            "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
+          )
+          .eq("detailer_id", b.detailer_id)
+          .eq("contact_id", b.contact_id)
+          .gte("scheduled_at", minuteStart.toISOString())
+          .lt("scheduled_at", minuteEnd.toISOString())
+          .neq("id", b.id);
+
+        if (siblingsErr) {
+          console.warn("[BookingDetail] contact_id sibling fetch error", siblingsErr);
+        }
+
+        const siblings: OrderVehicle[] = ((siblingsData as RawSiblingRow[] | null) ?? []).map((sib) => {
+          const v = sib.vehicles;
+          const c = sib.booking_contacts;
+          const sibVehicleDesc = v
+            ? [v.year, v.make, v.model, v.color].filter(Boolean).join(" ") || "Vehicle"
+            : c
+            ? [c.vehicle_year, c.vehicle_make, c.vehicle_model, c.vehicle_color].filter(Boolean).join(" ") || "Vehicle"
+            : "Vehicle";
+          return {
+            bookingId: sib.id,
+            vehicleDesc: sibVehicleDesc,
+            vehicleType: v?.vehicle_type ?? null,
+            packageName: sib.service_packages?.name ?? "Service",
+            packageDescription: sib.service_packages?.description ?? null,
+            durationMins: sib.service_packages?.duration_mins ?? 0,
+            basePrice: sib.service_packages?.base_price ?? 0,
+          };
+        });
+
+        if (siblings.length > 0) {
+          orderVehicles = [primaryVehicle, ...siblings];
+        }
       }
 
       setBooking({
@@ -442,6 +550,7 @@ export default function BookingDetailScreen() {
         hasElectricitySupply: b.has_electricity_supply,
         vehicleDesc,
         vehicleType: b.vehicles?.vehicle_type ?? null,
+        packageId: b.package_id,
         packageName: b.service_packages?.name ?? "Service",
         packageDescription: b.service_packages?.description ?? null,
         durationMins: b.service_packages?.duration_mins ?? 0,
@@ -455,6 +564,7 @@ export default function BookingDetailScreen() {
         crewMemberId: b.crew_member_id,
         crewName,
         crewInitials,
+        detailerId: b.detailer_id,
       });
       setScreenState("main");
     } catch (err) {
@@ -479,6 +589,75 @@ export default function BookingDetailScreen() {
       console.warn("[BookingDetail] statusChange error", err);
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function openEditSheet() {
+    if (!booking) return;
+    setEditScheduledAt(booking.scheduledAt.toISOString());
+    setEditCrewMemberId(booking.crewMemberId);
+    setEditNotes(booking.notes ?? "");
+    setEditPackageId(booking.packageId);
+    setEditError(null);
+    setEditDataError(false);
+    setEditSheetVisible(true);
+    setEditDataLoading(true);
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const [crewResult, pkgResult] = await Promise.all([
+        supabase
+          .from("team_members")
+          .select("id, display_name, users(full_name)")
+          .eq("detailer_id", booking.detailerId)
+          .eq("is_active", true),
+        supabase
+          .from("service_packages")
+          .select("id, name, base_price, duration_mins")
+          .eq("detailer_id", booking.detailerId)
+          .order("name"),
+      ]);
+      if (crewResult.error || pkgResult.error) throw new Error("load_failed");
+      setEditCrewMembers(
+        ((crewResult.data ?? []) as RawCrewRow[]).map((m) => ({
+          id: m.id,
+          name: m.display_name ?? m.users?.full_name ?? "Crew",
+        }))
+      );
+      setEditPackages((pkgResult.data ?? []) as EditPackageRow[]);
+    } catch (err) {
+      console.warn("[BookingDetail] openEditSheet error", err);
+      setEditDataError(true);
+    } finally {
+      setEditDataLoading(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!id || !editScheduledAt) {
+      setEditError("Please select a date and time.");
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const updates: Record<string, unknown> = {
+        scheduled_at: editScheduledAt,
+        crew_member_id: editCrewMemberId,
+        notes: editNotes.trim() || null,
+      };
+      if (editPackageId) updates.package_id = editPackageId;
+      const { error } = await supabase.from("bookings").update(updates).eq("id", id);
+      if (error) throw error;
+      setEditSheetVisible(false);
+      await fetchData();
+    } catch (err) {
+      console.warn("[BookingDetail] handleSaveEdit error", err);
+      setEditError("Failed to save changes. Please try again.");
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -527,6 +706,8 @@ export default function BookingDetailScreen() {
   const canComplete = booking.status === "in_progress";
   const canCancel = booking.status === "confirmed" || booking.status === "requested";
 
+  const isEditLocked = booking.status === "completed" || booking.status === "cancelled";
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Nav header */}
@@ -535,7 +716,24 @@ export default function BookingDetailScreen() {
           <Ionicons name="chevron-back" size={22} color={Colors.light.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>Booking Detail</Text>
-        <View style={styles.navSpacer} />
+        {isEditLocked ? (
+          <TouchableOpacity
+            style={[styles.editNavBtn, { opacity: 0.35 }]}
+            activeOpacity={0.7}
+            onPress={() =>
+              Alert.alert(
+                "Can't Edit",
+                `This booking has been ${booking.status} and can no longer be modified.`
+              )
+            }
+          >
+            <Text style={styles.editNavBtnText}>Edit</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={openEditSheet} style={styles.editNavBtn} activeOpacity={0.7}>
+            <Text style={styles.editNavBtnText}>Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -777,6 +975,195 @@ export default function BookingDetailScreen() {
         )}
 
       </ScrollView>
+
+      {/* ── Edit Appointment Sheet ───────────────────────────────────────────── */}
+      <DrawerModal visible={editSheetVisible} onRequestClose={() => setEditSheetVisible(false)}>
+        <DrawerHeader title="Edit Appointment" onClose={() => setEditSheetVisible(false)} />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.editSheetScroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Multi-vehicle note */}
+            {booking.orderVehicles.length > 1 && (
+              <View style={styles.editMultiNote}>
+                <Ionicons name="information-circle-outline" size={15} color={Colors.foamBlue} />
+                <Text style={styles.editMultiNoteText}>
+                  This appointment has multiple vehicles. Changes here apply to this vehicle only. Edit each vehicle separately to update the full order.
+                </Text>
+              </View>
+            )}
+
+            {/* Date & Time */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionLabel}>DATE & TIME</Text>
+              <TouchableOpacity
+                style={styles.editDateBtn}
+                onPress={() => {
+                  setEditSheetVisible(false);
+                  setEditDateDrawerVisible(true);
+                }}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="calendar-outline" size={16} color={Colors.foamBlue} />
+                <Text style={styles.editDateBtnText}>
+                  {formatEditScheduledAt(editScheduledAt)}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={Colors.light.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Package + Crew load error */}
+            {editDataError && (
+              <View style={styles.editDataErrorRow}>
+                <Ionicons name="alert-circle-outline" size={15} color={Colors.errorLight} />
+                <Text style={styles.editDataErrorText}>
+                  Couldn't load crew and packages. Check your connection and try again.
+                </Text>
+              </View>
+            )}
+
+            {/* Package */}
+            {editDataLoading ? (
+              <View style={styles.editLoadingRow}>
+                <ActivityIndicator size="small" color={Colors.foamBlue} />
+              </View>
+            ) : !editDataError && editPackages.length > 0 ? (
+              <View style={styles.editSection}>
+                <Text style={styles.editSectionLabel}>SERVICE PACKAGE</Text>
+                {editPackages.map((pkg) => {
+                  const isSelected = editPackageId === pkg.id;
+                  return (
+                    <TouchableOpacity
+                      key={pkg.id}
+                      style={[styles.editPickerRow, isSelected && styles.editPickerRowSelected]}
+                      onPress={() => setEditPackageId(pkg.id)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.editPickerRowName, isSelected && { color: Colors.foamBlue }]}>
+                          {pkg.name}
+                        </Text>
+                        <Text style={styles.editPickerRowSub}>
+                          {formatDuration(pkg.duration_mins)} · ${pkg.base_price.toFixed(0)}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {/* Crew */}
+            {!editDataLoading && !editDataError && editCrewMembers.length > 0 && (
+              <View style={styles.editSection}>
+                <Text style={styles.editSectionLabel}>ASSIGNED CREW</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.editPickerRow,
+                    editCrewMemberId === null && styles.editPickerRowSelected,
+                  ]}
+                  onPress={() => setEditCrewMemberId(null)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.editPickerRowName, editCrewMemberId === null && { color: Colors.foamBlue }]}>
+                    Unassigned
+                  </Text>
+                  {editCrewMemberId === null && (
+                    <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
+                  )}
+                </TouchableOpacity>
+                {editCrewMembers.map((crew) => {
+                  const isSelected = editCrewMemberId === crew.id;
+                  return (
+                    <TouchableOpacity
+                      key={crew.id}
+                      style={[styles.editPickerRow, isSelected && styles.editPickerRowSelected]}
+                      onPress={() => setEditCrewMemberId(crew.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.editPickerRowName, isSelected && { color: Colors.foamBlue }]}>
+                        {crew.name}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Notes */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionLabel}>NOTES</Text>
+              <TextInput
+                style={styles.editNotesInput}
+                value={editNotes}
+                onChangeText={setEditNotes}
+                placeholder="Add internal notes…"
+                placeholderTextColor={Colors.light.textDisabled}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Inline error */}
+            {editError ? (
+              <Text style={styles.editErrorText}>{editError}</Text>
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        <DrawerFooter>
+          <View style={styles.editFooterRow}>
+            <TouchableOpacity
+              style={styles.editCancelBtn}
+              onPress={() => setEditSheetVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.editCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.editSaveBtn, editSaving && { opacity: 0.6 }]}
+              onPress={handleSaveEdit}
+              disabled={editSaving}
+              activeOpacity={0.85}
+            >
+              {editSaving ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Text style={styles.editSaveBtnText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </DrawerFooter>
+      </DrawerModal>
+
+      {/* ── Date picker for edit flow (rendered outside sheet to avoid nesting) ── */}
+      <DateTimeDrawer
+        visible={editDateDrawerVisible}
+        onRequestClose={() => {
+          setEditDateDrawerVisible(false);
+          setEditSheetVisible(true);
+        }}
+        value={editScheduledAt}
+        onConfirm={(iso) => {
+          setEditScheduledAt(iso);
+          setEditDateDrawerVisible(false);
+          setEditSheetVisible(true);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -1092,6 +1479,166 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   retryBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.white,
+  },
+
+  // ── Edit nav button ──────────────────────────────────────────────────────
+  editNavBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    minWidth: 32,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  editNavBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+  },
+
+  // ── Edit sheet ───────────────────────────────────────────────────────────
+  editSheetScroll: {
+    paddingTop: Spacing.md,
+    paddingBottom: 32,
+    gap: Spacing.lg,
+  },
+  editMultiNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    padding: Spacing.mdSm,
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.md,
+  },
+  editMultiNoteText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    flex: 1,
+    lineHeight: 18,
+  },
+  editSection: {
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+  },
+  editSectionLabel: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.8,
+  },
+  editDateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+  },
+  editDateBtnText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    flex: 1,
+  },
+  editPickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    gap: Spacing.sm,
+  },
+  editPickerRowSelected: {
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  editPickerRowName: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  editPickerRowSub: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginTop: 2,
+  },
+  editLoadingRow: {
+    paddingVertical: Spacing.lg,
+    alignItems: "center",
+  },
+  editDataErrorRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    padding: Spacing.mdSm,
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderRadius: Radius.md,
+  },
+  editDataErrorText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+    flex: 1,
+    lineHeight: 18,
+  },
+  editNotesInput: {
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    backgroundColor: Colors.light.surface,
+    minHeight: 88,
+    textAlignVertical: "top",
+  },
+  editErrorText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.errorLight,
+    textAlign: "center",
+    marginHorizontal: Spacing.md,
+  },
+  editFooterRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  editCancelBtn: {
+    flex: 1,
+    height: 48,
+    backgroundColor: Colors.light.bgSecondary,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editCancelBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  editSaveBtn: {
+    flex: 1,
+    height: 48,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editSaveBtnText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,

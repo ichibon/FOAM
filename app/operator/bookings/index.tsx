@@ -304,7 +304,25 @@ export default function OperatorBookingsScreen() {
       }
       setCrewMembers(crewList);
 
-      const rawBookings: RawBookingRow[] = (bookingsRes.data as RawBookingRow[] | null) ?? [];
+      // Fallback: order_id migration not yet applied — retry without that column
+      let bookingsData = bookingsRes.data;
+      if (bookingsRes.error?.code === "42703") {
+        const { data: fallbackData } = await supabase
+          .from("bookings")
+          .select(
+            "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id," +
+            "service_address, subtotal, total, tip_amount, notes," +
+            "vehicles(make,model,year,color)," +
+            "service_packages(name)," +
+            "booking_contacts(full_name,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
+          )
+          .eq("detailer_id", dId)
+          .order("scheduled_at", { ascending: true })
+          .limit(300);
+        bookingsData = fallbackData;
+      }
+
+      const rawBookings: RawBookingRow[] = (bookingsData as RawBookingRow[] | null) ?? [];
 
       // Batch-fetch registered customer names where booking_contacts is not set
       const registeredIds = [

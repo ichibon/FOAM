@@ -288,12 +288,40 @@ export default function BookingDetailScreen() {
         .eq("id", id)
         .single();
 
-      if (error || !raw) {
+      // Fallback: order_id migration not yet applied — retry without that column.
+      // order_id will be treated as null, skipping sibling fetch.
+      let rawResult = raw;
+      if (error) {
+        if (error.code === "42703") {
+          const { data: retryRaw, error: retryErr } = await supabase
+            .from("bookings")
+            .select(
+              "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, detailer_id," +
+              "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
+              "has_water_supply, has_electricity_supply," +
+              "vehicles(make,model,year,color,vehicle_type)," +
+              "service_packages(name,description,duration_mins,base_price)," +
+              "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
+            )
+            .eq("id", id)
+            .single();
+          if (retryErr || !retryRaw) {
+            setScreenState("fetch_error");
+            return;
+          }
+          rawResult = retryRaw;
+        } else {
+          setScreenState("fetch_error");
+          return;
+        }
+      }
+
+      if (!rawResult) {
         setScreenState("fetch_error");
         return;
       }
 
-      const b = parseRawBooking(raw);
+      const b = parseRawBooking(rawResult);
       const scheduledAt = new Date(b.scheduled_at);
       const isUnassigned =
         (b.status === "confirmed" || b.status === "requested") && !b.crew_member_id;

@@ -35,8 +35,7 @@ interface RawServicePackage {
 }
 
 interface RawCustomerRow {
-  customer_id: string;
-  users: { id: string; full_name: string | null; phone: string | null } | null;
+  customer_id: string | null;
 }
 
 interface RawAssetRow {
@@ -542,6 +541,10 @@ export default function NewBookingScreen() {
   const [serviceLng, setServiceLng] = useState<number | null>(null);
   const [serviceZip, setServiceZip] = useState("");
 
+  // Utility supply (mobile/van bookings only)
+  const [hasWaterSupply, setHasWaterSupply] = useState(false);
+  const [hasElectricitySupply, setHasElectricitySupply] = useState(false);
+
   // Date & time
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [dateTimeDrawerVisible, setDateTimeDrawerVisible] = useState(false);
@@ -617,7 +620,7 @@ export default function NewBookingScreen() {
           .order("display_order"),
         supabase
           .from("bookings")
-          .select("customer_id, users!bookings_customer_id_fkey(id,full_name,phone)")
+          .select("customer_id")
           .eq("detailer_id", dId)
           .limit(300),
         supabase
@@ -641,16 +644,9 @@ export default function NewBookingScreen() {
 
       setPackages(parsePackages(pkgRes.data));
 
-      const seen = new Set<string>();
-      const custs: CustomerOption[] = [];
-      for (const row of (custRes.data as RawCustomerRow[] | null) ?? []) {
-        const u = row.users;
-        if (u && !seen.has(u.id)) {
-          seen.add(u.id);
-          custs.push({ userId: u.id, name: u.full_name ?? "Unknown", phone: u.phone ?? null });
-        }
-      }
-      setCustomers(custs);
+      // Registered customer lookup requires a users FK — currently walk-in only
+      // Customer list will be populated once the FK constraint is established
+      setCustomers([]);
 
       const sources: BookingSourceOption[] = [
         ...((assetRes.data as RawAssetRow[] | null) ?? []).map((a) => ({
@@ -938,6 +934,8 @@ export default function NewBookingScreen() {
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             service_zip: serviceZip || null,
+            has_water_supply: hasWaterSupply,
+            has_electricity_supply: hasElectricitySupply,
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -945,8 +943,32 @@ export default function NewBookingScreen() {
             location_id: selectedSource?.type === "location" ? selectedSource.id : null,
           });
 
-          if (bookingError) {
-            console.warn("[NewBooking] walk-in booking insert error", bookingError);
+          // Fallback: if utility columns haven't been migrated yet, retry without them
+          let finalError = bookingError;
+          if (bookingError?.code === "42703") {
+            const { error: retryError } = await supabase.from("bookings").insert({
+              contact_id: contactId,
+              vehicle_id: null,
+              detailer_id: detailerId,
+              crew_member_id: selectedCrewMemberId ?? null,
+              package_id: entry.selectedPackageId,
+              status: "confirmed",
+              scheduled_at: scheduledAt,
+              service_address: serviceAddress.trim() || null,
+              ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+              ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
+              service_zip: serviceZip || null,
+              notes: notes.trim() || null,
+              tip_amount: 0,
+              is_recurring: false,
+              asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+              location_id: selectedSource?.type === "location" ? selectedSource.id : null,
+            });
+            finalError = retryError;
+          }
+
+          if (finalError) {
+            console.warn("[NewBooking] walk-in booking insert error", finalError);
             setErrorMsg("Failed to create booking. Please try again.");
             setSubmitState("error");
             return;
@@ -1007,6 +1029,8 @@ export default function NewBookingScreen() {
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             service_zip: serviceZip || null,
+            has_water_supply: hasWaterSupply,
+            has_electricity_supply: hasElectricitySupply,
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -1014,8 +1038,32 @@ export default function NewBookingScreen() {
             location_id: selectedSource?.type === "location" ? selectedSource.id : null,
           });
 
-          if (bookingError) {
-            console.warn("[NewBooking] booking insert error", bookingError);
+          // Fallback: if utility columns haven't been migrated yet, retry without them
+          let finalError = bookingError;
+          if (bookingError?.code === "42703") {
+            const { error: retryError } = await supabase.from("bookings").insert({
+              customer_id: customerId,
+              detailer_id: detailerId,
+              crew_member_id: selectedCrewMemberId ?? null,
+              vehicle_id: vehicleId ?? undefined,
+              package_id: entry.selectedPackageId,
+              status: "confirmed",
+              scheduled_at: scheduledAt,
+              service_address: serviceAddress.trim() || null,
+              ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+              ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
+              service_zip: serviceZip || null,
+              notes: notes.trim() || null,
+              tip_amount: 0,
+              is_recurring: false,
+              asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+              location_id: selectedSource?.type === "location" ? selectedSource.id : null,
+            });
+            finalError = retryError;
+          }
+
+          if (finalError) {
+            console.warn("[NewBooking] booking insert error", finalError);
             setErrorMsg("Failed to create booking. Please try again.");
             setSubmitState("error");
             return;
@@ -1352,6 +1400,54 @@ export default function NewBookingScreen() {
                   setServiceZip(result.zip);
                 }}
               />
+            </>
+          )}
+
+          {/* Utility supply — only for van/asset bookings */}
+          {selectedSource?.type === "asset" && (
+            <>
+              <View style={styles.sectionDivider} />
+              <FieldLabel>Customer supplies</FieldLabel>
+              <TouchableOpacity
+                style={styles.utilityToggleRow}
+                onPress={() => setHasWaterSupply((v) => !v)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.utilityToggleLeft}>
+                  <Ionicons
+                    name="water"
+                    size={18}
+                    color={hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary}
+                  />
+                  <View>
+                    <Text style={styles.utilityToggleLabel}>Water connection</Text>
+                    <Text style={styles.utilityToggleSub}>Customer provides access to water supply</Text>
+                  </View>
+                </View>
+                <View style={[styles.utilityCheckbox, hasWaterSupply && styles.utilityCheckboxActive]}>
+                  {hasWaterSupply && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.utilityToggleRow}
+                onPress={() => setHasElectricitySupply((v) => !v)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.utilityToggleLeft}>
+                  <Ionicons
+                    name="flash"
+                    size={18}
+                    color={hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary}
+                  />
+                  <View>
+                    <Text style={styles.utilityToggleLabel}>Electricity connection</Text>
+                    <Text style={styles.utilityToggleSub}>Customer provides access to power outlet</Text>
+                  </View>
+                </View>
+                <View style={[styles.utilityCheckbox, hasElectricitySupply && styles.utilityCheckboxElecActive]}>
+                  {hasElectricitySupply && <Ionicons name="checkmark" size={13} color={Colors.white} />}
+                </View>
+              </TouchableOpacity>
             </>
           )}
         </SectionCard>
@@ -1731,6 +1827,50 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.light.borderSubtle,
     marginVertical: Spacing.mdSm,
+  },
+
+  // Utility supply toggles
+  utilityToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  utilityToggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    flex: 1,
+  },
+  utilityToggleLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textPrimary,
+  },
+  utilityToggleSub: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.caption,
+    color: Colors.light.textTertiary,
+    marginTop: 1,
+  },
+  utilityCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.light.borderDefault,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.light.surface,
+  },
+  utilityCheckboxActive: {
+    backgroundColor: Colors.foamBlue,
+    borderColor: Colors.foamBlue,
+  },
+  utilityCheckboxElecActive: {
+    backgroundColor: Colors.successLight,
+    borderColor: Colors.successLight,
   },
 
   // Source picker

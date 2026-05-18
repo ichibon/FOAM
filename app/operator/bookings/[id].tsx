@@ -31,10 +31,6 @@ interface RawBookingDetail {
   total: number | null;
   notes: string | null;
   is_recurring: boolean;
-  users: {
-    full_name: string | null;
-    phone: string | null;
-  } | null;
   vehicles: {
     make: string | null;
     model: string | null;
@@ -84,6 +80,8 @@ interface BookingDetail {
   customerInitials: string;
   customerPhone: string | null;
   serviceAddress: string | null;
+  hasWaterSupply: boolean;
+  hasElectricitySupply: boolean;
   vehicleDesc: string;
   vehicleType: string | null;
   packageName: string;
@@ -192,11 +190,17 @@ export default function BookingDetailScreen() {
         .select(
           "id, status, scheduled_at, estimated_duration_mins, crew_member_id, contact_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
-          "users!bookings_customer_id_fkey(full_name, phone)," +
           "vehicles(make,model,year,color,vehicle_type)," +
           "service_packages(name,description,duration_mins,base_price)," +
           "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
         )
+        .eq("id", id)
+        .single();
+
+      // Separate optional query for utility columns (gracefully ignored if not yet migrated)
+      const { data: utilityData } = await supabase
+        .from("bookings")
+        .select("has_water_supply, has_electricity_supply")
         .eq("id", id)
         .single();
 
@@ -237,7 +241,7 @@ export default function BookingDetailScreen() {
 
       // Walk-in bookings use booking_contacts instead of users/vehicles
       const contact = b.booking_contacts;
-      const custName = b.users?.full_name ?? contact?.full_name ?? "Customer";
+      const custName = contact?.full_name ?? "Customer";
 
       const vehicleDesc = b.vehicles
         ? [b.vehicles.year, b.vehicles.make, b.vehicles.model, b.vehicles.color]
@@ -258,8 +262,10 @@ export default function BookingDetailScreen() {
         isUnassigned,
         customerName: custName,
         customerInitials: getInitials(custName),
-        customerPhone: b.users?.phone ?? contact?.phone ?? null,
+        customerPhone: contact?.phone ?? null,
         serviceAddress: b.service_address,
+        hasWaterSupply: (utilityData as { has_water_supply?: boolean } | null)?.has_water_supply ?? false,
+        hasElectricitySupply: (utilityData as { has_electricity_supply?: boolean } | null)?.has_electricity_supply ?? false,
         vehicleDesc,
         vehicleType: b.vehicles?.vehicle_type ?? null,
         packageName: b.service_packages?.name ?? "Service",
@@ -466,6 +472,18 @@ export default function BookingDetailScreen() {
                 <View style={styles.infoRow}>
                   <Ionicons name="time-outline" size={14} color={Colors.light.textTertiary} />
                   <Text style={styles.infoRowText}>{formatDuration(booking.durationMins)}</Text>
+                </View>
+              )}
+              {booking.hasWaterSupply && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="water" size={14} color={Colors.foamBlue} />
+                  <Text style={[styles.infoRowText, { color: Colors.foamBlue }]}>Water connection provided</Text>
+                </View>
+              )}
+              {booking.hasElectricitySupply && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="flash" size={14} color={Colors.successLight} />
+                  <Text style={[styles.infoRowText, { color: Colors.successLight }]}>Electricity connection provided</Text>
                 </View>
               )}
             </View>

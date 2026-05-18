@@ -29,7 +29,6 @@ interface RawBookingRow {
   total: number | null;
   tip_amount: number;
   notes: string | null;
-  users: { full_name: string | null } | null;
   vehicles: { make: string | null; model: string | null; year: number | null; color: string | null } | null;
   service_packages: { name: string } | null;
   booking_contacts: { full_name: string | null; vehicle_make: string | null; vehicle_model: string | null; vehicle_year: number | null; vehicle_color: string | null } | null;
@@ -240,7 +239,6 @@ export default function OperatorBookingsScreen() {
           .select(
             "id, status, scheduled_at, estimated_duration_mins, crew_member_id," +
             "service_address, subtotal, total, tip_amount, notes," +
-            "users!bookings_customer_id_fkey(full_name)," +
             "vehicles(make,model,year,color)," +
             "service_packages(name)," +
             "booking_contacts(full_name,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
@@ -301,7 +299,7 @@ export default function OperatorBookingsScreen() {
           scheduledAt,
           timeLabel: formatTime(scheduledAt),
           dateLabel: formatDateShort(scheduledAt),
-          customerName: b.users?.full_name ?? b.booking_contacts?.full_name ?? "Customer",
+          customerName: b.booking_contacts?.full_name ?? "Customer",
           vehicleDesc,
           packageName: b.service_packages?.name ?? "Service",
           crewMemberId: b.crew_member_id,

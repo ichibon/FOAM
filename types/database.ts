@@ -151,6 +151,9 @@ export interface Booking {
   service_address?: string;
   service_lat?: number;
   service_lng?: number;
+  service_zip?: string;
+  has_water_supply: boolean;
+  has_electricity_supply: boolean;
   subtotal?: number;
   tip_amount: number;
   platform_fee?: number;

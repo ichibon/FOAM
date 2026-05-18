@@ -243,7 +243,8 @@ function VehicleServiceCard({
   onAddService,
 }: VehicleServiceCardProps) {
   const isNewCustomer = customerMode === "create";
-  const showNewFields = isNewCustomer || entry.useNewVehicle;
+  const noSavedVehicles = !isLoadingVehicles && savedVehicles.length === 0;
+  const showNewFields = isNewCustomer || entry.useNewVehicle || (!isNewCustomer && noSavedVehicles);
   const showSavedPicker = !isNewCustomer && !entry.useNewVehicle && savedVehicles.length > 0;
 
   const selectedSavedVehicle = savedVehicles.find((v) => v.id === entry.selectedVehicleId) ?? null;
@@ -896,19 +897,8 @@ export default function NewBookingScreen() {
             vehicleId = entry.selectedVehicleId;
           }
 
-          if (!vehicleId) {
-            const { data: existingVehicle } = await supabase
-              .from("vehicles")
-              .select("id")
-              .eq("customer_id", customerId)
-              .eq("is_default", true)
-              .limit(1)
-              .maybeSingle();
-            if (existingVehicle) vehicleId = (existingVehicle as { id: string }).id;
-          }
-
-          if (!vehicleId) {
-            setErrorMsg("Please select or enter a vehicle for each booking.");
+          if (!vehicleId && !entry.useNewVehicle && savedVehicles.length > 0) {
+            setErrorMsg("Please select a vehicle for each booking.");
             setSubmitState("error");
             return;
           }
@@ -916,7 +906,7 @@ export default function NewBookingScreen() {
           const { error: bookingError } = await supabase.from("bookings").insert({
             customer_id: customerId,
             detailer_id: detailerId,
-            vehicle_id: vehicleId,
+            vehicle_id: vehicleId ?? undefined,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
@@ -995,41 +985,69 @@ export default function NewBookingScreen() {
         automaticallyAdjustKeyboardInsets
       >
         {/* ── 1. BOOKED AT ── */}
-        {bookingSources.length > 1 && (
-          <SectionCard>
-            <Text style={styles.cardSectionLabel}>BOOKED AT</Text>
-            <TouchableOpacity
-              style={styles.sourcePickerField}
-              onPress={() => setShowSourcePicker((v) => !v)}
-              activeOpacity={0.8}
-            >
-              {selectedSource ? (
-                <View style={styles.sourcePickerSelected}>
-                  <Ionicons
-                    name={selectedSource.type === "asset" ? "car-outline" : "storefront-outline"}
-                    size={18}
-                    color={Colors.foamBlue}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.sourcePickerName}>{selectedSource.name}</Text>
-                    <Text style={styles.sourcePickerSub}>
-                      {selectedSource.type === "asset"
-                        ? "Mobile"
-                        : selectedSource.address ?? "Physical Location"}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.sourcePickerPlaceholder}>Select van or location…</Text>
-              )}
-              <Ionicons
-                name={showSourcePicker ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={Colors.light.textSecondary}
-              />
-            </TouchableOpacity>
+        <SectionCard>
+          <Text style={styles.cardSectionLabel}>BOOKED AT</Text>
 
-            {showSourcePicker && (
+          {bookingSources.length === 0 ? (
+            <View style={styles.hintBox}>
+              <Ionicons name="information-circle-outline" size={15} color={Colors.light.textTertiary} />
+              <Text style={styles.hintText}>
+                No vans or locations set up yet. Add them in Business Settings.
+              </Text>
+            </View>
+          ) : bookingSources.length === 1 ? (
+            /* Single source — read-only display */
+            <View style={styles.sourcePickerSelected}>
+              <Ionicons
+                name={selectedSource?.type === "asset" ? "car-outline" : "storefront-outline"}
+                size={18}
+                color={Colors.foamBlue}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sourcePickerName}>{selectedSource?.name}</Text>
+                <Text style={styles.sourcePickerSub}>
+                  {selectedSource?.type === "asset"
+                    ? "Mobile"
+                    : selectedSource?.address ?? "Physical Location"}
+                </Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={18} color={Colors.successLight} />
+            </View>
+          ) : (
+            /* Multiple sources — interactive picker */
+            <>
+              <TouchableOpacity
+                style={styles.sourcePickerField}
+                onPress={() => setShowSourcePicker((v) => !v)}
+                activeOpacity={0.8}
+              >
+                {selectedSource ? (
+                  <View style={styles.sourcePickerSelected}>
+                    <Ionicons
+                      name={selectedSource.type === "asset" ? "car-outline" : "storefront-outline"}
+                      size={18}
+                      color={Colors.foamBlue}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.sourcePickerName}>{selectedSource.name}</Text>
+                      <Text style={styles.sourcePickerSub}>
+                        {selectedSource.type === "asset"
+                          ? "Mobile"
+                          : selectedSource.address ?? "Physical Location"}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.sourcePickerPlaceholder}>Select van or location…</Text>
+                )}
+                <Ionicons
+                  name={showSourcePicker ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={Colors.light.textSecondary}
+                />
+              </TouchableOpacity>
+
+              {showSourcePicker && (
               <View style={styles.sourcePickerList}>
                 {bookingSources.some((s) => s.type === "asset") && (
                   <Text style={styles.sourcePickerGroupLabel}>MOBILE FLEET</Text>
@@ -1102,8 +1120,9 @@ export default function NewBookingScreen() {
                 ))}
               </View>
             )}
-          </SectionCard>
-        )}
+            </>
+          )}
+        </SectionCard>
 
         {/* ── 2. CUSTOMER ── */}
         <SectionCard>

@@ -25,6 +25,7 @@ interface RawBookingRow {
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
   customer_id: string | null;
+  order_id: string | null;
   service_address: string | null;
   subtotal: number | null;
   total: number | null;
@@ -60,6 +61,8 @@ interface CrewMember {
 
 interface BookingCard {
   id: string;
+  orderId: string | null;
+  vehicleCount: number;
   status: BookingStatus;
   isUnassigned: boolean;
   scheduledAt: Date;
@@ -190,7 +193,13 @@ function BookingListCard({
       </View>
 
       <Text style={styles.cardCustomer}>{booking.customerName}</Text>
-      <Text style={styles.cardVehicle}>{booking.vehicleDesc}</Text>
+      {booking.vehicleCount > 1 ? (
+        <View style={styles.vehicleCountPill}>
+          <Text style={styles.vehicleCountPillText}>{booking.vehicleCount} vehicles</Text>
+        </View>
+      ) : (
+        <Text style={styles.cardVehicle}>{booking.vehicleDesc}</Text>
+      )}
       <Text style={styles.cardPackage}>{booking.packageName}</Text>
 
       {/* Footer: crew chip or unassigned badge */}
@@ -253,7 +262,7 @@ export default function OperatorBookingsScreen() {
         supabase
           .from("bookings")
           .select(
-            "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id," +
+            "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, order_id," +
             "service_address, subtotal, total, tip_amount, notes," +
             "vehicles(make,model,year,color)," +
             "service_packages(name)," +
@@ -314,38 +323,87 @@ export default function OperatorBookingsScreen() {
         }
       }
 
-      const cards: BookingCard[] = rawBookings.map((b) => {
+      // Helper: build a vehicle description string from a raw booking row
+      function rowVehicleDesc(b: RawBookingRow): string {
         const veh = b.vehicles;
         const contact = b.booking_contacts;
-        const vehicleDesc = veh
-          ? [veh.year, veh.make, veh.model, veh.color].filter(Boolean).join(" ")
+        return veh
+          ? [veh.year, veh.make, veh.model, veh.color].filter(Boolean).join(" ") || "Vehicle"
           : contact
-          ? [contact.vehicle_year, contact.vehicle_make, contact.vehicle_model, contact.vehicle_color].filter(Boolean).join(" ") || "Vehicle (walk-in)"
+          ? [contact.vehicle_year, contact.vehicle_make, contact.vehicle_model, contact.vehicle_color].filter(Boolean).join(" ") || "Vehicle"
           : "Vehicle";
+      }
+
+      // Helper: map one raw row to a BookingCard (vehicleCount = 1, orderId carried through)
+      function mapRow(b: RawBookingRow): BookingCard {
         const scheduledAt = new Date(b.scheduled_at);
         const isUnassigned =
           (b.status === "confirmed" || b.status === "requested") && !b.crew_member_id;
         const crew = b.crew_member_id ? cMap[b.crew_member_id] : undefined;
+        const contact = b.booking_contacts;
         const customerName =
           contact?.full_name ??
           (b.customer_id ? userNameMap[b.customer_id] ?? "Customer" : "Customer");
-
         return {
           id: b.id,
+          orderId: b.order_id,
+          vehicleCount: 1,
           status: b.status as BookingStatus,
           isUnassigned,
           scheduledAt,
           timeLabel: formatTime(scheduledAt),
           dateLabel: formatDateShort(scheduledAt),
           customerName,
-          vehicleDesc,
+          vehicleDesc: rowVehicleDesc(b),
           packageName: b.service_packages?.name ?? "Service",
           crewMemberId: b.crew_member_id,
           crewName: crew?.name ?? null,
           crewInitials: crew?.initials ?? null,
           total: b.total ?? null,
         };
+      }
+
+      // Group rows that share an order_id into a single card
+      const orderMap = new Map<string, RawBookingRow[]>();
+      const soloRows: RawBookingRow[] = [];
+      for (const b of rawBookings) {
+        if (b.order_id) {
+          const group = orderMap.get(b.order_id) ?? [];
+          group.push(b);
+          orderMap.set(b.order_id, group);
+        } else {
+          soloRows.push(b);
+        }
+      }
+
+      const soloCards: BookingCard[] = soloRows.map(mapRow);
+
+      const groupedCards: BookingCard[] = [...orderMap.values()].map((rows) => {
+        const primary = rows[0];
+        const base = mapRow(primary);
+        const vehicleDescs = rows.map((r) => {
+          const v = r.vehicles;
+          const c = r.booking_contacts;
+          return v
+            ? [v.year, v.make, v.model].filter(Boolean).join(" ") || "Vehicle"
+            : c
+            ? [c.vehicle_year, c.vehicle_make, c.vehicle_model].filter(Boolean).join(" ") || "Vehicle"
+            : "Vehicle";
+        });
+        const allPackageNames = [...new Set(rows.map((r) => r.service_packages?.name).filter(Boolean))];
+        const combinedTotal = rows.reduce((sum, r) => sum + (r.total ?? 0), 0);
+        return {
+          ...base,
+          vehicleDesc: vehicleDescs.join(" · "),
+          vehicleCount: rows.length,
+          packageName: allPackageNames.length === 1 ? (allPackageNames[0] as string) : "Multiple services",
+          total: combinedTotal > 0 ? combinedTotal : null,
+        };
       });
+
+      const cards: BookingCard[] = [...soloCards, ...groupedCards].sort(
+        (a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime()
+      );
 
       setBookings(cards);
       setScreenState(cards.length === 0 ? "empty" : "main");
@@ -854,6 +912,19 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   crewPillName: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.foamBlue,
+  },
+  vehicleCountPill: {
+    alignSelf: "flex-start",
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: 2,
+    marginBottom: 2,
+  },
+  vehicleCountPillText: {
     fontFamily: Typography.bodyMedium,
     fontSize: Typography.size.caption,
     color: Colors.foamBlue,

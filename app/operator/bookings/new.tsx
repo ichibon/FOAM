@@ -161,6 +161,13 @@ function getEffectivePrice(pkg: ServicePackageOption, vType: VehicleSizeKey | nu
   return row ? row.priceAdjustment : pkg.price;
 }
 
+function generateOrderId(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 function makeEntry(useNewVehicle = false): VehicleServiceEntry {
   return {
     entryId: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -920,6 +927,9 @@ export default function NewBookingScreen() {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
 
+      // Shared across all vehicle entries in this submission
+      const orderId = generateOrderId();
+
       if (isCreateMode) {
         // Walk-in path: one booking_contacts row per vehicle entry carries
         // both the customer identity and the vehicle info. No vehicles table
@@ -959,6 +969,7 @@ export default function NewBookingScreen() {
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
+            order_id: orderId,
             service_address: serviceAddress.trim() || null,
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
@@ -972,7 +983,7 @@ export default function NewBookingScreen() {
             location_id: selectedSource?.type === "location" ? selectedSource.id : null,
           });
 
-          // Fallback: migration not yet applied — retry without utility + service_zip columns
+          // Fallback: migration not yet applied — retry without order_id + utility + service_zip
           let finalError = bookingError;
           if (bookingError?.code === "42703") {
             const { error: retryError } = await supabase.from("bookings").insert({
@@ -1053,6 +1064,7 @@ export default function NewBookingScreen() {
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
+            order_id: orderId,
             service_address: serviceAddress.trim() || null,
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
@@ -1066,7 +1078,7 @@ export default function NewBookingScreen() {
             location_id: selectedSource?.type === "location" ? selectedSource.id : null,
           });
 
-          // Fallback: migration not yet applied — retry without utility + service_zip columns
+          // Fallback: migration not yet applied — retry without order_id + utility + service_zip
           let finalError = bookingError;
           if (bookingError?.code === "42703") {
             const { error: retryError } = await supabase.from("bookings").insert({

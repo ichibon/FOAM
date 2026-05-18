@@ -17,6 +17,23 @@ import type { BookingStatus } from "@/types/database";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
+interface RawSiblingRow {
+  id: string;
+  vehicles: { make: string | null; model: string | null; year: number | null; color: string | null; vehicle_type: string | null } | null;
+  service_packages: { name: string; description: string | null; duration_mins: number; base_price: number } | null;
+  booking_contacts: { vehicle_make: string | null; vehicle_model: string | null; vehicle_year: number | null; vehicle_color: string | null } | null;
+}
+
+interface OrderVehicle {
+  bookingId: string;
+  vehicleDesc: string;
+  vehicleType: string | null;
+  packageName: string;
+  packageDescription: string | null;
+  durationMins: number;
+  basePrice: number;
+}
+
 interface RawBookingDetail {
   id: string;
   status: string;
@@ -25,6 +42,7 @@ interface RawBookingDetail {
   crew_member_id: string | null;
   customer_id: string | null;
   contact_id: string | null;
+  order_id: string | null;
   service_address: string | null;
   subtotal: number | null;
   platform_fee: number | null;
@@ -73,6 +91,7 @@ function parseRawBooking(raw: unknown): RawBookingDetail {
     crew_member_id: nullableStr(r.crew_member_id),
     customer_id: nullableStr(r.customer_id),
     contact_id: nullableStr(r.contact_id),
+    order_id: nullableStr(r.order_id),
     service_address: nullableStr(r.service_address),
     subtotal: nullableNum(r.subtotal),
     platform_fee: nullableNum(r.platform_fee),
@@ -138,6 +157,8 @@ type ScreenState = "loading" | "fetch_error" | "main";
 
 interface BookingDetail {
   id: string;
+  orderId: string | null;
+  orderVehicles: OrderVehicle[];
   status: BookingStatus;
   scheduledAt: Date;
   timeLabel: string;
@@ -255,7 +276,7 @@ export default function BookingDetailScreen() {
       const { data: raw, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id," +
+          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, order_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "has_water_supply, has_electricity_supply," +
           "vehicles(make,model,year,color,vehicle_type)," +
@@ -327,8 +348,57 @@ export default function BookingDetailScreen() {
             .join(" ") || "Vehicle (walk-in)"
         : "Vehicle";
 
+      // Build order vehicles list — starts with this booking, then fetches siblings
+      const primaryVehicle: OrderVehicle = {
+        bookingId: b.id,
+        vehicleDesc,
+        vehicleType: b.vehicles?.vehicle_type ?? null,
+        packageName: b.service_packages?.name ?? "Service",
+        packageDescription: b.service_packages?.description ?? null,
+        durationMins: b.service_packages?.duration_mins ?? 0,
+        basePrice: b.service_packages?.base_price ?? 0,
+      };
+
+      let orderVehicles: OrderVehicle[] = [primaryVehicle];
+
+      if (b.order_id) {
+        const { data: siblingsData } = await supabase
+          .from("bookings")
+          .select(
+            "id," +
+            "vehicles(make,model,year,color,vehicle_type)," +
+            "service_packages(name,description,duration_mins,base_price)," +
+            "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
+          )
+          .eq("order_id", b.order_id)
+          .neq("id", b.id);
+
+        const siblings: OrderVehicle[] = ((siblingsData as RawSiblingRow[] | null) ?? []).map((sib) => {
+          const v = sib.vehicles;
+          const c = sib.booking_contacts;
+          const sibVehicleDesc = v
+            ? [v.year, v.make, v.model, v.color].filter(Boolean).join(" ") || "Vehicle"
+            : c
+            ? [c.vehicle_year, c.vehicle_make, c.vehicle_model, c.vehicle_color].filter(Boolean).join(" ") || "Vehicle"
+            : "Vehicle";
+          return {
+            bookingId: sib.id,
+            vehicleDesc: sibVehicleDesc,
+            vehicleType: v?.vehicle_type ?? null,
+            packageName: sib.service_packages?.name ?? "Service",
+            packageDescription: sib.service_packages?.description ?? null,
+            durationMins: sib.service_packages?.duration_mins ?? 0,
+            basePrice: sib.service_packages?.base_price ?? 0,
+          };
+        });
+
+        orderVehicles = [primaryVehicle, ...siblings];
+      }
+
       setBooking({
         id: b.id,
+        orderId: b.order_id,
+        orderVehicles,
         status: b.status as BookingStatus,
         scheduledAt,
         timeLabel: formatTime(scheduledAt),
@@ -536,53 +606,64 @@ export default function BookingDetailScreen() {
         {/* Service */}
         <SectionCard>
           <SectionLabel>SERVICE</SectionLabel>
-          <View style={styles.serviceRow}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>{booking.packageName}</Text>
-              {booking.packageDescription && (
-                <Text style={styles.serviceDesc}>{booking.packageDescription}</Text>
+
+          {booking.orderVehicles.map((v, i) => (
+            <View key={v.bookingId}>
+              {i > 0 && <View style={styles.vehicleSeparator} />}
+              {booking.orderVehicles.length > 1 && (
+                <Text style={styles.vehicleLabel}>{v.vehicleDesc}</Text>
               )}
-              {booking.durationMins > 0 && (
-                <View style={styles.infoRow}>
-                  <Ionicons name="time-outline" size={14} color={Colors.light.textTertiary} />
-                  <Text style={styles.infoRowText}>{formatDuration(booking.durationMins)}</Text>
+              <View style={styles.serviceRow}>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceName}>{v.packageName}</Text>
+                  {v.packageDescription && (
+                    <Text style={styles.serviceDesc}>{v.packageDescription}</Text>
+                  )}
+                  {v.durationMins > 0 && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="time-outline" size={14} color={Colors.light.textTertiary} />
+                      <Text style={styles.infoRowText}>{formatDuration(v.durationMins)}</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-              {(booking.hasWaterSupply !== null || booking.hasElectricitySupply !== null) && (
-                <>
-                  <View style={styles.infoRow}>
-                    <Ionicons
-                      name={booking.hasWaterSupply === true ? "water" : "water-outline"}
-                      size={14}
-                      color={booking.hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary}
-                    />
-                    <Text style={[styles.infoRowText, { color: booking.hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary }]}>
-                      {booking.hasWaterSupply === true
-                        ? "Water available"
-                        : booking.hasWaterSupply === false
-                        ? "No water supply"
-                        : "Water not specified"}
-                    </Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Ionicons
-                      name={booking.hasElectricitySupply === true ? "flash" : "flash-outline"}
-                      size={14}
-                      color={booking.hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary}
-                    />
-                    <Text style={[styles.infoRowText, { color: booking.hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary }]}>
-                      {booking.hasElectricitySupply === true
-                        ? "Power available"
-                        : booking.hasElectricitySupply === false
-                        ? "No power supply"
-                        : "Power not specified"}
-                    </Text>
-                  </View>
-                </>
-              )}
+                <Text style={styles.servicePrice}>${v.basePrice.toFixed(0)}</Text>
+              </View>
             </View>
-            <Text style={styles.servicePrice}>${booking.basePrice.toFixed(0)}</Text>
-          </View>
+          ))}
+
+          {(booking.hasWaterSupply !== null || booking.hasElectricitySupply !== null) && (
+            <>
+              {booking.orderVehicles.length > 1 && <View style={styles.vehicleSeparator} />}
+              <View style={styles.infoRow}>
+                <Ionicons
+                  name={booking.hasWaterSupply === true ? "water" : "water-outline"}
+                  size={14}
+                  color={booking.hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary}
+                />
+                <Text style={[styles.infoRowText, { color: booking.hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary }]}>
+                  {booking.hasWaterSupply === true
+                    ? "Water available"
+                    : booking.hasWaterSupply === false
+                    ? "No water supply"
+                    : "Water not specified"}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons
+                  name={booking.hasElectricitySupply === true ? "flash" : "flash-outline"}
+                  size={14}
+                  color={booking.hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary}
+                />
+                <Text style={[styles.infoRowText, { color: booking.hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary }]}>
+                  {booking.hasElectricitySupply === true
+                    ? "Power available"
+                    : booking.hasElectricitySupply === false
+                    ? "No power supply"
+                    : "Power not specified"}
+                </Text>
+              </View>
+            </>
+          )}
         </SectionCard>
 
         {/* Notes */}
@@ -870,6 +951,17 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.foamBlue,
+  },
+  vehicleSeparator: {
+    height: 1,
+    backgroundColor: Colors.light.borderSubtle,
+    marginVertical: Spacing.mdSm,
+  },
+  vehicleLabel: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginBottom: Spacing.xs,
   },
   serviceRow: {
     flexDirection: "row",

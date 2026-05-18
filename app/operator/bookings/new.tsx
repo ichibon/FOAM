@@ -845,6 +845,10 @@ export default function NewBookingScreen() {
   }
 
   function selectSource(src: BookingSourceOption) {
+    if (src.type !== "asset") {
+      setHasWaterSupply(null);
+      setHasElectricitySupply(null);
+    }
     setSelectedSource(src);
     setShowSourcePicker(false);
     if (src.type === "location") setServiceAddress("");
@@ -959,8 +963,8 @@ export default function NewBookingScreen() {
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             service_zip: serviceZip || null,
-            has_water_supply: hasWaterSupply,
-            has_electricity_supply: hasElectricitySupply,
+            has_water_supply: selectedSource?.type === "asset" ? hasWaterSupply : null,
+            has_electricity_supply: selectedSource?.type === "asset" ? hasElectricitySupply : null,
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -968,7 +972,7 @@ export default function NewBookingScreen() {
             location_id: selectedSource?.type === "location" ? selectedSource.id : null,
           });
 
-          // Fallback: if utility columns haven't been migrated yet, retry without them
+          // Fallback: migration not yet applied — retry without utility + service_zip columns
           let finalError = bookingError;
           if (bookingError?.code === "42703") {
             const { error: retryError } = await supabase.from("bookings").insert({
@@ -982,7 +986,6 @@ export default function NewBookingScreen() {
               service_address: serviceAddress.trim() || null,
               ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
               ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
-              service_zip: serviceZip || null,
               notes: notes.trim() || null,
               tip_amount: 0,
               is_recurring: false,
@@ -1054,8 +1057,8 @@ export default function NewBookingScreen() {
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             service_zip: serviceZip || null,
-            has_water_supply: hasWaterSupply,
-            has_electricity_supply: hasElectricitySupply,
+            has_water_supply: selectedSource?.type === "asset" ? hasWaterSupply : null,
+            has_electricity_supply: selectedSource?.type === "asset" ? hasElectricitySupply : null,
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -1063,7 +1066,7 @@ export default function NewBookingScreen() {
             location_id: selectedSource?.type === "location" ? selectedSource.id : null,
           });
 
-          // Fallback: if utility columns haven't been migrated yet, retry without them
+          // Fallback: migration not yet applied — retry without utility + service_zip columns
           let finalError = bookingError;
           if (bookingError?.code === "42703") {
             const { error: retryError } = await supabase.from("bookings").insert({
@@ -1077,7 +1080,6 @@ export default function NewBookingScreen() {
               service_address: serviceAddress.trim() || null,
               ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
               ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
-              service_zip: serviceZip || null,
               notes: notes.trim() || null,
               tip_amount: 0,
               is_recurring: false,

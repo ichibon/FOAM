@@ -688,6 +688,9 @@ export default function NewBookingScreen() {
             i === 0 ? { ...e, selectedVehicleId: defaultV.id, useNewVehicle: false } : e
           )
         );
+      } else {
+        // No saved vehicles — switch all entries to new-vehicle input mode
+        setEntries((prev) => prev.map((e) => ({ ...e, useNewVehicle: true })));
       }
     } catch (err) {
       console.warn("[NewBooking] fetchCustomerVehicles error", err);
@@ -804,7 +807,8 @@ export default function NewBookingScreen() {
   // ── Entry management ───────────────────────────────────────────────────────
 
   function addEntry() {
-    setEntries((prev) => [...prev, makeEntry(customerMode === "create")]);
+    const forceNewVehicle = customerMode === "create" || savedVehicles.length === 0;
+    setEntries((prev) => [...prev, makeEntry(forceNewVehicle)]);
   }
 
   function removeEntry(entryId: string) {
@@ -912,7 +916,8 @@ export default function NewBookingScreen() {
         for (const entry of entries) {
           let vehicleId: string | null = null;
 
-          if (entry.useNewVehicle) {
+          const isNewVehiclePath = entry.useNewVehicle || savedVehicles.length === 0;
+          if (isNewVehiclePath) {
             if (!entry.make.trim() && !entry.model.trim()) {
               setErrorMsg("Please enter at least a make or model for each vehicle.");
               setSubmitState("error");
@@ -942,7 +947,7 @@ export default function NewBookingScreen() {
             vehicleId = entry.selectedVehicleId;
           }
 
-          if (!vehicleId && savedVehicles.length > 0) {
+          if (!vehicleId) {
             setErrorMsg("Please select a vehicle for each booking.");
             setSubmitState("error");
             return;

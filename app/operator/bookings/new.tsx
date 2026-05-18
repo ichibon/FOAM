@@ -45,6 +45,13 @@ interface RawAssetRow {
   asset_type: string;
 }
 
+interface RawCrewMemberRow {
+  id: string;
+  display_name: string | null;
+  users: { full_name: string | null } | null;
+  is_active: boolean;
+}
+
 interface RawLocationRow {
   id: string;
   name: string;
@@ -110,6 +117,11 @@ interface VehicleServiceEntry {
 type CustomerMode = "search" | "create";
 type BookingSourceType = "asset" | "location";
 type SubmitState = "idle" | "saving" | "success" | "error";
+
+interface CrewMemberOption {
+  id: string;
+  name: string;
+}
 
 interface BookingSourceOption {
   id: string;
@@ -544,6 +556,10 @@ export default function NewBookingScreen() {
   // ServiceDrawer: which entry is adding a new service
   const [addServiceForEntryId, setAddServiceForEntryId] = useState<string | null>(null);
 
+  // Crew members
+  const [crewMembers, setCrewMembers] = useState<CrewMemberOption[]>([]);
+  const [selectedCrewMemberId, setSelectedCrewMemberId] = useState<string | null>(null);
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const isMobile = selectedSource === null || selectedSource.type === "asset";
@@ -592,7 +608,7 @@ export default function NewBookingScreen() {
       const dId: string = (profileData as { id: string }).id;
       setDetailerId(dId);
 
-      const [pkgRes, custRes, assetRes, locationRes] = await Promise.all([
+      const [pkgRes, custRes, assetRes, locationRes, crewRes] = await Promise.all([
         supabase
           .from("service_packages")
           .select("id,name,base_price,duration_mins,description,vehicle_size_pricing(vehicle_type,price_adjustment)")
@@ -616,6 +632,11 @@ export default function NewBookingScreen() {
           .eq("detailer_id", dId)
           .eq("is_active", true)
           .order("name"),
+        supabase
+          .from("team_members")
+          .select("id,display_name,is_active,users!crew_members_user_id_fkey(full_name)")
+          .eq("manager_id", dId)
+          .eq("is_active", true),
       ]);
 
       setPackages(parsePackages(pkgRes.data));
@@ -646,6 +667,12 @@ export default function NewBookingScreen() {
         })),
       ];
       setBookingSources(sources);
+
+      const crewOptions: CrewMemberOption[] = ((crewRes.data as RawCrewMemberRow[] | null) ?? []).map((m) => ({
+        id: m.id,
+        name: m.display_name ?? m.users?.full_name ?? "Crew Member",
+      }));
+      setCrewMembers(crewOptions);
     } catch (err) {
       console.warn("[NewBooking] fetchData error", err);
     } finally {
@@ -931,10 +958,13 @@ export default function NewBookingScreen() {
             contact_id: sharedContactId,
             vehicle_id: walkinVehicleId,
             detailer_id: detailerId,
+            crew_member_id: selectedCrewMemberId ?? null,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
             service_address: serviceAddress.trim() || null,
+            ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+            ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -995,11 +1025,14 @@ export default function NewBookingScreen() {
           const { error: bookingError } = await supabase.from("bookings").insert({
             customer_id: customerId,
             detailer_id: detailerId,
+            crew_member_id: selectedCrewMemberId ?? null,
             vehicle_id: vehicleId ?? undefined,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
             service_address: serviceAddress.trim() || null,
+            ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+            ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -1401,7 +1434,42 @@ export default function NewBookingScreen() {
           </TouchableOpacity>
         </SectionCard>
 
-        {/* ── 5. NOTES FOR CREW ── */}
+        {/* ── 5. ASSIGN CREW (optional, hidden if no active crew) ── */}
+        {crewMembers.length > 0 && (
+          <SectionCard>
+            <Text style={styles.cardSectionLabel}>ASSIGN CREW</Text>
+            <Text style={styles.crewOptionalLabel}>Optional — leave blank to assign later</Text>
+            <View style={styles.crewList}>
+              {crewMembers.map((member) => {
+                const isSelected = selectedCrewMemberId === member.id;
+                return (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={[styles.crewRow, isSelected && styles.crewRowSelected]}
+                    onPress={() => setSelectedCrewMemberId(isSelected ? null : member.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.crewAvatar, isSelected && styles.crewAvatarSelected]}>
+                      <Ionicons
+                        name="person"
+                        size={14}
+                        color={isSelected ? Colors.foamBlue : Colors.light.textTertiary}
+                      />
+                    </View>
+                    <Text style={[styles.crewName, isSelected && styles.crewNameSelected]}>
+                      {member.name}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </SectionCard>
+        )}
+
+        {/* ── 6. NOTES FOR CREW ── */}
         <SectionCard>
           <Text style={styles.cardSectionLabel}>NOTES FOR CREW</Text>
           <TextInput
@@ -2080,6 +2148,54 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.errorLight,
     lineHeight: 18,
+  },
+
+  // Crew picker
+  crewOptionalLabel: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginBottom: Spacing.mdSm,
+  },
+  crewList: {
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+  },
+  crewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.mdSm,
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: Spacing.mdSm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.surface,
+  },
+  crewRowSelected: {
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  crewAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.light.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crewAvatarSelected: {
+    backgroundColor: Colors.foamBlue + "22",
+  },
+  crewName: {
+    flex: 1,
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  crewNameSelected: {
+    color: Colors.foamBlue,
+    fontFamily: Typography.bodySemiBold,
   },
 
   // CTA

@@ -194,6 +194,20 @@ function vehicleLabel(v: SavedVehicleOption): string {
   return v.color ? `${base} · ${v.color}` : base;
 }
 
+function buildVehicleNote(entry: VehicleServiceEntry): string {
+  const make = entry.make.trim();
+  const model = entry.model.trim();
+  const year = entry.year.trim();
+  const color = entry.color.trim();
+  const vType = entry.vehicleType
+    ? entry.vehicleType.charAt(0).toUpperCase() + entry.vehicleType.slice(1)
+    : "";
+  const nameStr = [year, make, model].filter(Boolean).join(" ");
+  const detailStr = [color, vType].filter(Boolean).join(", ");
+  if (!nameStr && !detailStr) return "";
+  return `Vehicle: ${nameStr}${detailStr ? ` (${detailStr})` : ""}`;
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function FieldLabel({ children }: { children: string }) {
@@ -739,6 +753,28 @@ export default function NewBookingScreen() {
     setSavedVehicles([]);
     setEntries([makeEntry()]);
     fetchCustomerVehicles(c.userId);
+    if (isMobile) fetchCustomerLastAddress(c.userId);
+  }
+
+  async function fetchCustomerLastAddress(userId: string) {
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const { data } = await supabase
+        .from("bookings")
+        .select("service_address")
+        .eq("customer_id", userId)
+        .not("service_address", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        const addr = (data as { service_address: string | null }).service_address;
+        if (addr) setServiceAddress(addr);
+      }
+    } catch (err) {
+      console.warn("[NewBooking] fetchCustomerLastAddress error", err);
+    }
   }
 
   function switchToCreate() {
@@ -820,41 +856,43 @@ export default function NewBookingScreen() {
       const supabase = getSupabase();
 
       if (isCreateMode) {
+        // Create ONE shared booking_contact for the customer (no per-vehicle data).
+        // Vehicle details are stored in each booking's notes so all bookings share
+        // the same contact record.
+        const sharedContactPayload: Record<string, unknown> = {
+          detailer_id: detailerId,
+          full_name: newCustomerName.trim(),
+        };
+        if (newCustomerPhone.trim()) sharedContactPayload.phone = newCustomerPhone.trim();
+        if (newCustomerEmail.trim()) sharedContactPayload.email = newCustomerEmail.trim();
+
+        const { data: sharedContactRow, error: contactError } = await supabase
+          .from("booking_contacts")
+          .insert(sharedContactPayload)
+          .select("id")
+          .single();
+
+        if (contactError || !sharedContactRow) {
+          console.warn("[NewBooking] booking_contacts insert error", contactError);
+          setErrorMsg("Failed to save contact info. Please try again.");
+          setSubmitState("error");
+          return;
+        }
+
+        const sharedContactId: string = (sharedContactRow as { id: string }).id;
+
         for (const entry of entries) {
-          const contactPayload: Record<string, unknown> = {
-            detailer_id: detailerId,
-            full_name: newCustomerName.trim(),
-          };
-          if (newCustomerPhone.trim()) contactPayload.phone = newCustomerPhone.trim();
-          if (newCustomerEmail.trim()) contactPayload.email = newCustomerEmail.trim();
-          if (entry.make.trim()) contactPayload.vehicle_make = entry.make.trim();
-          if (entry.model.trim()) contactPayload.vehicle_model = entry.model.trim();
-          if (entry.year.trim()) contactPayload.vehicle_year = parseInt(entry.year.trim(), 10);
-          if (entry.color.trim()) contactPayload.vehicle_color = entry.color.trim();
-
-          const { data: contactRow, error: contactError } = await supabase
-            .from("booking_contacts")
-            .insert(contactPayload)
-            .select("id")
-            .single();
-
-          if (contactError || !contactRow) {
-            console.warn("[NewBooking] booking_contacts insert error", contactError);
-            setErrorMsg("Failed to save contact info. Please try again.");
-            setSubmitState("error");
-            return;
-          }
-
-          const contactId: string = (contactRow as { id: string }).id;
+          const vehicleNote = buildVehicleNote(entry);
+          const combinedNotes = [vehicleNote, notes.trim()].filter(Boolean).join("\n\n");
 
           const { error: bookingError } = await supabase.from("bookings").insert({
-            contact_id: contactId,
+            contact_id: sharedContactId,
             detailer_id: detailerId,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
             service_address: serviceAddress.trim() || null,
-            notes: notes.trim() || null,
+            notes: combinedNotes || null,
             tip_amount: 0,
             is_recurring: false,
             asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
@@ -875,29 +913,36 @@ export default function NewBookingScreen() {
           let vehicleId: string | null = null;
 
           if (entry.useNewVehicle) {
-            if (entry.make.trim() || entry.model.trim()) {
-              const { data: vehicleData, error: vehicleError } = await supabase
-                .from("vehicles")
-                .insert({
-                  customer_id: customerId,
-                  make: entry.make.trim() || null,
-                  model: entry.model.trim() || null,
-                  year: entry.year.trim() ? parseInt(entry.year.trim(), 10) : null,
-                  color: entry.color.trim() || null,
-                  vehicle_type: entry.vehicleType ?? null,
-                  is_default: false,
-                })
-                .select("id")
-                .single();
-              if (!vehicleError && vehicleData) {
-                vehicleId = (vehicleData as { id: string }).id;
-              }
+            if (!entry.make.trim() && !entry.model.trim()) {
+              setErrorMsg("Please enter at least a make or model for each vehicle.");
+              setSubmitState("error");
+              return;
             }
+            const { data: vehicleData, error: vehicleError } = await supabase
+              .from("vehicles")
+              .insert({
+                customer_id: customerId,
+                make: entry.make.trim() || null,
+                model: entry.model.trim() || null,
+                year: entry.year.trim() ? parseInt(entry.year.trim(), 10) : null,
+                color: entry.color.trim() || null,
+                vehicle_type: entry.vehicleType ?? null,
+                is_default: false,
+              })
+              .select("id")
+              .single();
+            if (vehicleError || !vehicleData) {
+              console.warn("[NewBooking] vehicle insert error", vehicleError);
+              setErrorMsg("Failed to save vehicle info. Please try again.");
+              setSubmitState("error");
+              return;
+            }
+            vehicleId = (vehicleData as { id: string }).id;
           } else {
             vehicleId = entry.selectedVehicleId;
           }
 
-          if (!vehicleId && !entry.useNewVehicle && savedVehicles.length > 0) {
+          if (!vehicleId && savedVehicles.length > 0) {
             setErrorMsg("Please select a vehicle for each booking.");
             setSubmitState("error");
             return;

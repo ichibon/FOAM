@@ -306,8 +306,9 @@ export default function OperatorBookingsScreen() {
 
       // Fallback: order_id migration not yet applied — retry without that column
       let bookingsData = bookingsRes.data;
+      let usedOrderIdFallback = false;
       if (bookingsRes.error?.code === "42703") {
-        const { data: fallbackData } = await supabase
+        const { data: fallbackData, error: fallbackError } = await supabase
           .from("bookings")
           .select(
             "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id," +
@@ -319,10 +320,18 @@ export default function OperatorBookingsScreen() {
           .eq("detailer_id", dId)
           .order("scheduled_at", { ascending: true })
           .limit(300);
+        if (fallbackError) {
+          setScreenState("fetch_error");
+          return;
+        }
         bookingsData = fallbackData;
+        usedOrderIdFallback = true;
       }
 
-      const rawBookings: RawBookingRow[] = (bookingsData as RawBookingRow[] | null) ?? [];
+      // Normalize order_id to null on fallback rows so grouping logic sees a clean null
+      const rawBookings: RawBookingRow[] = ((bookingsData as RawBookingRow[] | null) ?? []).map(
+        (row) => (usedOrderIdFallback ? { ...row, order_id: null } : row)
+      );
 
       // Batch-fetch registered customer names where booking_contacts is not set
       const registeredIds = [

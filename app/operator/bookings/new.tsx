@@ -896,67 +896,39 @@ export default function NewBookingScreen() {
       const supabase = getSupabase();
 
       if (isCreateMode) {
-        // Walk-in / new-customer path.
-        //
-        // vehicles.customer_id is now nullable (migration 20260518000000).
-        // Walk-in vehicle records are created with customer_id = null and
-        // backfilled when the customer later claims their account.
-        //
-        // One shared booking_contacts row holds the customer's identity
-        // (name / phone / email). All bookings in this batch share the same
-        // contact_id, scheduled_at, address, and crew notes. Each booking
-        // gets its own vehicle_id pointing to a real vehicles row.
-
-        const sharedContactPayload: Record<string, unknown> = {
-          detailer_id: detailerId,
-          full_name: newCustomerName.trim(),
-        };
-        if (newCustomerPhone.trim()) sharedContactPayload.phone = newCustomerPhone.trim();
-        if (newCustomerEmail.trim()) sharedContactPayload.email = newCustomerEmail.trim();
-
-        const { data: sharedContactRow, error: sharedContactError } = await supabase
-          .from("booking_contacts")
-          .insert(sharedContactPayload)
-          .select("id")
-          .single();
-
-        if (sharedContactError || !sharedContactRow) {
-          console.warn("[NewBooking] booking_contacts insert error", sharedContactError);
-          setErrorMsg("Failed to save contact info. Please try again.");
-          setSubmitState("error");
-          return;
-        }
-
-        const sharedContactId: string = (sharedContactRow as { id: string }).id;
-
+        // Walk-in path: one booking_contacts row per vehicle entry carries
+        // both the customer identity and the vehicle info. No vehicles table
+        // insert is needed, so vehicle_id on the booking stays null.
         for (const entry of entries) {
-          // Create a vehicles row (customer_id nullable — backfilled on account claim).
-          const { data: vehicleRow, error: vehicleError } = await supabase
-            .from("vehicles")
-            .insert({
-              customer_id: null,
-              make: entry.make.trim() || null,
-              model: entry.model.trim() || null,
-              year: entry.year.trim() ? parseInt(entry.year.trim(), 10) : null,
-              color: entry.color.trim() || null,
-              vehicle_type: entry.vehicleType ?? null,
-              is_default: false,
-            })
+          const contactPayload: Record<string, unknown> = {
+            detailer_id: detailerId,
+            full_name: newCustomerName.trim(),
+          };
+          if (newCustomerPhone.trim()) contactPayload.phone = newCustomerPhone.trim();
+          if (newCustomerEmail.trim()) contactPayload.email = newCustomerEmail.trim();
+          if (entry.make.trim()) contactPayload.vehicle_make = entry.make.trim();
+          if (entry.model.trim()) contactPayload.vehicle_model = entry.model.trim();
+          if (entry.year.trim()) contactPayload.vehicle_year = parseInt(entry.year.trim(), 10);
+          if (entry.color.trim()) contactPayload.vehicle_color = entry.color.trim();
+
+          const { data: contactRow, error: contactError } = await supabase
+            .from("booking_contacts")
+            .insert(contactPayload)
             .select("id")
             .single();
 
-          if (vehicleError || !vehicleRow) {
-            console.warn("[NewBooking] walk-in vehicle insert error", vehicleError);
-            setErrorMsg("Failed to save vehicle info. Please try again.");
+          if (contactError || !contactRow) {
+            console.warn("[NewBooking] booking_contacts insert error", contactError);
+            setErrorMsg("Failed to save contact info. Please try again.");
             setSubmitState("error");
             return;
           }
 
-          const walkinVehicleId: string = (vehicleRow as { id: string }).id;
+          const contactId: string = (contactRow as { id: string }).id;
 
           const { error: bookingError } = await supabase.from("bookings").insert({
-            contact_id: sharedContactId,
-            vehicle_id: walkinVehicleId,
+            contact_id: contactId,
+            vehicle_id: null,
             detailer_id: detailerId,
             crew_member_id: selectedCrewMemberId ?? null,
             package_id: entry.selectedPackageId,

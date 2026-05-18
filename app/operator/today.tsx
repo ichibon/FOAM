@@ -21,7 +21,7 @@ import { UnitsSelectionDrawer } from "@/components/UnitsSelectionDrawer";
 
 // ─── Raw DB row shapes (avoids `any`) ─────────────────────────────────────────
 
-interface RawBookingUser {
+interface RawBookingContact {
   full_name: string | null;
 }
 
@@ -42,10 +42,18 @@ interface RawBooking {
   scheduled_at: string;
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
+  customer_id: string | null;
+  asset_id: string | null;
+  location_id: string | null;
   notes: string | null;
-  users: RawBookingUser | null;
+  booking_contacts: RawBookingContact | null;
   vehicles: RawBookingVehicle | null;
   service_packages: RawBookingPackage | null;
+}
+
+interface RawUnit {
+  id: string;
+  name: string;
 }
 
 interface RawTeamMember {
@@ -88,6 +96,13 @@ interface JobCard {
   startedMinAgo?: number;
   estDoneLabel?: string;
   hasIssue?: boolean;
+  unitLabel: string | null;
+}
+
+interface UnitPillItem {
+  id: string;
+  name: string;
+  type: "van" | "location";
 }
 
 interface ActivityItem {
@@ -136,8 +151,8 @@ function getGreeting(): string {
 
 function getStatusDotColor(status: MemberStatus): string {
   switch (status) {
-    case "on_job":   return Colors.successLight;
-    case "en_route": return Colors.foamBlue;
+    case "on_job":    return Colors.successLight;
+    case "en_route":  return Colors.foamBlue;
     case "available": return Colors.light.textTertiary;
     case "off_today": return Colors.light.borderDefault;
   }
@@ -145,19 +160,19 @@ function getStatusDotColor(status: MemberStatus): string {
 
 function getStatusLabel(status: MemberStatus): string {
   switch (status) {
-    case "on_job":    return "Clocked In";
+    case "on_job":    return "On Job";
     case "en_route":  return "En Route";
-    case "available": return "Not Started";
+    case "available": return "Available";
     case "off_today": return "Off Today";
   }
 }
 
 const ACTIVITY_ICON_COLOR: Record<ActivityIcon, string> = {
-  warning:       Colors.errorLight,
-  star:          Colors.foamBlue,
+  warning:         Colors.errorLight,
+  star:            Colors.foamBlue,
   "arrow-forward": Colors.light.textTertiary,
-  checkmark:     Colors.successLight,
-  add:           Colors.foamBlue,
+  checkmark:       Colors.successLight,
+  add:             Colors.foamBlue,
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -250,6 +265,11 @@ function TeamPillChip({ member }: { member: TeamMember }) {
 function UnassignedJobCard({ job }: { job: JobCard }) {
   return (
     <View style={[styles.jobCard, styles.jobCardUnassigned]}>
+      {job.unitLabel ? (
+        <View style={styles.unitPill}>
+          <Text style={styles.unitPillText}>{job.unitLabel}</Text>
+        </View>
+      ) : null}
       <View style={styles.jobCardTopRow}>
         <View style={styles.jobCardTimeRow}>
           <Text style={styles.jobCardTime}>{job.timeLabel}</Text>
@@ -279,6 +299,11 @@ function UnassignedJobCard({ job }: { job: JobCard }) {
 function AssignedJobCard({ job }: { job: JobCard }) {
   return (
     <View style={[styles.jobCard, styles.jobCardAssigned]}>
+      {job.unitLabel ? (
+        <View style={styles.unitPill}>
+          <Text style={styles.unitPillText}>{job.unitLabel}</Text>
+        </View>
+      ) : null}
       <View style={styles.jobCardTopRow}>
         <View style={styles.jobCardTimeRow}>
           <Text style={styles.jobCardTime}>{job.timeLabel}</Text>
@@ -360,6 +385,70 @@ function UpcomingJobCard({ job }: { job: JobCard }) {
   );
 }
 
+/** Horizontal unit pill selector row */
+function UnitPillRow({
+  units,
+  selectedId,
+  onSelect,
+}: {
+  units: UnitPillItem[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  if (units.length === 0) return null;
+  return (
+    <View style={styles.unitPillRowWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.unitPillRowContent}
+      >
+        {/* "All" pill */}
+        <TouchableOpacity
+          style={[styles.unitSelectorPill, selectedId === null && styles.unitSelectorPillActive]}
+          onPress={() => onSelect(null)}
+          activeOpacity={0.75}
+        >
+          <Text
+            style={[
+              styles.unitSelectorPillText,
+              selectedId === null && styles.unitSelectorPillTextActive,
+            ]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+
+        {units.map((u) => {
+          const isSelected = selectedId === u.id;
+          return (
+            <TouchableOpacity
+              key={u.id}
+              style={[styles.unitSelectorPill, isSelected && styles.unitSelectorPillActive]}
+              onPress={() => onSelect(u.id)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={u.type === "van" ? "car-outline" : "business-outline"}
+                size={14}
+                color={isSelected ? Colors.white : Colors.light.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.unitSelectorPillText,
+                  isSelected && styles.unitSelectorPillTextActive,
+                ]}
+              >
+                {u.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function OperatorTodayScreen() {
@@ -374,14 +463,14 @@ export default function OperatorTodayScreen() {
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertSeverity, setAlertSeverity] = useState<"warning" | "error">("warning");
-  // Unresolved alert count derived from real booking signals (no_show + requested)
   const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
-  // Calendar + complaint + units drawers
   const [storedDetailerId, setStoredDetailerId] = useState<string>("");
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [complaintVisible, setComplaintVisible] = useState(false);
   const [firstNoShowBookingId, setFirstNoShowBookingId] = useState<string | null>(null);
   const [unitsVisible, setUnitsVisible] = useState(false);
+  const [units, setUnits] = useState<UnitPillItem[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   const isMorning = new Date().getHours() < 9;
 
@@ -427,19 +516,47 @@ export default function OperatorTodayScreen() {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-      // ── 3. Today's bookings with customer / vehicle / package joins ────────
-      const { data: rawBookings } = await supabase
-        .from("bookings")
-        .select(
-          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, notes," +
-          "users!bookings_customer_id_fkey(full_name)," +
-          "vehicles(make, model, year, color)," +
-          "service_packages(name)"
-        )
-        .eq("detailer_id", detailerId)
-        .gte("scheduled_at", todayStart)
-        .lte("scheduled_at", todayEnd)
-        .order("scheduled_at");
+      // ── 3. Bookings + units in parallel ────────────────────────────────
+      const [
+        { data: rawBookings },
+        { data: assetsData },
+        { data: locsData },
+      ] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select(
+            "id, status, scheduled_at, estimated_duration_mins, crew_member_id," +
+            "customer_id, asset_id, location_id, notes," +
+            "booking_contacts(full_name)," +
+            "vehicles(make, model, year, color)," +
+            "service_packages(name)"
+          )
+          .eq("detailer_id", detailerId)
+          .gte("scheduled_at", todayStart)
+          .lte("scheduled_at", todayEnd)
+          .order("scheduled_at"),
+        supabase
+          .from("business_assets")
+          .select("id, name")
+          .eq("detailer_id", detailerId),
+        supabase
+          .from("business_locations")
+          .select("id, name")
+          .eq("detailer_id", detailerId),
+      ]);
+
+      // Build unit name map + pill items list
+      const unitNameMap: Record<string, string> = {};
+      const fetchedUnits: UnitPillItem[] = [];
+      for (const a of (assetsData as RawUnit[] | null) ?? []) {
+        unitNameMap[a.id] = a.name;
+        fetchedUnits.push({ id: a.id, name: a.name, type: "van" });
+      }
+      for (const l of (locsData as RawUnit[] | null) ?? []) {
+        unitNameMap[l.id] = l.name;
+        fetchedUnits.push({ id: l.id, name: l.name, type: "location" });
+      }
+      setUnits(fetchedUnits);
 
       // ── 4. Team members ──────────────────────────────────────────────────
       const { data: rawMembers } = await supabase
@@ -463,15 +580,36 @@ export default function OperatorTodayScreen() {
       }
 
       // ── 6. crew_member_id → display name map ─────────────────────────────
-      //    team_members.id → { name, initials }
       const crewDisplayMap: Record<string, { name: string; initials: string }> = {};
       for (const m of typedMembers) {
         const name = memberUserMap[m.user_id] ?? "Crew";
         crewDisplayMap[m.id] = { name, initials: getInitials(name) };
       }
 
-      // ── 7. Build typed JobCard array ──────────────────────────────────────
+      // ── 7. Batch-resolve registered customer names ───────────────────────
+      //    booking_contacts has the name for walk-in / operator-created bookings.
+      //    For bookings created by a registered user (customer_id set, no contact),
+      //    we need to look up the users table.
       const typedBookings: RawBooking[] = (rawBookings as RawBooking[] | null) ?? [];
+      const registeredIds = [
+        ...new Set(
+          typedBookings
+            .filter((b) => b.customer_id && !b.booking_contacts?.full_name)
+            .map((b) => b.customer_id!)
+        ),
+      ];
+      const customerNameMap: Record<string, string> = {};
+      if (registeredIds.length > 0) {
+        const { data: custUsers } = await supabase
+          .from("users")
+          .select("id, full_name")
+          .in("id", registeredIds);
+        for (const u of (custUsers as RawUser[] | null) ?? []) {
+          if (u.full_name) customerNameMap[u.id] = u.full_name;
+        }
+      }
+
+      // ── 8. Build typed JobCard array ──────────────────────────────────────
       const jobs: JobCard[] = typedBookings.map((b) => {
         const scheduledAt = new Date(b.scheduled_at);
         const crew = b.crew_member_id ? crewDisplayMap[b.crew_member_id] : undefined;
@@ -491,35 +629,44 @@ export default function OperatorTodayScreen() {
               .join(" ")
           : "Vehicle";
 
+        const customerName =
+          b.booking_contacts?.full_name ??
+          (b.customer_id ? customerNameMap[b.customer_id] ?? "Customer" : "Customer");
+
+        const unitLabel =
+          (b.asset_id    ? unitNameMap[b.asset_id]    : null) ??
+          (b.location_id ? unitNameMap[b.location_id] : null) ??
+          null;
+
         return {
           id: b.id,
           scheduledAt,
           timeLabel: formatTime(scheduledAt),
           durationLabel: formatDuration(b.estimated_duration_mins),
-          customerName: b.users?.full_name ?? "Customer",
-          vehicleDesc:  vehicleDesc,
+          customerName,
+          vehicleDesc,
           packageName:  b.service_packages?.name ?? "Service",
           status: b.status as BookingStatus,
           crew_member_id: b.crew_member_id,
-          assignedTo:        crew?.name,
+          assignedTo:         crew?.name,
           assignedToInitials: crew?.initials,
           startedMinAgo: minAgo,
           estDoneLabel: estDone ? formatTime(estDone) : undefined,
+          unitLabel,
         };
       });
 
       setTodayJobs(jobs);
 
-      // ── 8. Stats ──────────────────────────────────────────────────────────
+      // ── 9. Stats ──────────────────────────────────────────────────────────
       const inProgress = jobs.filter((j) => j.status === "in_progress").length;
       const completed  = jobs.filter((j) => j.status === "completed").length;
-      // Unassigned = confirmed booking with no crew assigned
       const unassigned = jobs.filter(
         (j) => j.status === "confirmed" && !j.crew_member_id
       ).length;
       setStats({ inProgress, completed, unassigned });
 
-      // ── 9. Team member status ─────────────────────────────────────────────
+      // ── 10. Team member status ─────────────────────────────────────────────
       const members: TeamMember[] = typedMembers.map((m) => {
         const name = memberUserMap[m.user_id] ?? "Team Member";
         let status: MemberStatus = "available";
@@ -541,9 +688,7 @@ export default function OperatorTodayScreen() {
       });
       setTeamMembers(members);
 
-      // ── 10. Unresolved alert signals from DB ────────────────────────────
-      // `no_show` = crew reported customer no-show (needs operator follow-up)
-      // `requested` = customer booked but operator has not yet confirmed
+      // ── 11. Alert signals ─────────────────────────────────────────────────
       const { data: alertRows } = await supabase
         .from("bookings")
         .select("id, status")
@@ -715,19 +860,27 @@ export default function OperatorTodayScreen() {
   });
   const allAssigned = stats.unassigned === 0;
 
-  // Classify jobs using canonical DB field (crew_member_id), not display string
-  const unassignedJobs = todayJobs.filter(
+  // Filter jobs by selected unit (null = All)
+  const displayJobs = selectedUnitId
+    ? todayJobs.filter((j) => {
+        const b = j as JobCard & { unitLabel: string | null };
+        return b.unitLabel === (units.find((u) => u.id === selectedUnitId)?.name ?? null);
+      })
+    : todayJobs;
+
+  const unassignedJobs = displayJobs.filter(
     (j) => j.status === "confirmed" && !j.crew_member_id
   );
-  const assignedJobs = todayJobs.filter(
+  const assignedJobs = displayJobs.filter(
     (j) => j.status === "in_progress" || (j.status === "confirmed" && j.crew_member_id)
   );
-  const completedJobs = todayJobs.filter((j) => j.status === "completed");
+  const completedJobs = displayJobs.filter((j) => j.status === "completed");
 
   // ── Morning ──────────────────────────────────────────────────────────────────
   if (screenState === "morning") {
     const totalJobs = todayJobs.length;
     const subtitle = `${todayLabel} · ${totalJobs} jobs today · ${allAssigned ? "All assigned" : `${stats.unassigned} unassigned`}`;
+    const unitsTrail = units.length > 0 ? ` · across ${units.length} unit${units.length !== 1 ? "s" : ""}` : "";
     return (
       <>
       <SafeAreaView style={styles.container}>
@@ -735,12 +888,14 @@ export default function OperatorTodayScreen() {
           firstName={firstName}
           subtitle={subtitle}
           subtitleStyle={allAssigned ? styles.subtitleSuccess : styles.subtitleWarning}
+          subtitleTrail={unitsTrail}
           greetingLarge
           alertCount={unresolvedAlertCount}
           onBellPress={() => router.push("/operator/alerts")}
           onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
           onUnitsPress={storedDetailerId ? () => setUnitsVisible(true) : undefined}
         />
+        <UnitPillRow units={units} selectedId={selectedUnitId} onSelect={setSelectedUnitId} />
         <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Team status pills */}
           <View style={styles.section}>
@@ -771,12 +926,12 @@ export default function OperatorTodayScreen() {
               <Text style={styles.sectionTitle}>Live Jobs</Text>
               <TouchableOpacity><Text style={styles.sectionLink}>View All</Text></TouchableOpacity>
             </View>
-            {todayJobs.slice(0, 5).map((job) => (
+            {displayJobs.slice(0, 5).map((job) => (
               <UpcomingJobCard key={job.id} job={job} />
             ))}
-            {todayJobs.length > 5 && (
+            {displayJobs.length > 5 && (
               <Text style={styles.moreJobsHint}>
-                + {todayJobs.length - 5} more jobs today
+                + {displayJobs.length - 5} more jobs today
               </Text>
             )}
           </View>
@@ -807,6 +962,9 @@ export default function OperatorTodayScreen() {
   if (stats.inProgress > 0)
     subParts.push(`${stats.inProgress} job${stats.inProgress > 1 ? "s" : ""} in progress`);
   const subtitle = subParts.join(" · ");
+  const unitsTrail = units.length > 0
+    ? ` · across ${units.length} unit${units.length !== 1 ? "s" : ""}`
+    : "";
 
   return (
     <>
@@ -819,6 +977,7 @@ export default function OperatorTodayScreen() {
             ? { text: ` · ${stats.unassigned} unassigned`, style: styles.subtitleWarning }
             : undefined
         }
+        subtitleTrail={unitsTrail}
         alertCount={unresolvedAlertCount}
         onBellPress={() => router.push("/operator/alerts")}
         onCalendarPress={storedDetailerId ? () => setCalendarVisible(true) : undefined}
@@ -867,7 +1026,6 @@ export default function OperatorTodayScreen() {
               View →
             </Text>
           </TouchableOpacity>
-          {/* Dismiss button */}
           <TouchableOpacity
             style={styles.alertDismissBtn}
             onPress={() => setAlertVisible(false)}
@@ -881,6 +1039,9 @@ export default function OperatorTodayScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* ── Unit pill row ──────────────────────────────────────────────────── */}
+      <UnitPillRow units={units} selectedId={selectedUnitId} onSelect={setSelectedUnitId} />
 
       <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -972,6 +1133,7 @@ interface StickyHeaderProps {
   subtitle: string;
   subtitleStyle?: object;
   subtitleSuffix?: { text: string; style: object };
+  subtitleTrail?: string;
   greetingLarge?: boolean;
   alertCount: number;
   onBellPress: () => void;
@@ -984,6 +1146,7 @@ function StickyHeader({
   subtitle,
   subtitleStyle,
   subtitleSuffix,
+  subtitleTrail,
   greetingLarge,
   alertCount,
   onBellPress,
@@ -1002,6 +1165,7 @@ function StickyHeader({
             {subtitleSuffix ? (
               <Text style={subtitleSuffix.style}>{subtitleSuffix.text}</Text>
             ) : null}
+            {subtitleTrail ? subtitleTrail : null}
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -1069,7 +1233,7 @@ function StatsGrid({ stats }: { stats: OperatorStats }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const PH = 20; // horizontal padding
+const PH = 20;
 
 const styles = StyleSheet.create({
   container:  { flex: 1, backgroundColor: Colors.light.bgPrimary },
@@ -1153,6 +1317,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+
+  // Unit pill row (horizontal selector)
+  unitPillRowWrap: {
+    backgroundColor: Colors.light.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+    paddingVertical: 10,
+  },
+  unitPillRowContent: {
+    paddingHorizontal: PH,
+    gap: 8,
+  },
+  unitSelectorPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    flexShrink: 0,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 1px 2px rgba(0,0,0,0.06)" }
+      : { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1 }),
+  },
+  unitSelectorPillActive: {
+    backgroundColor: Colors.foamBlue,
+    borderColor: Colors.foamBlue,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 1px 3px rgba(51,157,199,0.3)" }
+      : { shadowColor: Colors.foamBlue, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }),
+  },
+  unitSelectorPillText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  unitSelectorPillTextActive: {
+    color: Colors.white,
   },
 
   // Scroll
@@ -1307,6 +1513,21 @@ const styles = StyleSheet.create({
   completedRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
   completedText: { fontFamily: Typography.bodyMedium, fontSize: Typography.size.caption, color: Colors.successLight },
   completedDetail: { fontFamily: Typography.body, fontSize: Typography.size.caption, color: Colors.light.textTertiary },
+
+  // Unit pill on job card
+  unitPill: {
+    alignSelf: "flex-start",
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 8,
+  },
+  unitPillText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 10,
+    color: Colors.light.textSecondary,
+  },
 
   // Badges
   badgeUnassigned: { backgroundColor: "rgba(217,119,6,0.08)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill },

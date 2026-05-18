@@ -32,6 +32,8 @@ interface RawBookingDetail {
   total: number | null;
   notes: string | null;
   is_recurring: boolean;
+  has_water_supply: boolean | null;
+  has_electricity_supply: boolean | null;
   vehicles: {
     make: string | null;
     model: string | null;
@@ -53,6 +55,70 @@ interface RawBookingDetail {
     vehicle_year: number | null;
     vehicle_color: string | null;
   } | null;
+}
+
+function parseRawBooking(raw: unknown): RawBookingDetail {
+  if (!raw || typeof raw !== "object") throw new Error("Invalid booking row");
+  const r = raw as Record<string, unknown>;
+  const nullableStr = (v: unknown): string | null => (typeof v === "string" ? v : null);
+  const nullableNum = (v: unknown): number | null => (typeof v === "number" ? v : null);
+  const nullableBool = (v: unknown): boolean | null => (v == null ? null : Boolean(v));
+  const asObj = (v: unknown): Record<string, unknown> =>
+    v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+  return {
+    id: String(r.id ?? ""),
+    status: String(r.status ?? ""),
+    scheduled_at: String(r.scheduled_at ?? ""),
+    estimated_duration_mins: nullableNum(r.estimated_duration_mins),
+    crew_member_id: nullableStr(r.crew_member_id),
+    customer_id: nullableStr(r.customer_id),
+    contact_id: nullableStr(r.contact_id),
+    service_address: nullableStr(r.service_address),
+    subtotal: nullableNum(r.subtotal),
+    platform_fee: nullableNum(r.platform_fee),
+    tip_amount: typeof r.tip_amount === "number" ? r.tip_amount : 0,
+    total: nullableNum(r.total),
+    notes: nullableStr(r.notes),
+    is_recurring: Boolean(r.is_recurring),
+    has_water_supply: nullableBool(r.has_water_supply),
+    has_electricity_supply: nullableBool(r.has_electricity_supply),
+    vehicles: r.vehicles
+      ? (() => {
+          const v = asObj(r.vehicles);
+          return {
+            make: nullableStr(v.make),
+            model: nullableStr(v.model),
+            year: nullableNum(v.year),
+            color: nullableStr(v.color),
+            vehicle_type: nullableStr(v.vehicle_type),
+          };
+        })()
+      : null,
+    service_packages: r.service_packages
+      ? (() => {
+          const p = asObj(r.service_packages);
+          return {
+            name: typeof p.name === "string" ? p.name : "Service",
+            description: nullableStr(p.description),
+            duration_mins: typeof p.duration_mins === "number" ? p.duration_mins : 0,
+            base_price: typeof p.base_price === "number" ? p.base_price : 0,
+          };
+        })()
+      : null,
+    booking_contacts: r.booking_contacts
+      ? (() => {
+          const c = asObj(r.booking_contacts);
+          return {
+            full_name: nullableStr(c.full_name),
+            phone: nullableStr(c.phone),
+            vehicle_make: nullableStr(c.vehicle_make),
+            vehicle_model: nullableStr(c.vehicle_model),
+            vehicle_year: nullableNum(c.vehicle_year),
+            vehicle_color: nullableStr(c.vehicle_color),
+          };
+        })()
+      : null,
+  };
 }
 
 interface RawTeamMemberRow {
@@ -191,17 +257,11 @@ export default function BookingDetailScreen() {
         .select(
           "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
+          "has_water_supply, has_electricity_supply," +
           "vehicles(make,model,year,color,vehicle_type)," +
           "service_packages(name,description,duration_mins,base_price)," +
           "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
         )
-        .eq("id", id)
-        .single();
-
-      // Separate optional query for utility columns (gracefully ignored if migration not yet applied)
-      const { data: utilityData } = await supabase
-        .from("bookings")
-        .select("has_water_supply, has_electricity_supply")
         .eq("id", id)
         .single();
 
@@ -210,7 +270,7 @@ export default function BookingDetailScreen() {
         return;
       }
 
-      const b = raw as unknown as RawBookingDetail;
+      const b = parseRawBooking(raw);
       const scheduledAt = new Date(b.scheduled_at);
       const isUnassigned =
         (b.status === "confirmed" || b.status === "requested") && !b.crew_member_id;
@@ -278,8 +338,8 @@ export default function BookingDetailScreen() {
         customerInitials: getInitials(custName),
         customerPhone: custPhone,
         serviceAddress: b.service_address,
-        hasWaterSupply: (utilityData as { has_water_supply?: boolean | null } | null)?.has_water_supply ?? null,
-        hasElectricitySupply: (utilityData as { has_electricity_supply?: boolean | null } | null)?.has_electricity_supply ?? null,
+        hasWaterSupply: b.has_water_supply,
+        hasElectricitySupply: b.has_electricity_supply,
         vehicleDesc,
         vehicleType: b.vehicles?.vehicle_type ?? null,
         packageName: b.service_packages?.name ?? "Service",

@@ -194,19 +194,6 @@ function vehicleLabel(v: SavedVehicleOption): string {
   return v.color ? `${base} · ${v.color}` : base;
 }
 
-function buildVehicleNote(entry: VehicleServiceEntry): string {
-  const make = entry.make.trim();
-  const model = entry.model.trim();
-  const year = entry.year.trim();
-  const color = entry.color.trim();
-  const vType = entry.vehicleType
-    ? entry.vehicleType.charAt(0).toUpperCase() + entry.vehicleType.slice(1)
-    : "";
-  const nameStr = [year, make, model].filter(Boolean).join(" ");
-  const detailStr = [color, vType].filter(Boolean).join(", ");
-  if (!nameStr && !detailStr) return "";
-  return `Vehicle: ${nameStr}${detailStr ? ` (${detailStr})` : ""}`;
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -860,43 +847,47 @@ export default function NewBookingScreen() {
       const supabase = getSupabase();
 
       if (isCreateMode) {
-        // Create ONE shared booking_contact for the customer (no per-vehicle data).
-        // Vehicle details are stored in each booking's notes so all bookings share
-        // the same contact record.
-        const sharedContactPayload: Record<string, unknown> = {
-          detailer_id: detailerId,
-          full_name: newCustomerName.trim(),
-        };
-        if (newCustomerPhone.trim()) sharedContactPayload.phone = newCustomerPhone.trim();
-        if (newCustomerEmail.trim()) sharedContactPayload.email = newCustomerEmail.trim();
-
-        const { data: sharedContactRow, error: contactError } = await supabase
-          .from("booking_contacts")
-          .insert(sharedContactPayload)
-          .select("id")
-          .single();
-
-        if (contactError || !sharedContactRow) {
-          console.warn("[NewBooking] booking_contacts insert error", contactError);
-          setErrorMsg("Failed to save contact info. Please try again.");
-          setSubmitState("error");
-          return;
-        }
-
-        const sharedContactId: string = (sharedContactRow as { id: string }).id;
-
+        // Walk-in / new-customer path.
+        // vehicles.customer_id requires an auth user ID, which walk-ins don't have,
+        // so vehicle data is stored in booking_contacts' own vehicle_* fields.
+        // One booking_contact is created per vehicle entry; each booking references
+        // its own contact. Notes (crew instructions) are shared unchanged across
+        // all bookings — no vehicle text is prepended.
         for (const entry of entries) {
-          const vehicleNote = buildVehicleNote(entry);
-          const combinedNotes = [vehicleNote, notes.trim()].filter(Boolean).join("\n\n");
+          const contactPayload: Record<string, unknown> = {
+            detailer_id: detailerId,
+            full_name: newCustomerName.trim(),
+          };
+          if (newCustomerPhone.trim()) contactPayload.phone = newCustomerPhone.trim();
+          if (newCustomerEmail.trim()) contactPayload.email = newCustomerEmail.trim();
+          if (entry.make.trim()) contactPayload.vehicle_make = entry.make.trim();
+          if (entry.model.trim()) contactPayload.vehicle_model = entry.model.trim();
+          if (entry.year.trim()) contactPayload.vehicle_year = parseInt(entry.year.trim(), 10);
+          if (entry.color.trim()) contactPayload.vehicle_color = entry.color.trim();
+
+          const { data: contactRow, error: contactError } = await supabase
+            .from("booking_contacts")
+            .insert(contactPayload)
+            .select("id")
+            .single();
+
+          if (contactError || !contactRow) {
+            console.warn("[NewBooking] booking_contacts insert error", contactError);
+            setErrorMsg("Failed to save contact info. Please try again.");
+            setSubmitState("error");
+            return;
+          }
+
+          const contactId: string = (contactRow as { id: string }).id;
 
           const { error: bookingError } = await supabase.from("bookings").insert({
-            contact_id: sharedContactId,
+            contact_id: contactId,
             detailer_id: detailerId,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
             service_address: serviceAddress.trim() || null,
-            notes: combinedNotes || null,
+            notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
             asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,

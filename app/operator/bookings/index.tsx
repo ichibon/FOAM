@@ -201,7 +201,7 @@ function BookingListCard({
       )}
       <Text style={styles.cardPackage}>{booking.packageName}</Text>
 
-      {/* Footer: crew chip or unassigned badge */}
+      {/* Footer: crew chip or unassigned badge + optional total */}
       <View style={styles.cardFooter}>
         {booking.isUnassigned ? (
           <View style={[styles.footerBadge, { backgroundColor: "rgba(217,119,6,0.08)" }]}>
@@ -218,6 +218,9 @@ function BookingListCard({
           <View style={[styles.footerBadge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.footerBadgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
+        )}
+        {booking.total != null && booking.total > 0 && (
+          <Text style={styles.cardTotal}>${booking.total.toFixed(0)}</Text>
         )}
       </View>
     </TouchableOpacity>
@@ -881,9 +884,15 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: Spacing.mdSm,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderSubtle,
+  },
+  cardTotal: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
   },
   footerBadge: {
     paddingHorizontal: Spacing.mdSm,

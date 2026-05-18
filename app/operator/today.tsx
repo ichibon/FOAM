@@ -43,6 +43,7 @@ interface RawBooking {
   estimated_duration_mins: number | null;
   crew_member_id: string | null;
   customer_id: string | null;
+  contact_id: string | null;
   asset_id: string | null;
   location_id: string | null;
   notes: string | null;
@@ -262,7 +263,13 @@ function TeamPillChip({ member }: { member: TeamMember }) {
   );
 }
 
-function UnassignedJobCard({ job }: { job: JobCard }) {
+function UnassignedJobCard({
+  job,
+  onAssignPress,
+}: {
+  job: JobCard;
+  onAssignPress: () => void;
+}) {
   return (
     <View style={[styles.jobCard, styles.jobCardUnassigned]}>
       {job.unitLabel ? (
@@ -288,7 +295,7 @@ function UnassignedJobCard({ job }: { job: JobCard }) {
       <Text style={styles.jobCardVehicle}>{job.vehicleDesc}</Text>
       <Text style={styles.jobCardPackage}>{job.packageName}</Text>
       <View style={styles.jobCardAssignRow}>
-        <TouchableOpacity style={styles.assignBtn}>
+        <TouchableOpacity style={styles.assignBtn} onPress={onAssignPress} activeOpacity={0.75}>
           <Text style={styles.assignBtnText}>Assign</Text>
         </TouchableOpacity>
       </View>
@@ -526,7 +533,7 @@ export default function OperatorTodayScreen() {
           .from("bookings")
           .select(
             "id, status, scheduled_at, estimated_duration_mins, crew_member_id," +
-            "customer_id, asset_id, location_id, notes," +
+            "customer_id, contact_id, asset_id, location_id, notes," +
             "booking_contacts(full_name)," +
             "vehicles(make, model, year, color)," +
             "service_packages(name)"
@@ -906,7 +913,10 @@ export default function OperatorTodayScreen() {
           </View>
 
           {/* Stats */}
-          <StatsGrid stats={stats} />
+          <StatsGrid
+            stats={stats}
+            onUnassignedPress={() => router.push("/operator/bookings/unassigned")}
+          />
 
           {/* All-assigned banner */}
           {allAssigned && (
@@ -1061,17 +1071,34 @@ export default function OperatorTodayScreen() {
         {/* ── Today's Jobs ──────────────────────────────────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabelCaps}>TODAY'S JOBS</Text>
-          <StatsGrid stats={stats} />
+          <StatsGrid
+            stats={stats}
+            onUnassignedPress={() => router.push("/operator/bookings/unassigned")}
+          />
 
-          {unassignedJobs.map((job) => <UnassignedJobCard key={job.id} job={job} />)}
+          {unassignedJobs.map((job) => (
+            <UnassignedJobCard
+              key={job.id}
+              job={job}
+              onAssignPress={() =>
+                router.push(`/operator/bookings/assign?bookingId=${job.id}`)
+              }
+            />
+          ))}
           {unassignedJobs.length > 0 && (
-            <TouchableOpacity style={styles.viewAllLink}>
+            <TouchableOpacity
+              style={styles.viewAllLink}
+              onPress={() => router.push("/operator/bookings/unassigned")}
+            >
               <Text style={styles.viewAllText}>View all unassigned jobs →</Text>
             </TouchableOpacity>
           )}
           {assignedJobs.map((job) => <AssignedJobCard key={job.id} job={job} />)}
           {completedJobs.map((job) => <CompletedJobRow key={job.id} job={job} />)}
-          <TouchableOpacity style={styles.viewAllLink}>
+          <TouchableOpacity
+            style={styles.viewAllLink}
+            onPress={() => router.push("/operator/bookings")}
+          >
             <Text style={styles.viewAllText}>See all today's jobs →</Text>
           </TouchableOpacity>
         </View>
@@ -1197,7 +1224,13 @@ function StickyHeader({
   );
 }
 
-function StatsGrid({ stats }: { stats: OperatorStats }) {
+function StatsGrid({
+  stats,
+  onUnassignedPress,
+}: {
+  stats: OperatorStats;
+  onUnassignedPress?: () => void;
+}) {
   return (
     <View style={[styles.statsGrid, { marginBottom: Spacing.md }]}>
       <TouchableOpacity style={styles.statCell}>
@@ -1210,7 +1243,7 @@ function StatsGrid({ stats }: { stats: OperatorStats }) {
         <Text style={[styles.statValueLarge, { color: Colors.successLight }]}>{stats.completed}</Text>
       </TouchableOpacity>
       <View style={styles.statDivider} />
-      <TouchableOpacity style={styles.statCell}>
+      <TouchableOpacity style={styles.statCell} onPress={onUnassignedPress} activeOpacity={0.7}>
         <Text style={styles.statLabelSmall}>Unassigned</Text>
         <Text
           style={[

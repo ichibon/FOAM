@@ -848,46 +848,71 @@ export default function NewBookingScreen() {
 
       if (isCreateMode) {
         // Walk-in / new-customer path.
-        // vehicles.customer_id requires an auth user ID, which walk-ins don't have,
-        // so vehicle data is stored in booking_contacts' own vehicle_* fields.
-        // One booking_contact is created per vehicle entry; each booking references
-        // its own contact. Notes (crew instructions) are shared unchanged across
-        // all bookings — no vehicle text is prepended.
+        //
+        // Schema constraint: vehicles.customer_id is non-nullable and references
+        // the auth users table. Walk-in customers have no auth user, so we cannot
+        // insert rows into the vehicles table for them.
+        //
+        // Resolution:
+        //   1. Create ONE shared booking_contacts row (shared customer identity).
+        //      booking_contacts.vehicle_* holds only a single vehicle's worth of
+        //      data, so it is intentionally left empty here when there are multiple
+        //      vehicles — vehicle data is stored per-booking in notes instead.
+        //   2. For each vehicle+service entry, prepend a structured vehicle line to
+        //      the booking's notes column. This is the only per-booking vehicle
+        //      storage available for unauthenticated walk-ins. The operator-typed
+        //      crew instructions (the "notes" field in the UI) follow after.
+        //   3. All bookings share the same contact_id, scheduled_at, and address.
+
+        const sharedContactPayload: Record<string, unknown> = {
+          detailer_id: detailerId,
+          full_name: newCustomerName.trim(),
+        };
+        if (newCustomerPhone.trim()) sharedContactPayload.phone = newCustomerPhone.trim();
+        if (newCustomerEmail.trim()) sharedContactPayload.email = newCustomerEmail.trim();
+
+        const { data: sharedContactRow, error: sharedContactError } = await supabase
+          .from("booking_contacts")
+          .insert(sharedContactPayload)
+          .select("id")
+          .single();
+
+        if (sharedContactError || !sharedContactRow) {
+          console.warn("[NewBooking] booking_contacts insert error", sharedContactError);
+          setErrorMsg("Failed to save contact info. Please try again.");
+          setSubmitState("error");
+          return;
+        }
+
+        const sharedContactId: string = (sharedContactRow as { id: string }).id;
+
         for (const entry of entries) {
-          const contactPayload: Record<string, unknown> = {
-            detailer_id: detailerId,
-            full_name: newCustomerName.trim(),
-          };
-          if (newCustomerPhone.trim()) contactPayload.phone = newCustomerPhone.trim();
-          if (newCustomerEmail.trim()) contactPayload.email = newCustomerEmail.trim();
-          if (entry.make.trim()) contactPayload.vehicle_make = entry.make.trim();
-          if (entry.model.trim()) contactPayload.vehicle_model = entry.model.trim();
-          if (entry.year.trim()) contactPayload.vehicle_year = parseInt(entry.year.trim(), 10);
-          if (entry.color.trim()) contactPayload.vehicle_color = entry.color.trim();
-
-          const { data: contactRow, error: contactError } = await supabase
-            .from("booking_contacts")
-            .insert(contactPayload)
-            .select("id")
-            .single();
-
-          if (contactError || !contactRow) {
-            console.warn("[NewBooking] booking_contacts insert error", contactError);
-            setErrorMsg("Failed to save contact info. Please try again.");
-            setSubmitState("error");
-            return;
+          // Build a structured vehicle line for this booking's notes.
+          const vParts: string[] = [];
+          if (entry.year.trim()) vParts.push(entry.year.trim());
+          if (entry.make.trim()) vParts.push(entry.make.trim());
+          if (entry.model.trim()) vParts.push(entry.model.trim());
+          const vDetails: string[] = [];
+          if (entry.color.trim()) vDetails.push(entry.color.trim());
+          if (entry.vehicleType) {
+            vDetails.push(entry.vehicleType.charAt(0).toUpperCase() + entry.vehicleType.slice(1));
           }
-
-          const contactId: string = (contactRow as { id: string }).id;
+          const vehicleLine =
+            vParts.length > 0 || vDetails.length > 0
+              ? `Vehicle: ${vParts.join(" ")}${vDetails.length > 0 ? ` (${vDetails.join(", ")})` : ""}`
+              : null;
+          const combinedNotes = [vehicleLine, notes.trim() || null]
+            .filter(Boolean)
+            .join("\n\n");
 
           const { error: bookingError } = await supabase.from("bookings").insert({
-            contact_id: contactId,
+            contact_id: sharedContactId,
             detailer_id: detailerId,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
             service_address: serviceAddress.trim() || null,
-            notes: notes.trim() || null,
+            notes: combinedNotes || null,
             tip_amount: 0,
             is_recurring: false,
             asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,

@@ -224,6 +224,7 @@ interface VehicleServiceCardProps {
   total: number;
   packages: ServicePackageOption[];
   savedVehicles: SavedVehicleOption[];
+  usedVehicleIds: string[];
   isLoadingVehicles: boolean;
   customerMode: CustomerMode;
   onUpdate: (patch: Partial<VehicleServiceEntry>) => void;
@@ -237,6 +238,7 @@ function VehicleServiceCard({
   total,
   packages,
   savedVehicles,
+  usedVehicleIds,
   isLoadingVehicles,
   customerMode,
   onUpdate,
@@ -245,8 +247,17 @@ function VehicleServiceCard({
 }: VehicleServiceCardProps) {
   const isNewCustomer = customerMode === "create";
   const noSavedVehicles = !isLoadingVehicles && savedVehicles.length === 0;
-  const showNewFields = isNewCustomer || entry.useNewVehicle || (!isNewCustomer && noSavedVehicles);
-  const showSavedPicker = !isNewCustomer && !entry.useNewVehicle && savedVehicles.length > 0;
+
+  // Vehicles already selected by other entries — exclude from this entry's list.
+  const availableVehicles = savedVehicles.filter(
+    (v) => v.id === entry.selectedVehicleId || !usedVehicleIds.includes(v.id)
+  );
+  // Auto-fallback: if no unselected vehicles remain and none is selected, force new-vehicle form.
+  const noAvailableVehicles = !isLoadingVehicles && availableVehicles.length === 0;
+
+  const showNewFields =
+    isNewCustomer || entry.useNewVehicle || (!isNewCustomer && (noSavedVehicles || noAvailableVehicles));
+  const showSavedPicker = !isNewCustomer && !entry.useNewVehicle && availableVehicles.length > 0;
 
   const selectedSavedVehicle = savedVehicles.find((v) => v.id === entry.selectedVehicleId) ?? null;
   const effectiveVehicleType: VehicleSizeKey | null = showSavedPicker
@@ -282,7 +293,7 @@ function VehicleServiceCard({
           ) : showSavedPicker ? (
             <>
               <View style={styles.savedVehicleList}>
-                {savedVehicles.map((v) => {
+                {availableVehicles.map((v) => {
                   const isSelected = entry.selectedVehicleId === v.id;
                   return (
                     <TouchableOpacity
@@ -822,6 +833,10 @@ export default function NewBookingScreen() {
 
     const isCreateMode = customerMode === "create";
 
+    if (bookingSources.length > 1 && !selectedSource) {
+      setErrorMsg("Please select a van or location for this booking.");
+      return;
+    }
     if (!isCreateMode && !selectedCustomer) {
       setErrorMsg("Please select a customer or create a new one.");
       return;
@@ -829,6 +844,13 @@ export default function NewBookingScreen() {
     if (isCreateMode && !newCustomerName.trim()) {
       setErrorMsg("Please enter the customer's name.");
       return;
+    }
+    if (isCreateMode) {
+      const hasBlankVehicle = entries.some((e) => !e.make.trim() && !e.model.trim());
+      if (hasBlankVehicle) {
+        setErrorMsg("Please enter at least a make or model for each vehicle.");
+        return;
+      }
     }
     if (entries.some((e) => !e.selectedPackageId)) {
       setErrorMsg("Please select a service for each vehicle.");
@@ -1328,21 +1350,27 @@ export default function NewBookingScreen() {
         </SectionCard>
 
         {/* ── 3. VEHICLE + SERVICE (per entry) ── */}
-        {entries.map((entry, idx) => (
-          <VehicleServiceCard
-            key={entry.entryId}
-            entry={entry}
-            index={idx}
-            total={entries.length}
-            packages={packages}
-            savedVehicles={savedVehicles}
-            isLoadingVehicles={isLoadingVehicles}
-            customerMode={customerMode}
-            onUpdate={(patch) => updateEntry(entry.entryId, patch)}
-            onRemove={() => removeEntry(entry.entryId)}
-            onAddService={() => setAddServiceForEntryId(entry.entryId)}
-          />
-        ))}
+        {entries.map((entry, idx) => {
+          const usedVehicleIds = entries
+            .filter((e) => e.entryId !== entry.entryId && e.selectedVehicleId !== null)
+            .map((e) => e.selectedVehicleId as string);
+          return (
+            <VehicleServiceCard
+              key={entry.entryId}
+              entry={entry}
+              index={idx}
+              total={entries.length}
+              packages={packages}
+              savedVehicles={savedVehicles}
+              usedVehicleIds={usedVehicleIds}
+              isLoadingVehicles={isLoadingVehicles}
+              customerMode={customerMode}
+              onUpdate={(patch) => updateEntry(entry.entryId, patch)}
+              onRemove={() => removeEntry(entry.entryId)}
+              onAddService={() => setAddServiceForEntryId(entry.entryId)}
+            />
+          );
+        })}
 
         <TouchableOpacity style={styles.addVehicleBtn} onPress={addEntry} activeOpacity={0.8}>
           <Ionicons name="add-circle-outline" size={18} color={Colors.foamBlue} />

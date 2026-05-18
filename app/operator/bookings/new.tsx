@@ -849,20 +849,14 @@ export default function NewBookingScreen() {
       if (isCreateMode) {
         // Walk-in / new-customer path.
         //
-        // Schema constraint: vehicles.customer_id is non-nullable and references
-        // the auth users table. Walk-in customers have no auth user, so we cannot
-        // insert rows into the vehicles table for them.
+        // vehicles.customer_id is now nullable (migration 20260518000000).
+        // Walk-in vehicle records are created with customer_id = null and
+        // backfilled when the customer later claims their account.
         //
-        // Resolution:
-        //   1. Create ONE shared booking_contacts row (shared customer identity).
-        //      booking_contacts.vehicle_* holds only a single vehicle's worth of
-        //      data, so it is intentionally left empty here when there are multiple
-        //      vehicles — vehicle data is stored per-booking in notes instead.
-        //   2. For each vehicle+service entry, prepend a structured vehicle line to
-        //      the booking's notes column. This is the only per-booking vehicle
-        //      storage available for unauthenticated walk-ins. The operator-typed
-        //      crew instructions (the "notes" field in the UI) follow after.
-        //   3. All bookings share the same contact_id, scheduled_at, and address.
+        // One shared booking_contacts row holds the customer's identity
+        // (name / phone / email). All bookings in this batch share the same
+        // contact_id, scheduled_at, address, and crew notes. Each booking
+        // gets its own vehicle_id pointing to a real vehicles row.
 
         const sharedContactPayload: Record<string, unknown> = {
           detailer_id: detailerId,
@@ -887,32 +881,39 @@ export default function NewBookingScreen() {
         const sharedContactId: string = (sharedContactRow as { id: string }).id;
 
         for (const entry of entries) {
-          // Build a structured vehicle line for this booking's notes.
-          const vParts: string[] = [];
-          if (entry.year.trim()) vParts.push(entry.year.trim());
-          if (entry.make.trim()) vParts.push(entry.make.trim());
-          if (entry.model.trim()) vParts.push(entry.model.trim());
-          const vDetails: string[] = [];
-          if (entry.color.trim()) vDetails.push(entry.color.trim());
-          if (entry.vehicleType) {
-            vDetails.push(entry.vehicleType.charAt(0).toUpperCase() + entry.vehicleType.slice(1));
+          // Create a vehicles row (customer_id nullable — backfilled on account claim).
+          const { data: vehicleRow, error: vehicleError } = await supabase
+            .from("vehicles")
+            .insert({
+              customer_id: null,
+              make: entry.make.trim() || null,
+              model: entry.model.trim() || null,
+              year: entry.year.trim() ? parseInt(entry.year.trim(), 10) : null,
+              color: entry.color.trim() || null,
+              vehicle_type: entry.vehicleType ?? null,
+              is_default: false,
+            })
+            .select("id")
+            .single();
+
+          if (vehicleError || !vehicleRow) {
+            console.warn("[NewBooking] walk-in vehicle insert error", vehicleError);
+            setErrorMsg("Failed to save vehicle info. Please try again.");
+            setSubmitState("error");
+            return;
           }
-          const vehicleLine =
-            vParts.length > 0 || vDetails.length > 0
-              ? `Vehicle: ${vParts.join(" ")}${vDetails.length > 0 ? ` (${vDetails.join(", ")})` : ""}`
-              : null;
-          const combinedNotes = [vehicleLine, notes.trim() || null]
-            .filter(Boolean)
-            .join("\n\n");
+
+          const walkinVehicleId: string = (vehicleRow as { id: string }).id;
 
           const { error: bookingError } = await supabase.from("bookings").insert({
             contact_id: sharedContactId,
+            vehicle_id: walkinVehicleId,
             detailer_id: detailerId,
             package_id: entry.selectedPackageId,
             status: "confirmed",
             scheduled_at: scheduledAt,
             service_address: serviceAddress.trim() || null,
-            notes: combinedNotes || null,
+            notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
             asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,

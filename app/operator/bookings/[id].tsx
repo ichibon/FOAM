@@ -298,7 +298,6 @@ export default function BookingDetailScreen() {
             .select(
               "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, detailer_id," +
               "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
-              "has_water_supply, has_electricity_supply," +
               "vehicles(make,model,year,color,vehicle_type)," +
               "service_packages(name,description,duration_mins,base_price)," +
               "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"

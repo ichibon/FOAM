@@ -193,12 +193,11 @@ function BookingListCard({
       </View>
 
       <Text style={styles.cardCustomer}>{booking.customerName}</Text>
-      {booking.vehicleCount > 1 ? (
+      <Text style={styles.cardVehicle}>{booking.vehicleDesc}</Text>
+      {booking.vehicleCount > 1 && (
         <View style={styles.vehicleCountPill}>
           <Text style={styles.vehicleCountPillText}>{booking.vehicleCount} vehicles</Text>
         </View>
-      ) : (
-        <Text style={styles.cardVehicle}>{booking.vehicleDesc}</Text>
       )}
       <Text style={styles.cardPackage}>{booking.packageName}</Text>
 
@@ -595,7 +594,13 @@ export default function OperatorBookingsScreen() {
                 <BookingListCard
                   key={b.id}
                   booking={b}
-                  onPress={() => router.push(`/operator/bookings/${b.id}`)}
+                  onPress={() =>
+                    router.push(
+                      b.orderId
+                        ? `/operator/bookings/${b.id}?orderId=${b.orderId}`
+                        : `/operator/bookings/${b.id}`
+                    )
+                  }
                   onAssignPress={() => router.push(`/operator/bookings/assign?bookingId=${b.id}`)}
                 />
               ))}

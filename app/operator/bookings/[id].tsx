@@ -42,6 +42,7 @@ interface RawBookingDetail {
   crew_member_id: string | null;
   customer_id: string | null;
   contact_id: string | null;
+  detailer_id: string;
   order_id: string | null;
   service_address: string | null;
   subtotal: number | null;
@@ -91,6 +92,7 @@ function parseRawBooking(raw: unknown): RawBookingDetail {
     crew_member_id: nullableStr(r.crew_member_id),
     customer_id: nullableStr(r.customer_id),
     contact_id: nullableStr(r.contact_id),
+    detailer_id: String(r.detailer_id ?? ""),
     order_id: nullableStr(r.order_id),
     service_address: nullableStr(r.service_address),
     subtotal: nullableNum(r.subtotal),
@@ -276,7 +278,7 @@ export default function BookingDetailScreen() {
       const { data: raw, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, order_id," +
+          "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, detailer_id, order_id," +
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "has_water_supply, has_electricity_supply," +
           "vehicles(make,model,year,color,vehicle_type)," +
@@ -371,6 +373,7 @@ export default function BookingDetailScreen() {
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("order_id", b.order_id)
+          .eq("detailer_id", b.detailer_id)
           .neq("id", b.id);
 
         const siblings: OrderVehicle[] = ((siblingsData as RawSiblingRow[] | null) ?? []).map((sib) => {

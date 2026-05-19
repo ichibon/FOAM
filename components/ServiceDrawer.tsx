@@ -175,7 +175,11 @@ export function ServiceDrawer({
       setHours(service.hours);
       setMinutes(service.minutes);
       setVehiclePricingEnabled(service.vehiclePricing);
-      setPricing(service.pricing ?? EMPTY_PRICING);
+      const rawP = service.pricing as Record<string, string | undefined> | undefined;
+      setPricing({
+        xl: rawP?.xl ?? "",
+        xxl: rawP?.xxl ?? "",
+      });
       setIsAddon(service.isAddon ?? false);
       setAddonTargetIds(service.addonTargetIds ?? []);
     } else {
@@ -277,12 +281,12 @@ export function ServiceDrawer({
       await supabase.from("vehicle_size_pricing").delete().eq("package_id", packageId);
 
       if (vehiclePricingEnabled) {
-        const vehicleRows = (["suv", "truck", "van"] as (keyof VehiclePricing)[])
-          .filter((t) => pricing[t].trim() !== "")
+        const vehicleRows = (["xl", "xxl"] as (keyof VehiclePricing)[])
+          .filter((t) => (pricing[t] ?? "").trim() !== "")
           .map((t) => ({
             package_id: packageId,
             vehicle_type: t,
-            price_adjustment: parseFloat(pricing[t]),
+            price_adjustment: parseFloat(pricing[t] ?? "0"),
           }))
           .filter((r) => !isNaN(r.price_adjustment));
 

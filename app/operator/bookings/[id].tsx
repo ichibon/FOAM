@@ -337,6 +337,9 @@ export default function BookingDetailScreen() {
   const [editNewColor, setEditNewColor] = useState("");
   const [editNewPackageId, setEditNewPackageId] = useState<string | null>(null);
   const [editAddSaving, setEditAddSaving] = useState(false);
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [editVehiclePackageId, setEditVehiclePackageId] = useState<string | null>(null);
+  const [editVehicleSaving, setEditVehicleSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user || !id) return;
@@ -665,6 +668,9 @@ export default function BookingDetailScreen() {
     setEditNewColor("");
     setEditNewPackageId(null);
     setEditAddSaving(false);
+    setEditingVehicleId(null);
+    setEditVehiclePackageId(null);
+    setEditVehicleSaving(false);
     setEditSheetVisible(true);
     setEditDataLoading(true);
     try {
@@ -833,6 +839,29 @@ export default function BookingDetailScreen() {
     }
   }
 
+  async function handleUpdateVehiclePackage() {
+    if (!editingVehicleId || !editVehiclePackageId) return;
+    setEditVehicleSaving(true);
+    setEditError(null);
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ package_id: editVehiclePackageId })
+        .eq("id", editingVehicleId);
+      if (error) throw error;
+      setEditingVehicleId(null);
+      setEditVehiclePackageId(null);
+      await fetchData();
+    } catch (err) {
+      console.warn("[BookingDetail] handleUpdateVehiclePackage error", err);
+      setEditError("Failed to update service. Please try again.");
+    } finally {
+      setEditVehicleSaving(false);
+    }
+  }
+
   async function handleSaveEdit() {
     if (!id || !editScheduledAt) {
       setEditError("Please select a date and time.");
@@ -848,7 +877,6 @@ export default function BookingDetailScreen() {
         crew_member_id: editCrewMemberId,
         notes: editNotes.trim() || null,
       };
-      if (editPackageId) updates.package_id = editPackageId;
       const { error } = await supabase.from("bookings").update(updates).eq("id", id);
       if (error) throw error;
       setEditSheetVisible(false);
@@ -1193,25 +1221,96 @@ export default function BookingDetailScreen() {
             {/* Vehicles in this order */}
             <View style={styles.editSection}>
               <Text style={styles.editSectionLabel}>VEHICLES IN THIS ORDER</Text>
-              {booking.orderVehicles.map((v) => (
-                <View key={v.bookingId} style={styles.editVehicleRow}>
-                  <View style={styles.editVehicleInfo}>
-                    <Text style={styles.editVehicleDesc}>{v.vehicleDesc}</Text>
-                    <Text style={styles.editVehiclePkg}>{v.packageName}</Text>
+              {booking.orderVehicles.map((v) => {
+                const isExpanded = editingVehicleId === v.bookingId;
+                return (
+                  <View key={v.bookingId} style={[styles.editVehicleCard, isExpanded && styles.editVehicleCardOpen]}>
+                    {/* Header row */}
+                    <View style={styles.editVehicleRow}>
+                      <TouchableOpacity
+                        style={styles.editVehicleInfo}
+                        onPress={() => {
+                          if (isExpanded) {
+                            setEditingVehicleId(null);
+                            setEditVehiclePackageId(null);
+                          } else {
+                            setEditingVehicleId(v.bookingId);
+                            setEditVehiclePackageId(v.packageId);
+                          }
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={styles.editVehicleDesc}>{v.vehicleDesc}</Text>
+                        <Text style={styles.editVehiclePkg}>{v.packageName}</Text>
+                      </TouchableOpacity>
+                      <Ionicons
+                        name={isExpanded ? "chevron-up" : "chevron-down"}
+                        size={14}
+                        color={Colors.light.textTertiary}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.editVehicleRemoveBtn,
+                          booking.orderVehicles.length <= 1 && { opacity: 0.3 },
+                        ]}
+                        onPress={() => handleRemoveVehicle(v.bookingId)}
+                        disabled={booking.orderVehicles.length <= 1}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="trash-outline" size={17} color={Colors.errorLight} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Inline package picker */}
+                    {isExpanded && !editDataLoading && editPackages.length > 0 && (
+                      <View style={styles.editVehicleExpanded}>
+                        <Text style={styles.editVehicleExpandedLabel}>Change Service</Text>
+                        {editPackages.map((pkg) => {
+                          const isSel = editVehiclePackageId === pkg.id;
+                          return (
+                            <TouchableOpacity
+                              key={pkg.id}
+                              style={[styles.editPickerRow, isSel && styles.editPickerRowSelected]}
+                              onPress={() => setEditVehiclePackageId(pkg.id)}
+                              activeOpacity={0.75}
+                            >
+                              <View style={{ flex: 1 }}>
+                                <Text style={[styles.editPickerRowName, isSel && { color: Colors.foamBlue }]}>
+                                  {pkg.name}
+                                </Text>
+                                <Text style={styles.editPickerRowSub}>
+                                  {formatDuration(pkg.duration_mins)} · ${pkg.base_price.toFixed(0)}
+                                </Text>
+                              </View>
+                              {isSel && <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />}
+                            </TouchableOpacity>
+                          );
+                        })}
+                        <View style={styles.editAddBtnRow}>
+                          <TouchableOpacity
+                            style={styles.editAddCancelBtn}
+                            onPress={() => { setEditingVehicleId(null); setEditVehiclePackageId(null); }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={styles.editAddCancelText}>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.editAddSaveBtn, (!editVehiclePackageId || editVehicleSaving) && { opacity: 0.6 }]}
+                            onPress={handleUpdateVehiclePackage}
+                            disabled={!editVehiclePackageId || editVehicleSaving}
+                            activeOpacity={0.85}
+                          >
+                            {editVehicleSaving
+                              ? <ActivityIndicator size="small" color={Colors.white} />
+                              : <Text style={styles.editAddSaveText}>Update</Text>
+                            }
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
                   </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.editVehicleRemoveBtn,
-                      booking.orderVehicles.length <= 1 && { opacity: 0.3 },
-                    ]}
-                    onPress={() => handleRemoveVehicle(v.bookingId)}
-                    disabled={booking.orderVehicles.length <= 1}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="trash-outline" size={17} color={Colors.errorLight} />
-                  </TouchableOpacity>
-                </View>
-              ))}
+                );
+              })}
 
               {/* Add vehicle */}
               {!editAddVehicleOpen ? (
@@ -1335,10 +1434,7 @@ export default function BookingDetailScreen() {
               <Text style={styles.editSectionLabel}>DATE & TIME</Text>
               <TouchableOpacity
                 style={styles.editDateBtn}
-                onPress={() => {
-                  setEditSheetVisible(false);
-                  setEditDateDrawerVisible(true);
-                }}
+                onPress={() => setEditDateDrawerVisible(true)}
                 activeOpacity={0.75}
               >
                 <Ionicons name="calendar-outline" size={16} color={Colors.foamBlue} />
@@ -1359,39 +1455,11 @@ export default function BookingDetailScreen() {
               </View>
             )}
 
-            {/* Package */}
-            {editDataLoading ? (
+            {editDataLoading && (
               <View style={styles.editLoadingRow}>
                 <ActivityIndicator size="small" color={Colors.foamBlue} />
               </View>
-            ) : !editDataError && editPackages.length > 0 ? (
-              <View style={styles.editSection}>
-                <Text style={styles.editSectionLabel}>SERVICE PACKAGE</Text>
-                {editPackages.map((pkg) => {
-                  const isSelected = editPackageId === pkg.id;
-                  return (
-                    <TouchableOpacity
-                      key={pkg.id}
-                      style={[styles.editPickerRow, isSelected && styles.editPickerRowSelected]}
-                      onPress={() => setEditPackageId(pkg.id)}
-                      activeOpacity={0.75}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.editPickerRowName, isSelected && { color: Colors.foamBlue }]}>
-                          {pkg.name}
-                        </Text>
-                        <Text style={styles.editPickerRowSub}>
-                          {formatDuration(pkg.duration_mins)} · ${pkg.base_price.toFixed(0)}
-                        </Text>
-                      </View>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ) : null}
+            )}
 
             {/* Crew */}
             {!editDataLoading && !editDataError && editCrewMembers.length > 0 && (
@@ -1483,15 +1551,11 @@ export default function BookingDetailScreen() {
       {/* ── Date picker for edit flow (rendered outside sheet to avoid nesting) ── */}
       <DateTimeDrawer
         visible={editDateDrawerVisible}
-        onRequestClose={() => {
-          setEditDateDrawerVisible(false);
-          setEditSheetVisible(true);
-        }}
+        onRequestClose={() => setEditDateDrawerVisible(false)}
         value={editScheduledAt}
         onConfirm={(iso) => {
           setEditScheduledAt(iso);
           setEditDateDrawerVisible(false);
-          setEditSheetVisible(true);
         }}
       />
     </SafeAreaView>
@@ -1975,16 +2039,36 @@ const styles = StyleSheet.create({
   },
 
   // Vehicle list rows
+  editVehicleCard: {
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+  },
+  editVehicleCardOpen: {
+    borderColor: Colors.foamBlue,
+  },
   editVehicleRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
-    backgroundColor: Colors.light.surface,
-    borderWidth: 1,
-    borderColor: Colors.light.borderSubtle,
-    borderRadius: Radius.md,
     gap: Spacing.sm,
+  },
+  editVehicleExpanded: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.borderSubtle,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+    gap: 6,
+  },
+  editVehicleExpandedLabel: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    marginBottom: 4,
   },
   editVehicleInfo: {
     flex: 1,

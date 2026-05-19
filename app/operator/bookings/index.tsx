@@ -688,6 +688,7 @@ export default function OperatorBookingsScreen() {
                   const today = new Date();
                   setCalDate(today);
                   setCalWeekStart(getWeekStart(today));
+                  setCalViewMode("day");
                 }
               }}
               activeOpacity={0.7}

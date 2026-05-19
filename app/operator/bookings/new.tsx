@@ -180,6 +180,21 @@ function getEffectivePrice(pkg: ServicePackageOption, vType: VehicleSizeKey | nu
   return row ? row.priceAdjustment : pkg.price;
 }
 
+async function retryOnNetworkError<T>(
+  fn: () => Promise<{ data: T | null; error: any }>
+): Promise<{ data: T | null; error: any }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await fn();
+    const isNetworkErr =
+      result.error &&
+      result.error.code === "" &&
+      String(result.error.message ?? "").includes("Network request failed");
+    if (!isNetworkErr) return result;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return fn();
+}
+
 function generateOrderId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -1078,11 +1093,9 @@ export default function NewBookingScreen() {
           if (entry.year.trim()) contactPayload.vehicle_year = parseInt(entry.year.trim(), 10);
           if (entry.color.trim()) contactPayload.vehicle_color = entry.color.trim();
 
-          const { data: contactRow, error: contactError } = await supabase
-            .from("booking_contacts")
-            .insert(contactPayload)
-            .select("id")
-            .single();
+          const { data: contactRow, error: contactError } = await retryOnNetworkError(() =>
+            supabase.from("booking_contacts").insert(contactPayload).select("id").single()
+          );
 
           if (contactError || !contactRow) {
             console.warn("[NewBooking] booking_contacts insert error", contactError);
@@ -1093,27 +1106,29 @@ export default function NewBookingScreen() {
 
           const contactId: string = (contactRow as { id: string }).id;
 
-          const { error: bookingError } = await supabase.from("bookings").insert({
-            contact_id: contactId,
-            vehicle_id: null,
-            detailer_id: detailerId,
-            crew_member_id: selectedCrewMemberId ?? null,
-            package_id: entry.selectedPackageId,
-            status: "confirmed",
-            scheduled_at: scheduledAt,
-            order_id: orderId,
-            service_address: serviceAddress.trim() || null,
-            ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
-            ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
-            service_zip: serviceZip || null,
-            has_water_supply: hasWaterSupply,
-            has_electricity_supply: hasElectricitySupply,
-            notes: notes.trim() || null,
-            tip_amount: 0,
-            is_recurring: false,
-            asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
-            location_id: selectedSource?.type === "location" ? selectedSource.id : null,
-          });
+          const { error: bookingError } = await retryOnNetworkError(() =>
+            supabase.from("bookings").insert({
+              contact_id: contactId,
+              vehicle_id: null,
+              detailer_id: detailerId,
+              crew_member_id: selectedCrewMemberId ?? null,
+              package_id: entry.selectedPackageId,
+              status: "confirmed",
+              scheduled_at: scheduledAt,
+              order_id: orderId,
+              service_address: serviceAddress.trim() || null,
+              ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+              ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
+              service_zip: serviceZip || null,
+              has_water_supply: hasWaterSupply,
+              has_electricity_supply: hasElectricitySupply,
+              notes: notes.trim() || null,
+              tip_amount: 0,
+              is_recurring: false,
+              asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+              location_id: selectedSource?.type === "location" ? selectedSource.id : null,
+            })
+          );
 
           // Fallback: migration not yet applied — retry without order_id + utility + service_zip
           let finalError = bookingError;
@@ -1211,19 +1226,21 @@ export default function NewBookingScreen() {
               setSubmitState("error");
               return;
             }
-            const { data: vehicleData, error: vehicleError } = await supabase
-              .from("vehicles")
-              .insert({
-                customer_id: customerId,
-                make: entry.make.trim() || null,
-                model: entry.model.trim() || null,
-                year: entry.year.trim() ? parseInt(entry.year.trim(), 10) : null,
-                color: entry.color.trim() || null,
-                vehicle_type: entry.vehicleType ?? null,
-                is_default: false,
-              })
-              .select("id")
-              .single();
+            const { data: vehicleData, error: vehicleError } = await retryOnNetworkError(() =>
+              supabase
+                .from("vehicles")
+                .insert({
+                  customer_id: customerId,
+                  make: entry.make.trim() || null,
+                  model: entry.model.trim() || null,
+                  year: entry.year.trim() ? parseInt(entry.year.trim(), 10) : null,
+                  color: entry.color.trim() || null,
+                  vehicle_type: entry.vehicleType ?? null,
+                  is_default: false,
+                })
+                .select("id")
+                .single()
+            );
             if (vehicleError || !vehicleData) {
               console.warn("[NewBooking] vehicle insert error", vehicleError);
               setErrorMsg("Failed to save vehicle info. Please try again.");
@@ -1241,27 +1258,29 @@ export default function NewBookingScreen() {
             return;
           }
 
-          const { error: bookingError } = await supabase.from("bookings").insert({
-            customer_id: customerId,
-            detailer_id: detailerId,
-            crew_member_id: selectedCrewMemberId ?? null,
-            vehicle_id: vehicleId ?? undefined,
-            package_id: entry.selectedPackageId,
-            status: "confirmed",
-            scheduled_at: scheduledAt,
-            order_id: orderId,
-            service_address: serviceAddress.trim() || null,
-            ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
-            ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
-            service_zip: serviceZip || null,
-            has_water_supply: hasWaterSupply,
-            has_electricity_supply: hasElectricitySupply,
-            notes: notes.trim() || null,
-            tip_amount: 0,
-            is_recurring: false,
-            asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
-            location_id: selectedSource?.type === "location" ? selectedSource.id : null,
-          });
+          const { error: bookingError } = await retryOnNetworkError(() =>
+            supabase.from("bookings").insert({
+              customer_id: customerId,
+              detailer_id: detailerId,
+              crew_member_id: selectedCrewMemberId ?? null,
+              vehicle_id: vehicleId ?? undefined,
+              package_id: entry.selectedPackageId,
+              status: "confirmed",
+              scheduled_at: scheduledAt,
+              order_id: orderId,
+              service_address: serviceAddress.trim() || null,
+              ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+              ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
+              service_zip: serviceZip || null,
+              has_water_supply: hasWaterSupply,
+              has_electricity_supply: hasElectricitySupply,
+              notes: notes.trim() || null,
+              tip_amount: 0,
+              is_recurring: false,
+              asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+              location_id: selectedSource?.type === "location" ? selectedSource.id : null,
+            })
+          );
 
           // Fallback: migration not yet applied — retry without order_id + utility + service_zip
           let finalError = bookingError;

@@ -43,6 +43,7 @@ interface RawContactRow {
   id: string;
   full_name: string;
   phone: string | null;
+  email: string | null;
   vehicle_make: string | null;
   vehicle_model: string | null;
   vehicle_year: number | null;
@@ -106,6 +107,7 @@ interface CustomerOption {
   userId: string;
   name: string;
   phone: string | null;
+  email?: string | null;
   type?: "registered" | "walkin";
   prefillName?: string;
   prefillPhone?: string | null;
@@ -325,6 +327,8 @@ function VehicleServiceCard({
     ? (selectedSavedVehicle?.vehicleType ?? null)
     : entry.vehicleType;
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   return (
     <SectionCard>
       {/* Header */}
@@ -353,38 +357,69 @@ function VehicleServiceCard({
             </View>
           ) : showSavedPicker ? (
             <>
-              <View style={styles.savedVehicleList}>
-                {availableVehicles.map((v) => {
-                  const isSelected = entry.selectedVehicleId === v.id;
-                  return (
-                    <TouchableOpacity
-                      key={v.id}
-                      style={[styles.savedVehicleRow, isSelected && styles.savedVehicleRowSelected]}
-                      onPress={() => onUpdate({ selectedVehicleId: v.id })}
-                      activeOpacity={0.75}
-                    >
-                      <Ionicons
-                        name="car-outline"
-                        size={16}
-                        color={isSelected ? Colors.foamBlue : Colors.light.textSecondary}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.savedVehicleName, isSelected && { color: Colors.foamBlue }]}>
-                          {vehicleLabel(v)}{v.isDefault ? "  ★" : ""}
+              <TouchableOpacity
+                style={styles.vehicleDropdownTrigger}
+                onPress={() => setPickerOpen((o) => !o)}
+                activeOpacity={0.75}
+              >
+                <View style={{ flex: 1 }}>
+                  {selectedSavedVehicle ? (
+                    <>
+                      <Text style={styles.vehicleDropdownValue}>
+                        {vehicleLabel(selectedSavedVehicle)}{selectedSavedVehicle.isDefault ? "  ★" : ""}
+                      </Text>
+                      {selectedSavedVehicle.vehicleType ? (
+                        <Text style={styles.vehicleDropdownSub}>
+                          {selectedSavedVehicle.vehicleType.charAt(0).toUpperCase() + selectedSavedVehicle.vehicleType.slice(1)}
                         </Text>
-                        {v.vehicleType && (
-                          <Text style={styles.savedVehicleType}>
-                            {v.vehicleType.charAt(0).toUpperCase() + v.vehicleType.slice(1)}
+                      ) : null}
+                    </>
+                  ) : (
+                    <Text style={styles.vehicleDropdownPlaceholder}>Select a vehicle</Text>
+                  )}
+                </View>
+                <Ionicons
+                  name={pickerOpen ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={Colors.light.textSecondary}
+                />
+              </TouchableOpacity>
+
+              {pickerOpen && (
+                <View style={styles.vehicleDropdownList}>
+                  {availableVehicles.map((v, idx) => {
+                    const isSelected = entry.selectedVehicleId === v.id;
+                    return (
+                      <TouchableOpacity
+                        key={v.id}
+                        style={[
+                          styles.vehicleDropdownOption,
+                          isSelected && styles.vehicleDropdownOptionSelected,
+                          idx === availableVehicles.length - 1 && { borderBottomWidth: 0 },
+                        ]}
+                        onPress={() => {
+                          onUpdate({ selectedVehicleId: v.id });
+                          setPickerOpen(false);
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.vehicleDropdownOptionText, isSelected && { color: Colors.foamBlue }]}>
+                            {vehicleLabel(v)}{v.isDefault ? "  ★" : ""}
                           </Text>
-                        )}
-                      </View>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                          {v.vehicleType ? (
+                            <Text style={styles.vehicleDropdownOptionSub}>
+                              {v.vehicleType.charAt(0).toUpperCase() + v.vehicleType.slice(1)}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {isSelected && <Ionicons name="checkmark" size={16} color={Colors.foamBlue} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
               <TouchableOpacity
                 style={styles.switchModeLink}
                 onPress={() => onUpdate({ useNewVehicle: true, selectedVehicleId: null })}
@@ -692,7 +727,7 @@ export default function NewBookingScreen() {
           .eq("is_active", true),
         supabase
           .from("booking_contacts")
-          .select("id,full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color")
+          .select("id,full_name,phone,email,vehicle_make,vehicle_model,vehicle_year,vehicle_color")
           .eq("detailer_id", dId)
           .order("created_at", { ascending: false })
           .limit(300),
@@ -736,6 +771,7 @@ export default function NewBookingScreen() {
           userId: `walkin-${c.id}`,
           name: c.full_name.trim(),
           phone: c.phone ?? null,
+          email: c.email ?? null,
           type: "walkin" as const,
           contactId: c.id,
           prefillName: c.full_name.trim(),
@@ -1577,9 +1613,17 @@ export default function NewBookingScreen() {
                 </View>
               )}
               {selectedCustomer && (
-                <View style={styles.selectedRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={Colors.successLight} />
-                  <Text style={styles.selectedText}>{selectedCustomer.name} selected</Text>
+                <View style={[styles.selectedRow, { alignItems: "flex-start" }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.successLight} style={{ marginTop: 2 }} />
+                  <View style={{ gap: 2 }}>
+                    <Text style={styles.selectedText}>{selectedCustomer.name} selected</Text>
+                    {selectedCustomer.phone ? (
+                      <Text style={styles.selectedSubText}>{selectedCustomer.phone}</Text>
+                    ) : null}
+                    {selectedCustomer.email ? (
+                      <Text style={styles.selectedSubText}>{selectedCustomer.email}</Text>
+                    ) : null}
+                  </View>
                 </View>
               )}
               {customers.length === 0 && (
@@ -2051,6 +2095,11 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.successLight,
   },
+  selectedSubText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+  },
   hintBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -2260,6 +2309,65 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
+    marginTop: 2,
+  },
+  vehicleDropdownTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: Spacing.mdSm,
+    backgroundColor: Colors.light.surface,
+    marginBottom: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  vehicleDropdownValue: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  vehicleDropdownSub: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    marginTop: 2,
+  },
+  vehicleDropdownPlaceholder: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textTertiary,
+  },
+  vehicleDropdownList: {
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+    marginBottom: Spacing.sm,
+  },
+  vehicleDropdownOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.mdSm,
+    paddingVertical: Spacing.mdSm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.surface,
+    gap: Spacing.sm,
+  },
+  vehicleDropdownOptionSelected: {
+    backgroundColor: Colors.foamBlueSubtle,
+  },
+  vehicleDropdownOptionText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  vehicleDropdownOptionSub: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
     marginTop: 2,
   },
   switchModeLink: {

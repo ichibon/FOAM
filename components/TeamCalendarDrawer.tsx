@@ -234,10 +234,12 @@ export function DayView({
   jobs,
   crew,
   filterCrewId,
+  onJobPress,
 }: {
   jobs: CalJob[];
   crew: CrewMember[];
   filterCrewId: string | null;
+  onJobPress?: (jobId: string) => void;
 }) {
   const hasUnassigned = jobs.some((j) => !j.crewMemberId);
   const totalGridH = TOTAL_HOUR_SLOTS * SLOT_HEIGHT;
@@ -288,10 +290,14 @@ export function DayView({
   function JobBlock({ job, color }: { job: CalJob; color: string }) {
     const { top, height } = jobLayout(job);
     return (
-      <View style={[gvStyles.absJobBlock, { top, height, backgroundColor: color }]}>
+      <TouchableOpacity
+        activeOpacity={onJobPress ? 0.75 : 1}
+        onPress={onJobPress ? () => onJobPress(job.id) : undefined}
+        style={[gvStyles.absJobBlock, { top, height, backgroundColor: color }]}
+      >
         <Text style={gvStyles.chipCustomer} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
         {height > 38 && <Text style={gvStyles.chipPkg} numberOfLines={1}>{job.packageName}</Text>}
-      </View>
+      </TouchableOpacity>
     );
   }
 

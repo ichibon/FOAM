@@ -770,7 +770,12 @@ export default function OperatorBookingsScreen() {
             })();
 
             return calViewMode === "day" ? (
-              <DayView jobs={calJobs} crew={crewMembers} filterCrewId={calFilterCrewId} />
+              <DayView
+                jobs={calJobs}
+                crew={crewMembers}
+                filterCrewId={calFilterCrewId}
+                onJobPress={(jobId) => router.push(`/operator/bookings/${jobId}`)}
+              />
             ) : (
               <WeekView
                 weekStart={calWeekStart}

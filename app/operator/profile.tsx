@@ -22,6 +22,7 @@ interface ProfileData {
   jobCount: number;
   rating: number | null;
   reviewCount: number;
+  stripeConnected: boolean;
 }
 
 function AvatarCircle({ name }: { name: string }) {
@@ -86,6 +87,7 @@ export default function OperatorProfileScreen() {
     jobCount: 0,
     rating: null,
     reviewCount: 0,
+    stripeConnected: false,
   });
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -97,7 +99,7 @@ export default function OperatorProfileScreen() {
 
       const { data: dp } = await supabase
         .from("detailer_profiles")
-        .select("id, display_name, business_name")
+        .select("id, display_name, business_name, stripe_account_id")
         .eq("user_id", authUser.id)
         .maybeSingle();
 
@@ -135,7 +137,8 @@ export default function OperatorProfileScreen() {
         } catch { }
       }
 
-      setProfile({ displayName, businessName, jobCount, rating, reviewCount });
+      const stripeConnected = !!(dp as { stripe_account_id?: string | null } | null)?.stripe_account_id;
+      setProfile({ displayName, businessName, jobCount, rating, reviewCount, stripeConnected });
     } catch (err) {
       console.warn("[OperatorProfile] loadProfile failed", err);
     } finally {
@@ -306,13 +309,15 @@ export default function OperatorProfileScreen() {
           <View style={styles.rowGroup}>
             <SettingsRow
               iconName="Landmark"
-              iconBg="rgba(217,119,6,0.12)"
-              iconColor={Colors.warningLight}
+              iconBg={profile.stripeConnected ? "rgba(22,163,74,0.10)" : "rgba(217,119,6,0.12)"}
+              iconColor={profile.stripeConnected ? Colors.successLight : Colors.warningLight}
               title="Bank & Payout"
               subtitle={
                 <View style={styles.payoutRow}>
-                  <View style={[styles.payoutDot, { backgroundColor: Colors.warningLight }]} />
-                  <Text style={styles.rowSubtitle}>Not connected \u00B7 Tap to set up</Text>
+                  <View style={[styles.payoutDot, { backgroundColor: profile.stripeConnected ? Colors.successLight : Colors.warningLight }]} />
+                  <Text style={styles.rowSubtitle}>
+                    {profile.stripeConnected ? "Connected \u00B7 Tap to manage" : "Not connected \u00B7 Tap to set up"}
+                  </Text>
                 </View>
               }
               onPress={() => router.push("/operator/onboarding/stripe-connect")}

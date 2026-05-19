@@ -214,7 +214,7 @@ export default function StripeConnectScreen() {
           startInLoadingState
           renderLoading={() => (
             <View style={styles.webViewLoader}>
-              <ActivityIndicator size="large" color={COLORS.foamBlue} />
+              <ActivityIndicator size="large" color={Colors.foamBlue} />
             </View>
           )}
           onError={(e) => {

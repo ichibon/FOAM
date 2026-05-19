@@ -34,6 +34,8 @@ export interface ServiceDrawerService {
   description: string | null;
   vehiclePricing: boolean;
   pricing: VehiclePricing;
+  isAddon: boolean;
+  addonTargetIds: string[];
 }
 
 export interface ServiceDrawerProps {
@@ -41,6 +43,7 @@ export interface ServiceDrawerProps {
   onRequestClose: () => void;
   detailerId: string;
   service?: ServiceDrawerService;
+  regularServices: { id: string; name: string }[];
   onSaved: (saved: { id: string; name: string }) => void;
 }
 
@@ -142,6 +145,7 @@ export function ServiceDrawer({
   onRequestClose,
   detailerId,
   service,
+  regularServices,
   onSaved,
 }: ServiceDrawerProps) {
   const isEdit = !!service?.id;
@@ -153,6 +157,8 @@ export function ServiceDrawer({
   const [minutes, setMinutes] = useState(30);
   const [vehiclePricingEnabled, setVehiclePricingEnabled] = useState(false);
   const [pricing, setPricing] = useState<VehiclePricing>(EMPTY_PRICING);
+  const [isAddon, setIsAddon] = useState(false);
+  const [addonTargetIds, setAddonTargetIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,6 +172,8 @@ export function ServiceDrawer({
       setMinutes(service.minutes);
       setVehiclePricingEnabled(service.vehiclePricing);
       setPricing(service.pricing ?? EMPTY_PRICING);
+      setIsAddon(service.isAddon ?? false);
+      setAddonTargetIds(service.addonTargetIds ?? []);
     } else {
       setName("");
       setDescription("");
@@ -174,9 +182,17 @@ export function ServiceDrawer({
       setMinutes(30);
       setVehiclePricingEnabled(false);
       setPricing(EMPTY_PRICING);
+      setIsAddon(false);
+      setAddonTargetIds([]);
     }
     setError(null);
   }, [visible, service]);
+
+  function toggleTarget(id: string) {
+    setAddonTargetIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
 
   async function handleSave() {
     const nameTrimmed = name.trim();
@@ -195,6 +211,10 @@ export function ServiceDrawer({
       setError("Duration must be at least 1 minute.");
       return;
     }
+    if (isAddon && regularServices.length > 0 && addonTargetIds.length === 0) {
+      setError("Select at least one service this add-on applies to.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -208,6 +228,7 @@ export function ServiceDrawer({
         description: description.trim() || null,
         base_price: priceNum,
         duration_mins: durationMins,
+        is_addon: isAddon,
       };
 
       let packageId: string;
@@ -225,6 +246,7 @@ export function ServiceDrawer({
           .select("display_order")
           .eq("detailer_id", detailerId)
           .eq("is_active", true)
+          .eq("is_addon", isAddon)
           .order("display_order", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -248,7 +270,6 @@ export function ServiceDrawer({
       }
 
       // ── Vehicle size pricing ─────────────────────────────────────────────────
-      // Delete all existing rows for this package, then re-insert current values.
       await supabase.from("vehicle_size_pricing").delete().eq("package_id", packageId);
 
       if (vehiclePricingEnabled) {
@@ -267,6 +288,18 @@ export function ServiceDrawer({
         }
       }
 
+      // ── Add-on targets ───────────────────────────────────────────────────────
+      await supabase.from("service_addon_targets").delete().eq("addon_id", packageId);
+
+      if (isAddon && addonTargetIds.length > 0) {
+        const targetRows = addonTargetIds.map((sid) => ({
+          addon_id: packageId,
+          service_id: sid,
+        }));
+        const { error: tErr } = await supabase.from("service_addon_targets").insert(targetRows);
+        if (tErr) throw tErr;
+      }
+
       onSaved({ id: packageId, name: nameTrimmed });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save service.";
@@ -282,7 +315,10 @@ export function ServiceDrawer({
 
   return (
     <DrawerModal visible={visible} onRequestClose={onRequestClose}>
-      <DrawerHeader title={isEdit ? "Edit Service" : "New Service"} onClose={onRequestClose} />
+      <DrawerHeader
+        title={isEdit ? (isAddon ? "Edit Add-on" : "Edit Service") : (isAddon ? "New Add-on" : "New Service")}
+        onClose={onRequestClose}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -299,7 +335,7 @@ export function ServiceDrawer({
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="e.g., Exterior Wash, Full Detail"
+              placeholder={isAddon ? "e.g., Pet Hair Removal, Headlight Restoration" : "e.g., Exterior Wash, Full Detail"}
               placeholderTextColor={Colors.light.textTertiary}
               autoCapitalize="words"
             />
@@ -307,7 +343,7 @@ export function ServiceDrawer({
 
           {/* Base price */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Base price</Text>
+            <Text style={styles.label}>Price</Text>
             <View style={styles.priceRow}>
               <Text style={styles.currencySymbol}>$</Text>
               <TextInput
@@ -354,12 +390,81 @@ export function ServiceDrawer({
               style={[styles.input, styles.textArea]}
               value={description}
               onChangeText={setDescription}
-              placeholder="What's included in this service?"
+              placeholder="What's included?"
               placeholderTextColor={Colors.light.textTertiary}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
             />
+          </View>
+
+          {/* Add-on toggle */}
+          <View style={styles.addonSection}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabelCol}>
+                <Text style={styles.label}>This is an add-on service</Text>
+                <Text style={styles.switchHint}>
+                  Add-ons attach to a base service (e.g. Pet Hair Removal, Headlight Restoration)
+                </Text>
+              </View>
+              <Switch
+                value={isAddon}
+                onValueChange={(v) => {
+                  setIsAddon(v);
+                  if (!v) setAddonTargetIds([]);
+                }}
+                trackColor={{ false: Colors.light.borderDefault, true: Colors.foamBlue }}
+                thumbColor={Colors.white}
+              />
+            </View>
+
+            {isAddon && (
+              <View style={styles.targetsBlock}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Applies to</Text>
+                  <Text style={styles.optional}>
+                    {addonTargetIds.length > 0
+                      ? `${addonTargetIds.length} selected`
+                      : "Required"}
+                  </Text>
+                </View>
+
+                {regularServices.length === 0 ? (
+                  <View style={styles.noServicesHint}>
+                    <LucideIcon name="Info" size={14} color={Colors.foamBlue} />
+                    <Text style={styles.noServicesText}>
+                      Add regular services first, then you can link this add-on to them.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.targetChipsWrap}>
+                    {regularServices.map((svc) => {
+                      const selected = addonTargetIds.includes(svc.id);
+                      return (
+                        <TouchableOpacity
+                          key={svc.id}
+                          style={[styles.targetChip, selected && styles.targetChipSelected]}
+                          onPress={() => toggleTarget(svc.id)}
+                          activeOpacity={0.7}
+                        >
+                          {selected && (
+                            <LucideIcon name="Check" size={12} color={Colors.white} />
+                          )}
+                          <Text
+                            style={[
+                              styles.targetChipText,
+                              selected && styles.targetChipTextSelected,
+                            ]}
+                          >
+                            {svc.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Vehicle pricing */}
@@ -417,7 +522,7 @@ export function ServiceDrawer({
               <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <Text style={styles.saveBtnText}>
-                {isEdit ? "Save Changes" : "Add Service"}
+                {isEdit ? "Save Changes" : isAddon ? "Add Add-on" : "Add Service"}
               </Text>
             )}
           </TouchableOpacity>
@@ -552,7 +657,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  vehicleSection: {
+  // Add-on section
+  addonSection: {
     gap: Spacing.md,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
@@ -562,6 +668,66 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  switchLabelCol: { flex: 1, gap: 3 },
+  switchHint: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    lineHeight: 18,
+  },
+  targetsBlock: { gap: Spacing.sm },
+  noServicesHint: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.foamLightBlue,
+    borderRadius: Radius.sm,
+    padding: 12,
+  },
+  noServicesText: {
+    flex: 1,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+  },
+  targetChipsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+  },
+  targetChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderDefault,
+    backgroundColor: Colors.light.bgPrimary,
+  },
+  targetChipSelected: {
+    backgroundColor: Colors.foamBlue,
+    borderColor: Colors.foamBlue,
+  },
+  targetChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textSecondary,
+  },
+  targetChipTextSelected: {
+    color: Colors.white,
+  },
+
+  // Vehicle pricing section
+  vehicleSection: {
+    gap: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.borderSubtle,
   },
   vehicleInputs: { gap: Spacing.sm },
   vehicleRow: {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ interface RawServicePackage {
   duration_mins: number;
   description: string | null;
   display_order: number;
+  is_addon: boolean;
   vehicle_size_pricing: RawVehiclePricingRow[];
 }
 
@@ -50,6 +51,9 @@ interface ServiceItem {
   vehiclePricing: boolean;
   pricing: VehiclePricingMap;
   displayOrder: number;
+  isAddon: boolean;
+  addonTargetIds: string[];
+  addonTargetNames: string[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -80,6 +84,9 @@ export default function ServicesScreen() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingService, setEditingService] = useState<ServiceDrawerService | undefined>(undefined);
 
+  const regularServices = useMemo(() => services.filter((s) => !s.isAddon), [services]);
+  const addonServices = useMemo(() => services.filter((s) => s.isAddon), [services]);
+
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -99,13 +106,37 @@ export default function ServicesScreen() {
 
       const { data: pkgData, error: pkgErr } = await supabase
         .from("service_packages")
-        .select("id,name,base_price,duration_mins,description,display_order,vehicle_size_pricing(vehicle_type,price_adjustment)")
+        .select("id,name,base_price,duration_mins,description,display_order,is_addon,vehicle_size_pricing(vehicle_type,price_adjustment)")
         .eq("detailer_id", dId)
         .eq("is_active", true)
         .order("display_order");
       if (pkgErr) throw pkgErr;
 
       const rows: RawServicePackage[] = (pkgData as unknown as RawServicePackage[]) ?? [];
+
+      // Load add-on targets for any add-on packages
+      const addonIds = rows.filter((r) => r.is_addon).map((r) => r.id);
+      const addonTargetMap: Record<string, string[]> = {};
+
+      if (addonIds.length > 0) {
+        const { data: targetsData } = await supabase
+          .from("service_addon_targets")
+          .select("addon_id, service_id")
+          .in("addon_id", addonIds);
+
+        const targets = (targetsData ?? []) as { addon_id: string; service_id: string }[];
+        for (const t of targets) {
+          if (!addonTargetMap[t.addon_id]) addonTargetMap[t.addon_id] = [];
+          addonTargetMap[t.addon_id].push(t.service_id);
+        }
+      }
+
+      // Build a name map for regular services so add-ons can show their target names
+      const serviceNameMap: Record<string, string> = {};
+      for (const r of rows) {
+        if (!r.is_addon) serviceNameMap[r.id] = r.name;
+      }
+
       setServices(
         rows.map((r) => {
           const { hours, minutes } = minsToHM(r.duration_mins);
@@ -115,7 +146,7 @@ export default function ServicesScreen() {
             const t = row.vehicle_type as keyof VehiclePricingMap;
             if (t in pricing) pricing[t] = row.price_adjustment.toString();
           }
-          const vehiclePricing = vspRows.length > 0;
+          const targetIds = addonTargetMap[r.id] ?? [];
           return {
             id: r.id,
             name: r.name,
@@ -123,9 +154,12 @@ export default function ServicesScreen() {
             hours,
             minutes,
             description: r.description,
-            vehiclePricing,
+            vehiclePricing: vspRows.length > 0,
             pricing,
             displayOrder: r.display_order,
+            isAddon: r.is_addon,
+            addonTargetIds: targetIds,
+            addonTargetNames: targetIds.map((id) => serviceNameMap[id] ?? "").filter(Boolean),
           };
         })
       );
@@ -162,6 +196,8 @@ export default function ServicesScreen() {
       description: svc.description,
       vehiclePricing: svc.vehiclePricing,
       pricing: svc.pricing,
+      isAddon: svc.isAddon,
+      addonTargetIds: svc.addonTargetIds,
     });
     setDrawerVisible(true);
   }
@@ -172,14 +208,14 @@ export default function ServicesScreen() {
   }
 
   function confirmDelete(svc: ServiceItem) {
-    Alert.alert(
-      "Delete Service",
-      `Remove "${svc.name}" from your service menu?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteService(svc.id) },
-      ]
-    );
+    const hasAddons = !svc.isAddon && addonServices.some((a) => a.addonTargetIds.includes(svc.id));
+    const message = hasAddons
+      ? `Remove "${svc.name}"? Add-ons linked to this service will lose this association.`
+      : `Remove "${svc.name}" from your service menu?`;
+    Alert.alert("Delete Service", message, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => deleteService(svc.id) },
+    ]);
   }
 
   async function deleteService(id: string) {
@@ -198,31 +234,34 @@ export default function ServicesScreen() {
     }
   }
 
-  async function moveService(index: number, direction: "up" | "down") {
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= services.length) return;
+  async function moveService(svcId: string, direction: "up" | "down") {
     if (reordering) return;
+    const target = services.find((s) => s.id === svcId);
+    if (!target) return;
 
-    // Swap the two items and renumber the entire list sequentially so that
-    // duplicate display_order values (from legacy data or concurrent adds) can
-    // never block a future reorder.
-    const reordered = [...services];
-    const temp = reordered[index];
-    reordered[index] = reordered[swapIndex];
-    reordered[swapIndex] = temp;
+    // Work within the same group (regular or add-on)
+    const group = services.filter((s) => s.isAddon === target.isAddon);
+    const idx = group.findIndex((s) => s.id === svcId);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= group.length) return;
 
-    const withNewOrder = reordered.map((svc, i) => ({
-      ...svc,
-      displayOrder: i,
-    }));
-    setServices(withNewOrder);
+    const newGroup = [...group];
+    [newGroup[idx], newGroup[swapIdx]] = [newGroup[swapIdx], newGroup[idx]];
+    const newGroupOrdered = newGroup.map((s, i) => ({ ...s, displayOrder: i }));
+
+    // Merge back into the flat services array
+    const orderById: Record<string, number> = {};
+    for (const s of newGroupOrdered) orderById[s.id] = s.displayOrder;
+    setServices((prev) =>
+      prev.map((s) => (s.id in orderById ? { ...s, displayOrder: orderById[s.id] } : s))
+    );
 
     setReordering(true);
     try {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
       const updates = await Promise.all(
-        withNewOrder.map((svc) =>
+        newGroupOrdered.map((svc) =>
           supabase
             .from("service_packages")
             .update({ display_order: svc.displayOrder })
@@ -243,6 +282,8 @@ export default function ServicesScreen() {
       setReordering(false);
     }
   }
+
+  const isEmpty = services.length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -274,7 +315,7 @@ export default function ServicesScreen() {
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : services.length === 0 ? (
+      ) : isEmpty ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIconCircle}>
             <Ionicons name="construct-outline" size={36} color={Colors.foamBlue} />
@@ -294,90 +335,53 @@ export default function ServicesScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
         >
-          {services.map((svc, idx) => (
-            <View key={svc.id} style={[styles.card, styles.shadow]}>
-              <View style={styles.cardTop}>
-                {/* Reorder handle */}
-                <View style={styles.reorderCol}>
-                  <TouchableOpacity
-                    style={[styles.reorderBtn, idx === 0 && styles.reorderBtnDisabled]}
-                    onPress={() => moveService(idx, "up")}
-                    activeOpacity={0.6}
-                    disabled={idx === 0 || reordering}
-                  >
-                    <Ionicons
-                      name="chevron-up"
-                      size={16}
-                      color={idx === 0 ? Colors.light.textDisabled : Colors.light.textSecondary}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.reorderBtn, idx === services.length - 1 && styles.reorderBtnDisabled]}
-                    onPress={() => moveService(idx, "down")}
-                    activeOpacity={0.6}
-                    disabled={idx === services.length - 1 || reordering}
-                  >
-                    <Ionicons
-                      name="chevron-down"
-                      size={16}
-                      color={idx === services.length - 1 ? Colors.light.textDisabled : Colors.light.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.cardInfo}>
-                  <Text style={styles.svcName}>{svc.name}</Text>
-                  <Text style={styles.svcMeta}>
-                    ${svc.price.toFixed(0)} · {durationLabel(svc.hours, svc.minutes)}
-                  </Text>
-                  {svc.description ? (
-                    <Text style={styles.svcDesc} numberOfLines={2}>
-                      {svc.description}
-                    </Text>
-                  ) : null}
-                  {svc.vehiclePricing && (
-                    <View style={styles.chipRow}>
-                      {svc.pricing.suv ? (
-                        <View style={styles.chip}>
-                          <Text style={styles.chipText}>SUV ${svc.pricing.suv}</Text>
-                        </View>
-                      ) : null}
-                      {svc.pricing.truck ? (
-                        <View style={styles.chip}>
-                          <Text style={styles.chipText}>Truck ${svc.pricing.truck}</Text>
-                        </View>
-                      ) : null}
-                      {svc.pricing.van ? (
-                        <View style={styles.chip}>
-                          <Text style={styles.chipText}>Van ${svc.pricing.van}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  )}
-                </View>
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => openEdit(svc)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="pencil-outline" size={18} color={Colors.foamBlue} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => confirmDelete(svc)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={Colors.errorLight} />
-                  </TouchableOpacity>
-                </View>
+          {/* Regular services */}
+          {regularServices.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>SERVICES</Text>
+                <Text style={styles.sectionCount}>{regularServices.length}</Text>
               </View>
-            </View>
-          ))}
+              {regularServices.map((svc, idx) => (
+                <ServiceCard
+                  key={svc.id}
+                  svc={svc}
+                  idx={idx}
+                  groupSize={regularServices.length}
+                  reordering={reordering}
+                  onMove={(dir) => moveService(svc.id, dir)}
+                  onEdit={() => openEdit(svc)}
+                  onDelete={() => confirmDelete(svc)}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Add-ons */}
+          {addonServices.length > 0 && (
+            <>
+              <View style={[styles.sectionHeader, regularServices.length > 0 && { marginTop: Spacing.md }]}>
+                <Text style={styles.sectionTitle}>ADD-ONS</Text>
+                <Text style={styles.sectionCount}>{addonServices.length}</Text>
+              </View>
+              {addonServices.map((svc, idx) => (
+                <ServiceCard
+                  key={svc.id}
+                  svc={svc}
+                  idx={idx}
+                  groupSize={addonServices.length}
+                  reordering={reordering}
+                  onMove={(dir) => moveService(svc.id, dir)}
+                  onEdit={() => openEdit(svc)}
+                  onDelete={() => confirmDelete(svc)}
+                />
+              ))}
+            </>
+          )}
 
           <TouchableOpacity style={styles.addTrigger} onPress={openAdd} activeOpacity={0.8}>
             <Ionicons name="add" size={20} color={Colors.foamBlue} />
-            <Text style={styles.addTriggerText}>Add a Service</Text>
+            <Text style={styles.addTriggerText}>Add a Service or Add-on</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -389,10 +393,124 @@ export default function ServicesScreen() {
           onRequestClose={() => setDrawerVisible(false)}
           detailerId={detailerId}
           service={editingService}
+          regularServices={regularServices.map((s) => ({ id: s.id, name: s.name }))}
           onSaved={handleSaved}
         />
       ) : null}
     </SafeAreaView>
+  );
+}
+
+// ─── ServiceCard ──────────────────────────────────────────────────────────────
+
+function ServiceCard({
+  svc,
+  idx,
+  groupSize,
+  reordering,
+  onMove,
+  onEdit,
+  onDelete,
+}: {
+  svc: ServiceItem;
+  idx: number;
+  groupSize: number;
+  reordering: boolean;
+  onMove: (dir: "up" | "down") => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <View style={[styles.card, styles.shadow]}>
+      <View style={styles.cardTop}>
+        {/* Reorder handle */}
+        <View style={styles.reorderCol}>
+          <TouchableOpacity
+            style={[styles.reorderBtn, idx === 0 && styles.reorderBtnDisabled]}
+            onPress={() => onMove("up")}
+            activeOpacity={0.6}
+            disabled={idx === 0 || reordering}
+          >
+            <Ionicons
+              name="chevron-up"
+              size={16}
+              color={idx === 0 ? Colors.light.textDisabled : Colors.light.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.reorderBtn, idx === groupSize - 1 && styles.reorderBtnDisabled]}
+            onPress={() => onMove("down")}
+            activeOpacity={0.6}
+            disabled={idx === groupSize - 1 || reordering}
+          >
+            <Ionicons
+              name="chevron-down"
+              size={16}
+              color={idx === groupSize - 1 ? Colors.light.textDisabled : Colors.light.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.cardInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.svcName}>{svc.name}</Text>
+            {svc.isAddon && (
+              <View style={styles.addonBadge}>
+                <Text style={styles.addonBadgeText}>Add-on</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.svcMeta}>
+            ${svc.price.toFixed(0)} · {durationLabel(svc.hours, svc.minutes)}
+          </Text>
+          {svc.description ? (
+            <Text style={styles.svcDesc} numberOfLines={2}>
+              {svc.description}
+            </Text>
+          ) : null}
+          {/* Vehicle size pricing chips */}
+          {svc.vehiclePricing && (
+            <View style={styles.chipRow}>
+              {svc.pricing.suv ? (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>SUV ${svc.pricing.suv}</Text>
+                </View>
+              ) : null}
+              {svc.pricing.truck ? (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>Truck ${svc.pricing.truck}</Text>
+                </View>
+              ) : null}
+              {svc.pricing.van ? (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>Van ${svc.pricing.van}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+          {/* Add-on target service chips */}
+          {svc.isAddon && svc.addonTargetNames.length > 0 && (
+            <View style={styles.chipRow}>
+              {svc.addonTargetNames.map((n) => (
+                <View key={n} style={styles.addonTargetChip}>
+                  <Ionicons name="add-circle-outline" size={11} color={Colors.foamBlue} />
+                  <Text style={styles.addonTargetChipText}>{n}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.actionBtn} onPress={onEdit} activeOpacity={0.7}>
+            <Ionicons name="pencil-outline" size={18} color={Colors.foamBlue} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={onDelete} activeOpacity={0.7}>
+            <Ionicons name="trash-outline" size={18} color={Colors.errorLight} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -508,6 +626,30 @@ const styles = StyleSheet.create({
     gap: Spacing.mdSm,
   },
 
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: 2,
+    marginBottom: 2,
+  },
+  sectionTitle: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.8,
+  },
+  sectionCount: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.foamBlue,
+    backgroundColor: Colors.foamBlueSubtle,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: Radius.pill,
+    overflow: "hidden",
+  },
+
   card: {
     backgroundColor: Colors.light.surface,
     borderRadius: Radius.lg,
@@ -541,10 +683,27 @@ const styles = StyleSheet.create({
   },
 
   cardInfo: { flex: 1, gap: 4 },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
   svcName: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyL,
     color: Colors.light.textPrimary,
+  },
+  addonBadge: {
+    backgroundColor: Colors.foamBlueSubtle,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  addonBadgeText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 10,
+    color: Colors.foamBlue,
   },
   svcMeta: {
     fontFamily: Typography.body,
@@ -589,6 +748,22 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.caption,
     color: Colors.light.textSecondary,
+  },
+  addonTargetChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    backgroundColor: Colors.foamLightBlue,
+  },
+  addonTargetChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.caption,
+    color: Colors.foamBlue,
   },
 
   addTrigger: {

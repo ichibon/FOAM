@@ -137,12 +137,15 @@ function BookingListCard({
   booking,
   onPress,
   onAssignPress,
+  onDeletePress,
 }: {
   booking: BookingCard;
   onPress: () => void;
   onAssignPress: () => void;
+  onDeletePress?: () => void;
 }) {
-  const isPast = booking.status === "completed" || booking.status === "cancelled" || booking.status === "no_show";
+  const isCancelled = booking.status === "cancelled";
+  const isPast = booking.status === "completed" || booking.status === "no_show";
   const badge = statusBadgeConfig(booking.status);
 
   return (
@@ -163,8 +166,12 @@ function BookingListCard({
             <Text style={styles.cardTimePast}>{badge.label} · {booking.timeLabel}</Text>
           ) : (
             <View style={styles.cardTimeBadgeRow}>
-              <Text style={styles.cardTime}>{booking.timeLabel}</Text>
-              {booking.isUnassigned ? (
+              <Text style={isCancelled ? styles.cardTimePast : styles.cardTime}>{booking.timeLabel}</Text>
+              {isCancelled ? (
+                <View style={[styles.inlineBadge, { backgroundColor: badge.bg }]}>
+                  <Text style={[styles.inlineBadgeText, { color: badge.color }]}>{badge.label}</Text>
+                </View>
+              ) : booking.isUnassigned ? (
                 <View style={[styles.inlineBadge, { backgroundColor: "rgba(217,119,6,0.08)" }]}>
                   <Text style={[styles.inlineBadgeText, { color: Colors.warningLight }]}>Unassigned</Text>
                 </View>
@@ -177,7 +184,11 @@ function BookingListCard({
           )}
         </View>
 
-        {booking.isUnassigned ? (
+        {isCancelled ? (
+          <TouchableOpacity onPress={onDeletePress} style={styles.textActionBtn} activeOpacity={0.75}>
+            <Ionicons name="trash-outline" size={18} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+        ) : booking.isUnassigned ? (
           <TouchableOpacity onPress={onAssignPress} style={styles.assignBtn} activeOpacity={0.75}>
             <Text style={styles.assignBtnText}>Assign</Text>
           </TouchableOpacity>
@@ -446,10 +457,37 @@ export default function OperatorBookingsScreen() {
     fetchData();
   }, [fetchData]);
 
+  // ── Delete handler ────────────────────────────────────────────────────────────
+
+  async function handleDeleteCancelled(bookingId: string) {
+    Alert.alert(
+      "Delete Booking",
+      "Permanently delete this cancelled booking?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+              const supabase = getSupabase();
+              await supabase.from("bookings").delete().eq("id", bookingId);
+              setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+            } catch (err) {
+              console.warn("[OperatorBookings] delete error", err);
+              Alert.alert("Error", "Failed to delete booking. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  }
+
   // ── Filter logic ──────────────────────────────────────────────────────────────
 
-  const PAST_STATUSES: BookingStatus[] = ["completed", "cancelled", "no_show"];
-  const UPCOMING_STATUSES: BookingStatus[] = ["requested", "confirmed", "in_progress"];
+  const PAST_STATUSES: BookingStatus[] = ["completed", "no_show"];
+  const UPCOMING_STATUSES: BookingStatus[] = ["requested", "confirmed", "in_progress", "cancelled"];
 
   const filteredBookings = bookings.filter((b) => {
     const matchesSegment =
@@ -632,6 +670,7 @@ export default function OperatorBookingsScreen() {
                     )
                   }
                   onAssignPress={() => router.push(`/operator/bookings/assign?bookingId=${b.id}`)}
+                  onDeletePress={() => handleDeleteCancelled(b.id)}
                 />
               ))}
             </View>

@@ -216,6 +216,8 @@ interface BookingDetail {
   crewName: string | null;
   crewInitials: string | null;
   detailerId: string;
+  customerId: string | null;
+  contactId: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -328,6 +330,13 @@ export default function BookingDetailScreen() {
   const [editCrewMembers, setEditCrewMembers] = useState<EditCrewOption[]>([]);
   const [editDataLoading, setEditDataLoading] = useState(false);
   const [editDataError, setEditDataError] = useState(false);
+  const [editAddVehicleOpen, setEditAddVehicleOpen] = useState(false);
+  const [editNewMake, setEditNewMake] = useState("");
+  const [editNewModel, setEditNewModel] = useState("");
+  const [editNewYear, setEditNewYear] = useState("");
+  const [editNewColor, setEditNewColor] = useState("");
+  const [editNewPackageId, setEditNewPackageId] = useState<string | null>(null);
+  const [editAddSaving, setEditAddSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user || !id) return;
@@ -612,6 +621,8 @@ export default function BookingDetailScreen() {
         crewName,
         crewInitials,
         detailerId: b.detailer_id,
+        customerId: b.customer_id,
+        contactId: b.contact_id,
       });
       setScreenState("main");
     } catch (err) {
@@ -647,6 +658,13 @@ export default function BookingDetailScreen() {
     setEditPackageId(booking.packageId);
     setEditError(null);
     setEditDataError(false);
+    setEditAddVehicleOpen(false);
+    setEditNewMake("");
+    setEditNewModel("");
+    setEditNewYear("");
+    setEditNewColor("");
+    setEditNewPackageId(null);
+    setEditAddSaving(false);
     setEditSheetVisible(true);
     setEditDataLoading(true);
     try {
@@ -681,6 +699,137 @@ export default function BookingDetailScreen() {
       setEditDataError(true);
     } finally {
       setEditDataLoading(false);
+    }
+  }
+
+  function handleRemoveVehicle(vehicleBookingId: string) {
+    if (!booking || booking.orderVehicles.length <= 1) return;
+    Alert.alert(
+      "Remove Vehicle",
+      "Remove this vehicle from the order? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+              const supabase = getSupabase();
+              const { error } = await supabase.from("bookings").delete().eq("id", vehicleBookingId);
+              if (error) throw error;
+              setEditSheetVisible(false);
+              // If the removed booking is the one currently being viewed,
+              // navigate to a surviving sibling instead of re-fetching a deleted row.
+              if (vehicleBookingId === id) {
+                const sibling = booking.orderVehicles.find((v) => v.bookingId !== vehicleBookingId);
+                if (sibling) {
+                  router.replace(`/operator/bookings/${sibling.bookingId}` as never);
+                  return;
+                }
+              }
+              await fetchData();
+            } catch (err) {
+              console.warn("[BookingDetail] handleRemoveVehicle error", err);
+              setEditError("Failed to remove vehicle. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleAddVehicle() {
+    if (!booking) return;
+    if (!editNewPackageId) {
+      setEditError("Please select a package for the new vehicle.");
+      return;
+    }
+    if (!editNewMake.trim() || !editNewModel.trim()) {
+      setEditError("Please enter both a make and model for the new vehicle.");
+      return;
+    }
+    setEditAddSaving(true);
+    setEditError(null);
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+
+      // Ensure order_id exists; backfill all siblings if pre-migration
+      let orderId = booking.orderId;
+      if (!orderId) {
+        orderId = crypto.randomUUID();
+        for (const v of booking.orderVehicles) {
+          const { error: patchErr } = await supabase
+            .from("bookings")
+            .update({ order_id: orderId })
+            .eq("id", v.bookingId);
+          if (patchErr) throw new Error("Failed to link order — please try again.");
+        }
+      }
+
+      // Registered customer: create a vehicles row and link it
+      let vehicleId: string | null = null;
+      if (booking.customerId) {
+        const { data: vData, error: vErr } = await supabase
+          .from("vehicles")
+          .insert({
+            customer_id: booking.customerId,
+            make: editNewMake.trim() || null,
+            model: editNewModel.trim() || null,
+            year: editNewYear.trim() ? parseInt(editNewYear.trim(), 10) : null,
+            color: editNewColor.trim() || null,
+            is_default: false,
+          })
+          .select("id")
+          .single();
+        if (vErr || !vData) throw new Error("Failed to create vehicle record");
+        vehicleId = (vData as { id: string }).id;
+      }
+
+      // Walk-in customer: create a new booking_contacts row for this vehicle
+      let contactId: string | null = booking.contactId;
+      if (booking.contactId && !booking.customerId) {
+        const { data: cData, error: cErr } = await supabase
+          .from("booking_contacts")
+          .insert({
+            detailer_id: booking.detailerId,
+            full_name: booking.customerName,
+            phone: booking.customerPhone || null,
+            vehicle_make: editNewMake.trim() || null,
+            vehicle_model: editNewModel.trim() || null,
+            vehicle_year: editNewYear.trim() ? parseInt(editNewYear.trim(), 10) : null,
+            vehicle_color: editNewColor.trim() || null,
+          })
+          .select("id")
+          .single();
+        if (cErr || !cData) throw new Error("Failed to create contact record");
+        contactId = (cData as { id: string }).id;
+      }
+
+      const { error: bErr } = await supabase.from("bookings").insert({
+        detailer_id: booking.detailerId,
+        customer_id: booking.customerId,
+        contact_id: contactId,
+        vehicle_id: vehicleId,
+        package_id: editNewPackageId,
+        order_id: orderId,
+        status: booking.status,
+        scheduled_at: booking.scheduledAt.toISOString(),
+        crew_member_id: booking.crewMemberId,
+        service_address: booking.serviceAddress,
+        tip_amount: 0,
+        is_recurring: false,
+      });
+      if (bErr) throw bErr;
+
+      setEditSheetVisible(false);
+      await fetchData();
+    } catch (err) {
+      console.warn("[BookingDetail] handleAddVehicle error", err);
+      setEditError("Failed to add vehicle. Please try again.");
+    } finally {
+      setEditAddSaving(false);
     }
   }
 
@@ -1041,15 +1190,145 @@ export default function BookingDetailScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Multi-vehicle note */}
-            {booking.orderVehicles.length > 1 && (
-              <View style={styles.editMultiNote}>
-                <Ionicons name="information-circle-outline" size={15} color={Colors.foamBlue} />
-                <Text style={styles.editMultiNoteText}>
-                  This appointment has multiple vehicles. Changes here apply to this vehicle only. Edit each vehicle separately to update the full order.
-                </Text>
-              </View>
-            )}
+            {/* Vehicles in this order */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionLabel}>VEHICLES IN THIS ORDER</Text>
+              {booking.orderVehicles.map((v) => (
+                <View key={v.bookingId} style={styles.editVehicleRow}>
+                  <View style={styles.editVehicleInfo}>
+                    <Text style={styles.editVehicleDesc}>{v.vehicleDesc}</Text>
+                    <Text style={styles.editVehiclePkg}>{v.packageName}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.editVehicleRemoveBtn,
+                      booking.orderVehicles.length <= 1 && { opacity: 0.3 },
+                    ]}
+                    onPress={() => handleRemoveVehicle(v.bookingId)}
+                    disabled={booking.orderVehicles.length <= 1}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={17} color={Colors.errorLight} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {/* Add vehicle */}
+              {!editAddVehicleOpen ? (
+                <TouchableOpacity
+                  style={styles.editAddVehicleBtn}
+                  onPress={() => setEditAddVehicleOpen(true)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="add-circle-outline" size={16} color={Colors.foamBlue} />
+                  <Text style={styles.editAddVehicleBtnText}>Add Vehicle</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.editAddVehicleForm}>
+                  <Text style={styles.editAddFormTitle}>New Vehicle</Text>
+                  <View style={styles.editAddRow}>
+                    <Text style={styles.editAddLabel}>Make</Text>
+                    <TextInput
+                      style={styles.editAddInput}
+                      value={editNewMake}
+                      onChangeText={setEditNewMake}
+                      placeholder="Toyota"
+                      placeholderTextColor={Colors.light.textTertiary}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                  <View style={styles.editAddRow}>
+                    <Text style={styles.editAddLabel}>Model</Text>
+                    <TextInput
+                      style={styles.editAddInput}
+                      value={editNewModel}
+                      onChangeText={setEditNewModel}
+                      placeholder="Camry"
+                      placeholderTextColor={Colors.light.textTertiary}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                  <View style={styles.editAddRow}>
+                    <Text style={styles.editAddLabel}>Year</Text>
+                    <TextInput
+                      style={styles.editAddInput}
+                      value={editNewYear}
+                      onChangeText={setEditNewYear}
+                      placeholder="2022"
+                      placeholderTextColor={Colors.light.textTertiary}
+                      keyboardType="numeric"
+                      maxLength={4}
+                    />
+                  </View>
+                  <View style={styles.editAddRow}>
+                    <Text style={styles.editAddLabel}>Color</Text>
+                    <TextInput
+                      style={styles.editAddInput}
+                      value={editNewColor}
+                      onChangeText={setEditNewColor}
+                      placeholder="Silver"
+                      placeholderTextColor={Colors.light.textTertiary}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                  {!editDataLoading && editPackages.length > 0 && (
+                    <>
+                      <Text style={[styles.editAddLabel, { marginTop: 4 }]}>Package</Text>
+                      {editPackages.map((pkg) => {
+                        const isSel = editNewPackageId === pkg.id;
+                        return (
+                          <TouchableOpacity
+                            key={pkg.id}
+                            style={[styles.editPickerRow, isSel && styles.editPickerRowSelected]}
+                            onPress={() => setEditNewPackageId(pkg.id)}
+                            activeOpacity={0.75}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.editPickerRowName, isSel && { color: Colors.foamBlue }]}>
+                                {pkg.name}
+                              </Text>
+                              <Text style={styles.editPickerRowSub}>
+                                {pkg.duration_mins} min · ${pkg.base_price.toFixed(0)}
+                              </Text>
+                            </View>
+                            {isSel && <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </>
+                  )}
+                  <View style={styles.editAddBtnRow}>
+                    <TouchableOpacity
+                      style={styles.editAddCancelBtn}
+                      onPress={() => {
+                        setEditAddVehicleOpen(false);
+                        setEditNewMake("");
+                        setEditNewModel("");
+                        setEditNewYear("");
+                        setEditNewColor("");
+                        setEditNewPackageId(null);
+                        setEditError(null);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.editAddCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.editAddSaveBtn, editAddSaving && { opacity: 0.6 }]}
+                      onPress={handleAddVehicle}
+                      disabled={editAddSaving}
+                      activeOpacity={0.85}
+                    >
+                      {editAddSaving ? (
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      ) : (
+                        <Text style={styles.editAddSaveText}>Add</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
 
             {/* Date & Time */}
             <View style={styles.editSection}>
@@ -1690,6 +1969,124 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   editSaveBtnText: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyM,
+    color: Colors.white,
+  },
+
+  // Vehicle list rows
+  editVehicleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    gap: Spacing.sm,
+  },
+  editVehicleInfo: {
+    flex: 1,
+  },
+  editVehicleDesc: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+  },
+  editVehiclePkg: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    marginTop: 2,
+  },
+  editVehicleRemoveBtn: {
+    padding: 6,
+  },
+
+  // Add vehicle button (collapsed state)
+  editAddVehicleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.foamBlue,
+    borderStyle: "dashed",
+    borderRadius: Radius.md,
+  },
+  editAddVehicleBtnText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.foamBlue,
+  },
+
+  // Add vehicle form (expanded state)
+  editAddVehicleForm: {
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    backgroundColor: Colors.light.bgSecondary,
+  },
+  editAddFormTitle: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  editAddRow: {
+    gap: 4,
+  },
+  editAddLabel: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
+  },
+  editAddInput: {
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textPrimary,
+    backgroundColor: Colors.light.surface,
+  },
+  editAddBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  editAddCancelBtn: {
+    flex: 1,
+    height: 40,
+    backgroundColor: Colors.light.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editAddCancelText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: Typography.size.bodyM,
+    color: Colors.light.textSecondary,
+  },
+  editAddSaveBtn: {
+    flex: 1,
+    height: 40,
+    backgroundColor: Colors.foamBlue,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editAddSaveText: {
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.bodyM,
     color: Colors.white,

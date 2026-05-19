@@ -9,6 +9,7 @@ import {
   Animated,
   ActivityIndicator,
   Linking,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -44,6 +45,7 @@ export default function OperatorPendingScreen() {
   const [unitCounts, setUnitCounts] = useState<UnitCounts>({ vans: 0, locations: 0 });
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -113,6 +115,12 @@ export default function OperatorPendingScreen() {
     }
     setLoading(false);
   }, [refreshAuth]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadData();
+    setIsRefreshing(false);
+  }, [loadData]);
 
   useEffect(() => {
     void loadData();

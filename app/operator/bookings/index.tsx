@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -250,6 +251,7 @@ export default function OperatorBookingsScreen() {
   const [crewFilter, setCrewFilter] = useState<string | null>(null);
   const [bookings, setBookings] = useState<BookingCard[]>([]);
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -453,6 +455,12 @@ export default function OperatorBookingsScreen() {
     }
   }, [user]);
 
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  }, [fetchData]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -654,6 +662,7 @@ export default function OperatorBookingsScreen() {
         <ScrollView
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
         >
           {groupBookingsByDate(filteredBookings).map((group) => (
             <View key={group.dateKey}>

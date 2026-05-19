@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   Linking,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -170,6 +171,7 @@ export default function MemberProfileScreen() {
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [canViewContact, setCanViewContact] = useState(false);
   const [canReschedule, setCanReschedule] = useState(false);
@@ -323,6 +325,12 @@ export default function MemberProfileScreen() {
       setScreenState("fetch_error");
     }
   }, [user, memberId]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load();
+    setIsRefreshing(false);
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -139,6 +140,7 @@ export default function TeamRosterScreen() {
   const { user } = useAuth();
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [members, setMembers] = useState<RosterMember[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -243,6 +245,12 @@ export default function TeamRosterScreen() {
       setScreenState("fetch_error");
     }
   }, [user]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load();
+    setIsRefreshing(false);
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {

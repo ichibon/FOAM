@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -49,6 +50,7 @@ export default function LocationsVansScreen() {
   const [locations, setLocations] = useState<LocationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>("approved");
   const [storedDetailerId, setStoredDetailerId] = useState<string>("");
   const [addVanOpen, setAddVanOpen] = useState(false);
@@ -95,6 +97,12 @@ export default function LocationsVansScreen() {
     }
     setLoading(false);
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadUnits();
+    setIsRefreshing(false);
+  }, [loadUnits]);
 
   useEffect(() => {
     void loadUnits();

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -140,6 +141,7 @@ export default function UnassignedJobsScreen() {
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [jobs, setJobs] = useState<UnassignedCard[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -267,6 +269,12 @@ export default function UnassignedJobsScreen() {
       setScreenState("fetch_error");
     }
   }, [user]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();

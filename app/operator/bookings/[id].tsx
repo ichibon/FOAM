@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -337,6 +338,7 @@ export default function BookingDetailScreen() {
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ── Edit sheet state ──────────────────────────────────────────────────────
   const [editSheetVisible, setEditSheetVisible] = useState(false);
@@ -654,6 +656,12 @@ export default function BookingDetailScreen() {
       setScreenState("fetch_error");
     }
   }, [user, id]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -985,7 +993,7 @@ export default function BookingDetailScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}>
 
         {/* Status + Time */}
         <SectionCard>

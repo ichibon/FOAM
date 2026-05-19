@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -74,6 +75,7 @@ export default function ServicesScreen() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingService, setEditingService] = useState<ServiceDrawerService | undefined>(undefined);
@@ -134,6 +136,12 @@ export default function ServicesScreen() {
       setLoading(false);
     }
   }, [user]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load();
+    setIsRefreshing(false);
+  }, [load]);
 
   useEffect(() => {
     load();

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -261,6 +262,7 @@ export default function BusinessScreen() {
   const [period, setPeriod] = useState<Period>("week");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [pendingRevenue, setPendingRevenue] = useState(0);
@@ -426,6 +428,12 @@ export default function BusinessScreen() {
     },
     [user]
   );
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load(period);
+    setIsRefreshing(false);
+  }, [load, period]);
 
   useFocusEffect(
     useCallback(() => {

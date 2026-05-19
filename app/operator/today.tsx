@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -465,6 +466,7 @@ export default function OperatorTodayScreen() {
 
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [firstName, setFirstName] = useState("there");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [todayJobs, setTodayJobs] = useState<JobCard[]>([]);
   const [stats, setStats] = useState<OperatorStats>({ inProgress: 0, completed: 0, unassigned: 0 });
@@ -744,6 +746,12 @@ export default function OperatorTodayScreen() {
       setScreenState("fetch_error");
     }
   }, [user]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  }, [fetchData]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

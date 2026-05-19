@@ -34,3 +34,7 @@ These are already in the live database. Running them again is safe (all use
 | `20260515000005_vehicle_size_pricing.sql` | ✅ |
 | `20260516000000_fix_bookings_rls.sql` | ✅ |
 | `20260516000001_bookings_add_asset_location.sql` | ✅ |
+| `20260518000000_vehicles_nullable_customer_id.sql` | ✅ |
+| `20260518000001_bookings_utility_fields.sql` | ✅ |
+| `20260518000002_bookings_order_id.sql` | ✅ |
+| `20260518000003_backfill_order_id_registered_customers.sql` | ✅ |

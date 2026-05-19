@@ -454,18 +454,29 @@ export function WeekView({
 }) {
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   const filtered = filterCrewId ? jobs.filter((j) => j.crewMemberId === filterCrewId) : jobs;
+  const totalGridH = TOTAL_HOUR_SLOTS * SLOT_HEIGHT;
 
-  // Group by day index and hour
-  const gridMap: Record<number, Record<number, CalJob[]>> = {};
-  for (let i = 0; i < 7; i++) gridMap[i] = {};
+  // Group jobs by day index (not by slot)
+  const jobsByDay: Record<number, CalJob[]> = {};
+  for (let i = 0; i < 7; i++) jobsByDay[i] = [];
   for (const job of filtered) {
     const dayIdx = weekDays.findIndex((d) => isSameDay(d, job.scheduledAt));
     if (dayIdx < 0) continue;
     const h = job.scheduledAt.getHours();
     if (h < DAY_START_HOUR || h >= DAY_END_HOUR) continue;
-    const slotIdx = h - DAY_START_HOUR;
-    if (!gridMap[dayIdx][slotIdx]) gridMap[dayIdx][slotIdx] = [];
-    gridMap[dayIdx][slotIdx].push(job);
+    jobsByDay[dayIdx].push(job);
+  }
+
+  // Same layout logic as DayView — fractional hour offset + duration height
+  function jobLayout(job: CalJob): { top: number; height: number } {
+    const h = job.scheduledAt.getHours();
+    const m = job.scheduledAt.getMinutes();
+    const fractHour = h + m / 60;
+    const top = (fractHour - DAY_START_HOUR) * SLOT_HEIGHT;
+    const desired = (job.durationMins / 60) * SLOT_HEIGHT;
+    const maxAvail = (DAY_END_HOUR - fractHour) * SLOT_HEIGHT;
+    const height = Math.max(Math.min(desired, maxAvail), 16);
+    return { top, height };
   }
 
   return (
@@ -486,37 +497,51 @@ export function WeekView({
         })}
       </View>
 
-      {/* Hour rows */}
-      {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, slotIdx) => {
-        const hour = DAY_START_HOUR + slotIdx;
-        return (
-          <View key={slotIdx} style={wvStyles.row}>
-            <View style={[wvStyles.timeGutter]}>
-              <Text style={wvStyles.timeLabel}>{formatHour(hour)}</Text>
+      {/* Grid body — absolutely positioned job blocks */}
+      <View style={{ flexDirection: "row", height: totalGridH }}>
+        {/* Time gutter */}
+        <View style={{ width: TIME_GUTTER_W, flexShrink: 0 }}>
+          {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, i) => (
+            <View
+              key={i}
+              style={{ position: "absolute", top: i * SLOT_HEIGHT + 4, width: TIME_GUTTER_W, alignItems: "flex-end", paddingRight: 8 }}
+            >
+              <Text style={wvStyles.timeLabel}>{formatHour(DAY_START_HOUR + i)}</Text>
             </View>
-            {weekDays.map((d, dayIdx) => {
-              const cellJobs = gridMap[dayIdx][slotIdx] ?? [];
+          ))}
+        </View>
+
+        {/* Day columns */}
+        {weekDays.map((d, dayIdx) => (
+          <TouchableOpacity
+            key={dayIdx}
+            style={[wvStyles.dayCol, isToday(d) && wvStyles.todayCol]}
+            onPress={() => onDayPress(d)}
+            activeOpacity={0.85}
+          >
+            {/* Hour grid lines */}
+            {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, i) => (
+              <View
+                key={i}
+                style={{ position: "absolute", top: i * SLOT_HEIGHT, left: 0, right: 0, height: 1, backgroundColor: Colors.light.borderSubtle }}
+              />
+            ))}
+
+            {/* Job blocks */}
+            {jobsByDay[dayIdx].map((job) => {
+              const { top, height } = jobLayout(job);
+              const color = job.crewMemberId ? crewColor(job.crewIndex) : Colors.light.borderDefault;
               return (
-                <TouchableOpacity
-                  key={dayIdx}
-                  style={[wvStyles.cell, isToday(d) && wvStyles.todayCell]}
-                  onPress={() => onDayPress(d)}
-                  activeOpacity={0.85}
-                >
-                  {cellJobs.map((job) => (
-                    <View
-                      key={job.id}
-                      style={[wvStyles.dot, { backgroundColor: job.crewMemberId ? crewColor(job.crewIndex) : Colors.light.borderDefault }]}
-                    >
-                      <Text style={wvStyles.dotText} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
-                    </View>
-                  ))}
-                </TouchableOpacity>
+                <View key={job.id} style={[wvStyles.weekJobBlock, { top, height, backgroundColor: color }]}>
+                  <Text style={wvStyles.weekJobText} numberOfLines={1}>
+                    {job.customerName.split(" ")[0]}
+                  </Text>
+                </View>
               );
             })}
-          </View>
-        );
-      })}
+          </TouchableOpacity>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -540,6 +565,13 @@ const wvStyles = StyleSheet.create({
     padding: 2,
     gap: 2,
   },
+  dayCol: {
+    flex: 1,
+    position: "relative",
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.light.borderSubtle,
+  },
+  todayCol: { backgroundColor: "rgba(51,157,199,0.04)" },
   todayCell: { backgroundColor: "rgba(51,157,199,0.04)" },
   dayLetter: {
     fontFamily: Typography.bodyMedium,
@@ -553,6 +585,16 @@ const wvStyles = StyleSheet.create({
   todayCircle: { backgroundColor: Colors.foamBlue },
   dayNumber: { fontFamily: Typography.bodyMedium, fontSize: 12, color: Colors.light.textSecondary },
   todayText: { color: Colors.white, fontFamily: Typography.bodySemiBold },
+  weekJobBlock: {
+    position: "absolute",
+    left: 1,
+    right: 1,
+    borderRadius: 2,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+    overflow: "hidden",
+  },
+  weekJobText: { fontFamily: Typography.bodyMedium, fontSize: 8, color: Colors.white },
   dot: { borderRadius: Radius.xs, paddingHorizontal: 3, paddingVertical: 2, marginBottom: 1 },
   dotText: { fontFamily: Typography.bodyMedium, fontSize: 9, color: Colors.white },
 });

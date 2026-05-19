@@ -46,6 +46,13 @@ These must be registered in the Supabase dashboard, Google Cloud Console, and Ap
 - **Workflow**: "Start application" runs `npx expo start --web --port 5000` (web preview in Replit canvas)
 - **Port**: 5000 (web preview)
 
+## Git / GitHub Workflow
+- The agent makes code changes locally; Replit auto-checkpoints commit them to the local `main` branch automatically.
+- **The agent does NOT push to GitHub** — pushing from the agent sandbox is blocked and was causing history divergence.
+- To push to GitHub, run `git push origin main` from the Shell tab. The origin URL already includes the PAT so no auth prompt is needed.
+- If the local and remote histories ever diverge again, run: `git fetch origin && git reset --hard origin/main` to align local with GitHub.
+- Stale `.git/*.lock` files (left by Replit's checkpoint system) can be cleared with `rm -f .git/*.lock .git/refs/remotes/origin/*.lock .git/objects/maintenance.lock`
+
 ## Native Device Testing
 Testing native features (Google OAuth, Apple Sign In, SecureStore, deep links) requires a real device build — Expo Go and tunnel mode are not sufficient.
 

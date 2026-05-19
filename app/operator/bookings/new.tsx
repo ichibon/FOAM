@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Switch,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,6 +37,12 @@ interface RawServicePackage {
 
 interface RawCustomerRow {
   customer_id: string | null;
+}
+
+interface RawContactRow {
+  id: string;
+  full_name: string;
+  phone: string | null;
 }
 
 interface RawUserDetail {
@@ -95,6 +102,9 @@ interface CustomerOption {
   userId: string;
   name: string;
   phone: string | null;
+  type?: "registered" | "walkin";
+  prefillName?: string;
+  prefillPhone?: string | null;
 }
 
 interface SavedVehicleOption {
@@ -557,9 +567,9 @@ export default function NewBookingScreen() {
   const [serviceLng, setServiceLng] = useState<number | null>(null);
   const [serviceZip, setServiceZip] = useState("");
 
-  // Utility supply (van/asset bookings only; null = not asked)
-  const [hasWaterSupply, setHasWaterSupply] = useState<boolean | null>(null);
-  const [hasElectricitySupply, setHasElectricitySupply] = useState<boolean | null>(null);
+  // Utility supply
+  const [hasWaterSupply, setHasWaterSupply] = useState(false);
+  const [hasElectricitySupply, setHasElectricitySupply] = useState(false);
 
   // Date & time
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
@@ -627,7 +637,7 @@ export default function NewBookingScreen() {
       const dId: string = (profileData as { id: string }).id;
       setDetailerId(dId);
 
-      const [pkgRes, custRes, assetRes, locationRes, crewRes] = await Promise.all([
+      const [pkgRes, custRes, assetRes, locationRes, crewRes, contactRes] = await Promise.all([
         supabase
           .from("service_packages")
           .select("id,name,base_price,duration_mins,description,vehicle_size_pricing(vehicle_type,price_adjustment)")
@@ -656,6 +666,12 @@ export default function NewBookingScreen() {
           .select("id,display_name,is_active,users!crew_members_user_id_fkey(full_name)")
           .eq("manager_id", dId)
           .eq("is_active", true),
+        supabase
+          .from("booking_contacts")
+          .select("id,full_name,phone")
+          .eq("detailer_id", dId)
+          .order("created_at", { ascending: false })
+          .limit(300),
       ]);
 
       setPackages(parsePackages(pkgRes.data));
@@ -668,20 +684,45 @@ export default function NewBookingScreen() {
             .filter((id): id is string => !!id)
         ),
       ];
+      let registeredCusts: CustomerOption[] = [];
       if (custIds.length > 0) {
         const { data: usersData } = await supabase
           .from("users")
           .select("id, full_name, phone")
           .in("id", custIds);
-        const custs: CustomerOption[] = ((usersData as RawUserDetail[] | null) ?? []).map((u) => ({
+        registeredCusts = ((usersData as RawUserDetail[] | null) ?? []).map((u) => ({
           userId: u.id,
           name: u.full_name ?? "Unknown",
           phone: u.phone ?? null,
+          type: "registered" as const,
         }));
-        setCustomers(custs);
-      } else {
-        setCustomers([]);
       }
+
+      // Walk-in contacts — deduplicate by (full_name, phone)
+      const seen = new Set<string>();
+      const walkinCusts: CustomerOption[] = ((contactRes.data as RawContactRow[] | null) ?? [])
+        .filter((c) => {
+          if (!c.full_name?.trim()) return false;
+          const key = `${c.full_name.trim().toLowerCase()}|${(c.phone ?? "").replace(/\D/g, "")}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map((c) => ({
+          userId: `walkin-${c.id}`,
+          name: c.full_name.trim(),
+          phone: c.phone ?? null,
+          type: "walkin" as const,
+          prefillName: c.full_name.trim(),
+          prefillPhone: c.phone ?? null,
+        }));
+
+      // Merge: registered (alpha) then walk-ins (alpha)
+      const merged = [
+        ...registeredCusts.sort((a, b) => a.name.localeCompare(b.name)),
+        ...walkinCusts.sort((a, b) => a.name.localeCompare(b.name)),
+      ];
+      setCustomers(merged);
 
       const sources: BookingSourceOption[] = [
         ...((assetRes.data as RawAssetRow[] | null) ?? []).map((a) => ({
@@ -806,9 +847,16 @@ export default function NewBookingScreen() {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   function selectCustomer(c: CustomerOption) {
+    setShowCustomerList(false);
+    if (c.type === "walkin") {
+      // Switch to create-mode and pre-fill the contact's details
+      switchToCreate();
+      setNewCustomerName(c.name);
+      setNewCustomerPhone(c.prefillPhone ?? "");
+      return;
+    }
     setSelectedCustomer(c);
     setCustomerSearch(c.name);
-    setShowCustomerList(false);
     setSavedVehicles([]);
     setEntries([makeEntry()]);
     fetchCustomerVehicles(c.userId);
@@ -821,18 +869,42 @@ export default function NewBookingScreen() {
       const supabase = getSupabase();
       const { data } = await supabase
         .from("bookings")
-        .select("service_address")
+        .select("service_address, has_water_supply, has_electricity_supply")
         .eq("customer_id", userId)
         .not("service_address", "is", null)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (data) {
-        const addr = (data as { service_address: string | null }).service_address;
-        if (addr) setServiceAddress(addr);
+        const row = data as { service_address: string | null; has_water_supply: boolean | null; has_electricity_supply: boolean | null };
+        if (row.service_address) setServiceAddress(row.service_address);
+        if (row.has_water_supply !== null) setHasWaterSupply(row.has_water_supply ?? false);
+        if (row.has_electricity_supply !== null) setHasElectricitySupply(row.has_electricity_supply ?? false);
       }
     } catch (err) {
       console.warn("[NewBooking] fetchCustomerLastAddress error", err);
+    }
+  }
+
+  async function fetchUtilityPrefsForAddress(userId: string, address: string) {
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const { data } = await supabase
+        .from("bookings")
+        .select("has_water_supply, has_electricity_supply")
+        .eq("customer_id", userId)
+        .eq("service_address", address)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        const row = data as { has_water_supply: boolean | null; has_electricity_supply: boolean | null };
+        setHasWaterSupply(row.has_water_supply ?? false);
+        setHasElectricitySupply(row.has_electricity_supply ?? false);
+      }
+    } catch (err) {
+      console.warn("[NewBooking] fetchUtilityPrefsForAddress error", err);
     }
   }
 
@@ -855,13 +927,13 @@ export default function NewBookingScreen() {
   }
 
   function selectSource(src: BookingSourceOption) {
-    if (src.type !== "asset") {
-      setHasWaterSupply(null);
-      setHasElectricitySupply(null);
-    }
     setSelectedSource(src);
     setShowSourcePicker(false);
-    if (src.type === "location") setServiceAddress("");
+    if (src.type === "location") {
+      setServiceAddress("");
+      setHasWaterSupply(false);
+      setHasElectricitySupply(false);
+    }
   }
 
   // ── Entry management ───────────────────────────────────────────────────────
@@ -977,8 +1049,8 @@ export default function NewBookingScreen() {
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             service_zip: serviceZip || null,
-            has_water_supply: selectedSource?.type === "asset" ? hasWaterSupply : null,
-            has_electricity_supply: selectedSource?.type === "asset" ? hasElectricitySupply : null,
+            has_water_supply: hasWaterSupply,
+            has_electricity_supply: hasElectricitySupply,
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -1072,8 +1144,8 @@ export default function NewBookingScreen() {
             ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
             ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
             service_zip: serviceZip || null,
-            has_water_supply: selectedSource?.type === "asset" ? hasWaterSupply : null,
-            has_electricity_supply: selectedSource?.type === "asset" ? hasElectricitySupply : null,
+            has_water_supply: hasWaterSupply,
+            has_electricity_supply: hasElectricitySupply,
             notes: notes.trim() || null,
             tip_amount: 0,
             is_recurring: false,
@@ -1362,7 +1434,14 @@ export default function NewBookingScreen() {
                       onPress={() => selectCustomer(c)}
                       activeOpacity={0.75}
                     >
-                      <Text style={styles.dropdownItemName}>{c.name}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text style={styles.dropdownItemName}>{c.name}</Text>
+                        {c.type === "walkin" && (
+                          <View style={styles.walkinBadge}>
+                            <Text style={styles.walkinBadgeText}>Walk-in</Text>
+                          </View>
+                        )}
+                      </View>
                       {c.phone && <Text style={styles.dropdownItemSub}>{c.phone}</Text>}
                     </TouchableOpacity>
                   ))}
@@ -1440,70 +1519,57 @@ export default function NewBookingScreen() {
                   setServiceLat(result.lat);
                   setServiceLng(result.lng);
                   setServiceZip(result.zip);
+                  if (selectedCustomer?.userId) {
+                    fetchUtilityPrefsForAddress(selectedCustomer.userId, result.formattedAddress);
+                  }
                 }}
               />
             </>
           )}
 
-          {/* Utility supply — only for van/asset bookings */}
-          {selectedSource?.type === "asset" && (
+          {/* Utility supply — mobile bookings only */}
+          {isMobile && (
             <>
               <View style={styles.sectionDivider} />
-              <FieldLabel>Water supply available?</FieldLabel>
               <TouchableOpacity
                 style={styles.utilityToggleRow}
-                onPress={() => setHasWaterSupply((v) => v === null ? true : v === true ? false : null)}
+                onPress={() => setHasWaterSupply((v) => !v)}
                 activeOpacity={0.75}
               >
                 <View style={styles.utilityToggleLeft}>
                   <Ionicons
                     name={hasWaterSupply ? "water" : "water-outline"}
                     size={18}
-                    color={hasWaterSupply === true ? Colors.foamBlue : Colors.light.textTertiary}
+                    color={hasWaterSupply ? Colors.foamBlue : Colors.light.textTertiary}
                   />
-                  <View>
-                    <Text style={styles.utilityToggleLabel}>
-                      {hasWaterSupply === true ? "Water available" : hasWaterSupply === false ? "No water supply" : "Not set"}
-                    </Text>
-                    <Text style={styles.utilityToggleSub}>Customer provides access to water supply</Text>
-                  </View>
+                  <Text style={styles.utilityToggleLabel}>Water available</Text>
                 </View>
-                <View style={[
-                  styles.utilityCheckbox,
-                  hasWaterSupply === true && styles.utilityCheckboxActive,
-                  hasWaterSupply === false && styles.utilityCheckboxFalse,
-                ]}>
-                  {hasWaterSupply === true && <Ionicons name="checkmark" size={13} color={Colors.white} />}
-                  {hasWaterSupply === false && <Ionicons name="close" size={13} color={Colors.light.textTertiary} />}
-                </View>
+                <Switch
+                  value={hasWaterSupply}
+                  onValueChange={setHasWaterSupply}
+                  trackColor={{ false: Colors.light.borderSubtle, true: Colors.foamBlue }}
+                  thumbColor={Colors.white}
+                />
               </TouchableOpacity>
-              <FieldLabel>Power (electricity) available?</FieldLabel>
               <TouchableOpacity
                 style={styles.utilityToggleRow}
-                onPress={() => setHasElectricitySupply((v) => v === null ? true : v === true ? false : null)}
+                onPress={() => setHasElectricitySupply((v) => !v)}
                 activeOpacity={0.75}
               >
                 <View style={styles.utilityToggleLeft}>
                   <Ionicons
                     name={hasElectricitySupply ? "flash" : "flash-outline"}
                     size={18}
-                    color={hasElectricitySupply === true ? Colors.successLight : Colors.light.textTertiary}
+                    color={hasElectricitySupply ? Colors.successLight : Colors.light.textTertiary}
                   />
-                  <View>
-                    <Text style={styles.utilityToggleLabel}>
-                      {hasElectricitySupply === true ? "Power available" : hasElectricitySupply === false ? "No power supply" : "Not set"}
-                    </Text>
-                    <Text style={styles.utilityToggleSub}>Customer provides access to power outlet</Text>
-                  </View>
+                  <Text style={styles.utilityToggleLabel}>Electricity available</Text>
                 </View>
-                <View style={[
-                  styles.utilityCheckbox,
-                  hasElectricitySupply === true && styles.utilityCheckboxElecActive,
-                  hasElectricitySupply === false && styles.utilityCheckboxFalse,
-                ]}>
-                  {hasElectricitySupply === true && <Ionicons name="checkmark" size={13} color={Colors.white} />}
-                  {hasElectricitySupply === false && <Ionicons name="close" size={13} color={Colors.light.textTertiary} />}
-                </View>
+                <Switch
+                  value={hasElectricitySupply}
+                  onValueChange={setHasElectricitySupply}
+                  trackColor={{ false: Colors.light.borderSubtle, true: Colors.successLight }}
+                  thumbColor={Colors.white}
+                />
               </TouchableOpacity>
             </>
           )}
@@ -1829,6 +1895,18 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
     marginTop: 2,
+  },
+  walkinBadge: {
+    backgroundColor: Colors.light.borderSubtle,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  walkinBadgeText: {
+    fontFamily: Typography.body,
+    fontSize: 10,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.3,
   },
 
   // Selected / hint rows

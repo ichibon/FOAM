@@ -446,11 +446,13 @@ export function WeekView({
   jobs,
   filterCrewId,
   onDayPress,
+  onJobPress,
 }: {
   weekStart: Date;
   jobs: CalJob[];
   filterCrewId: string | null;
   onDayPress: (date: Date) => void;
+  onJobPress?: (jobId: string) => void;
 }) {
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   const filtered = filterCrewId ? jobs.filter((j) => j.crewMemberId === filterCrewId) : jobs;
@@ -532,11 +534,16 @@ export function WeekView({
               const { top, height } = jobLayout(job);
               const color = job.crewMemberId ? crewColor(job.crewIndex) : Colors.light.borderDefault;
               return (
-                <View key={job.id} style={[wvStyles.weekJobBlock, { top, height, backgroundColor: color }]}>
+                <TouchableOpacity
+                  key={job.id}
+                  activeOpacity={onJobPress ? 0.75 : 1}
+                  onPress={onJobPress ? () => onJobPress(job.id) : undefined}
+                  style={[wvStyles.weekJobBlock, { top, height, backgroundColor: color }]}
+                >
                   <Text style={wvStyles.weekJobText} numberOfLines={1}>
                     {job.customerName.split(" ")[0]}
                   </Text>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </TouchableOpacity>

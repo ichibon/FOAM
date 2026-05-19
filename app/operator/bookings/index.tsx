@@ -789,6 +789,7 @@ export default function OperatorBookingsScreen() {
                   setCalDate(date);
                   setCalViewMode("day");
                 }}
+                onJobPress={(jobId) => router.push(`/operator/bookings/${jobId}`)}
               />
             );
           })()}

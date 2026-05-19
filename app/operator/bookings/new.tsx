@@ -945,13 +945,15 @@ export default function NewBookingScreen() {
     setSavedVehicles([]);
     setEntries([makeEntry()]);
     fetchCustomerVehicles(c.userId);
-    if (isMobile) fetchCustomerLastAddress(c.userId);
+    if (isMobile) fetchCustomerLastAddress(c.userId, c.phone);
   }
 
-  async function fetchCustomerLastAddress(userId: string) {
+  async function fetchCustomerLastAddress(userId: string, phone?: string | null) {
     try {
       const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
       const supabase = getSupabase();
+
+      // Primary: look for registered-customer bookings
       const { data } = await supabase
         .from("bookings")
         .select("service_address, has_water_supply, has_electricity_supply")
@@ -960,11 +962,47 @@ export default function NewBookingScreen() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+
       if (data) {
         const row = data as { service_address: string | null; has_water_supply: boolean | null; has_electricity_supply: boolean | null };
-        if (row.service_address) setServiceAddress(row.service_address);
-        if (row.has_water_supply !== null) setHasWaterSupply(row.has_water_supply ?? false);
-        if (row.has_electricity_supply !== null) setHasElectricitySupply(row.has_electricity_supply ?? false);
+        if (row.service_address) {
+          setServiceAddress(row.service_address);
+          if (row.has_water_supply !== null) setHasWaterSupply(row.has_water_supply ?? false);
+          if (row.has_electricity_supply !== null) setHasElectricitySupply(row.has_electricity_supply ?? false);
+          return;
+        }
+      }
+
+      // Fallback: customer may have been booked as a walk-in before — match by phone
+      const cleaned = phone ? phone.replace(/\D/g, "") : "";
+      if (cleaned.length >= 7 && detailerId) {
+        const { data: contacts } = await supabase
+          .from("booking_contacts")
+          .select("id")
+          .eq("detailer_id", detailerId)
+          .ilike("phone", `%${cleaned.slice(-7)}%`)
+          .limit(5);
+
+        const contactIds = ((contacts as { id: string }[] | null) ?? []).map((c) => c.id);
+        if (contactIds.length > 0) {
+          const { data: fallback } = await supabase
+            .from("bookings")
+            .select("service_address, has_water_supply, has_electricity_supply")
+            .in("contact_id", contactIds)
+            .not("service_address", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (fallback) {
+            const row = fallback as { service_address: string | null; has_water_supply: boolean | null; has_electricity_supply: boolean | null };
+            if (row.service_address) {
+              setServiceAddress(row.service_address);
+              if (row.has_water_supply !== null) setHasWaterSupply(row.has_water_supply ?? false);
+              if (row.has_electricity_supply !== null) setHasElectricitySupply(row.has_electricity_supply ?? false);
+            }
+          }
+        }
       }
     } catch (err) {
       console.warn("[NewBooking] fetchCustomerLastAddress error", err);

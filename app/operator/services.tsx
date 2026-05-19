@@ -36,9 +36,8 @@ interface RawServicePackage {
 }
 
 type VehiclePricingMap = {
-  suv: string;
-  truck: string;
-  van: string;
+  xl: string;
+  xxl: string;
 };
 
 interface ServiceItem {
@@ -141,7 +140,7 @@ export default function ServicesScreen() {
         rows.map((r) => {
           const { hours, minutes } = minsToHM(r.duration_mins);
           const vspRows = r.vehicle_size_pricing ?? [];
-          const pricing: VehiclePricingMap = { suv: "", truck: "", van: "" };
+          const pricing: VehiclePricingMap = { xl: "", xxl: "" };
           for (const row of vspRows) {
             const t = row.vehicle_type as keyof VehiclePricingMap;
             if (t in pricing) pricing[t] = row.price_adjustment.toString();
@@ -471,19 +470,14 @@ function ServiceCard({
           {/* Vehicle size pricing chips */}
           {svc.vehiclePricing && (
             <View style={styles.chipRow}>
-              {svc.pricing.suv ? (
+              {svc.pricing.xl ? (
                 <View style={styles.chip}>
-                  <Text style={styles.chipText}>SUV ${svc.pricing.suv}</Text>
+                  <Text style={styles.chipText}>XL +${svc.pricing.xl}</Text>
                 </View>
               ) : null}
-              {svc.pricing.truck ? (
+              {svc.pricing.xxl ? (
                 <View style={styles.chip}>
-                  <Text style={styles.chipText}>Truck ${svc.pricing.truck}</Text>
-                </View>
-              ) : null}
-              {svc.pricing.van ? (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Van ${svc.pricing.van}</Text>
+                  <Text style={styles.chipText}>XXL +${svc.pricing.xxl}</Text>
                 </View>
               ) : null}
             </View>

@@ -87,7 +87,13 @@ interface RawVehicleRow {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type VehicleSizeKey = "sedan" | "suv" | "truck" | "van";
+type VehicleSizeKey = "standard" | "xl" | "xxl";
+
+const VEHICLE_SIZE_LABELS: Record<VehicleSizeKey, string> = {
+  standard: "Standard",
+  xl: "XL · 2 Rows",
+  xxl: "XXL · 3 Rows",
+};
 
 interface VehicleSizePricingEntry {
   vehicleType: VehicleSizeKey;
@@ -168,7 +174,7 @@ function parsePackages(data: unknown): ServicePackageOption[] {
     durationMins: p.duration_mins,
     description: p.description,
     vehicleSizePricing: (p.vehicle_size_pricing ?? [])
-      .filter((r) => ["sedan", "suv", "truck", "van"].includes(r.vehicle_type))
+      .filter((r) => ["standard", "xl", "xxl"].includes(r.vehicle_type))
       .map((r) => ({
         vehicleType: r.vehicle_type as VehicleSizeKey,
         priceAdjustment: r.price_adjustment,
@@ -456,7 +462,7 @@ function VehicleServiceCard({
         <>
           <FieldLabel>Vehicle type</FieldLabel>
           <View style={styles.vehicleTypeRow}>
-            {(["sedan", "suv", "truck", "van"] as VehicleSizeKey[]).map((vt) => (
+            {(["standard", "xl", "xxl"] as VehicleSizeKey[]).map((vt) => (
               <TouchableOpacity
                 key={vt}
                 style={[styles.vehicleTypeBtn, entry.vehicleType === vt && styles.vehicleTypeBtnActive]}
@@ -464,7 +470,7 @@ function VehicleServiceCard({
                 activeOpacity={0.75}
               >
                 <Text style={[styles.vehicleTypeBtnText, entry.vehicleType === vt && styles.vehicleTypeBtnTextActive]}>
-                  {vt.charAt(0).toUpperCase() + vt.slice(1)}
+                  {VEHICLE_SIZE_LABELS[vt]}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -837,7 +843,7 @@ export default function NewBookingScreen() {
         model: v.model,
         year: v.year,
         color: v.color,
-        vehicleType: ["sedan", "suv", "truck", "van"].includes(v.vehicle_type ?? "")
+        vehicleType: ["standard", "xl", "xxl"].includes(v.vehicle_type ?? "")
           ? (v.vehicle_type as VehicleSizeKey)
           : null,
         isDefault: v.is_default,

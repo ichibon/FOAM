@@ -22,10 +22,13 @@ import { EmptyState } from "@/components/EmptyState";
 import { LucideIcon } from "@/components/LucideIcon";
 
 type VehiclePricing = {
-  sedan: string;
-  suv: string;
-  truck: string;
-  van: string;
+  xl: string;
+  xxl: string;
+};
+
+const VEHICLE_TIER_LABELS: Record<keyof VehiclePricing, string> = {
+  xl: "XL · 2 Rows",
+  xxl: "XXL · 3 Rows",
 };
 
 type ServiceItem = {
@@ -52,7 +55,7 @@ export default function ServicesScreen() {
   const [newMinutes, setNewMinutes] = useState(30);
   const [newDescription, setNewDescription] = useState("");
   const [vehiclePricing, setVehiclePricing] = useState(false);
-  const [pricing, setPricing] = useState<VehiclePricing>({ sedan: "", suv: "", truck: "", van: "" });
+  const [pricing, setPricing] = useState<VehiclePricing>({ xl: "", xxl: "" });
 
   function openSheet() {
     setNewName("");
@@ -61,7 +64,7 @@ export default function ServicesScreen() {
     setNewMinutes(30);
     setNewDescription("");
     setVehiclePricing(false);
-    setPricing({ sedan: "", suv: "", truck: "", van: "" });
+    setPricing({ xl: "", xxl: "" });
     setSheetOpen(true);
   }
 
@@ -189,14 +192,14 @@ export default function ServicesScreen() {
 
                 <View style={styles.serviceBottom}>
                   <View style={styles.serviceChips}>
-                    {service.vehiclePricing && service.pricing.sedan ? (
+                    {service.vehiclePricing && service.pricing.xl ? (
                       <View style={styles.chip}>
-                        <Text style={styles.chipText}>Sedan ${service.pricing.sedan}</Text>
+                        <Text style={styles.chipText}>XL +${service.pricing.xl}</Text>
                       </View>
                     ) : null}
-                    {service.vehiclePricing && service.pricing.suv ? (
+                    {service.vehiclePricing && service.pricing.xxl ? (
                       <View style={styles.chip}>
-                        <Text style={styles.chipText}>SUV +${service.pricing.suv}</Text>
+                        <Text style={styles.chipText}>XXL +${service.pricing.xxl}</Text>
                       </View>
                     ) : null}
                   </View>
@@ -334,16 +337,16 @@ export default function ServicesScreen() {
 
                 {vehiclePricing && (
                   <View style={styles.vehicleInputs}>
-                    {(["sedan", "suv", "truck", "van"] as (keyof VehiclePricing)[]).map((type) => (
+                    {(["xl", "xxl"] as (keyof VehiclePricing)[]).map((type) => (
                       <View key={type} style={styles.vehicleRow}>
-                        <Text style={styles.vehicleLabel}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                        <Text style={styles.vehicleLabel}>{VEHICLE_TIER_LABELS[type]}</Text>
                         <View style={styles.vehiclePriceInput}>
-                          <Text style={styles.currencySymbol}>{type === "sedan" ? "$" : "+$"}</Text>
+                          <Text style={styles.currencySymbol}>+$</Text>
                           <TextInput
                             style={styles.vehicleInput}
                             value={pricing[type]}
                             onChangeText={(v) => setPricing((p) => ({ ...p, [type]: v }))}
-                            placeholder={type === "sedan" ? "220" : "30"}
+                            placeholder="30"
                             placeholderTextColor={Colors.light.textTertiary}
                             keyboardType="decimal-pad"
                           />

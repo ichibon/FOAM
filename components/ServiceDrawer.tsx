@@ -20,9 +20,8 @@ import { Colors, Typography, Spacing, Radius } from "@/constants/design";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type VehiclePricing = {
-  suv: string;
-  truck: string;
-  van: string;
+  xl: string;
+  xxl: string;
 };
 
 export interface ServiceDrawerService {
@@ -47,7 +46,12 @@ export interface ServiceDrawerProps {
   onSaved: (saved: { id: string; name: string }) => void;
 }
 
-const EMPTY_PRICING: VehiclePricing = { suv: "", truck: "", van: "" };
+const EMPTY_PRICING: VehiclePricing = { xl: "", xxl: "" };
+
+const VEHICLE_TIER_LABELS: Record<keyof VehiclePricing, string> = {
+  xl: "XL · 2 Rows",
+  xxl: "XXL · 3 Rows",
+};
 
 // ─── Duration picker options ───────────────────────────────────────────────────
 
@@ -481,10 +485,10 @@ export function ServiceDrawer({
 
             {vehiclePricingEnabled && (
               <View style={styles.vehicleInputs}>
-                {(["suv", "truck", "van"] as (keyof VehiclePricing)[]).map((type) => (
+                {(["xl", "xxl"] as (keyof VehiclePricing)[]).map((type) => (
                   <View key={type} style={styles.vehicleRow}>
                     <Text style={styles.vehicleLabel}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                      {VEHICLE_TIER_LABELS[type]}
                     </Text>
                     <View style={styles.vehiclePriceWrap}>
                       <Text style={styles.vehicleCurrencySymbol}>$</Text>
@@ -739,7 +743,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.body,
     fontSize: Typography.size.bodyM,
     color: Colors.light.textSecondary,
-    width: 60,
+    flex: 1,
   },
   vehiclePriceWrap: { position: "relative", width: 140 },
   vehicleCurrencySymbol: {

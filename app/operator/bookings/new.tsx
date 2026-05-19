@@ -863,19 +863,27 @@ export default function NewBookingScreen() {
   function selectCustomer(c: CustomerOption) {
     setShowCustomerList(false);
     if (c.type === "walkin") {
-      // Switch to create-mode and pre-fill the contact's details
-      switchToCreate();
-      setNewCustomerName(c.name);
-      setNewCustomerPhone(c.prefillPhone ?? "");
-      // Pre-fill vehicle details from the most-recent booking_contacts row
-      if (c.prefillMake || c.prefillModel || c.prefillYear || c.prefillColor) {
-        setEntries([{
-          ...makeEntry(true),
-          make: c.prefillMake ?? "",
-          model: c.prefillModel ?? "",
-          year: c.prefillYear ?? "",
-          color: c.prefillColor ?? "",
-        }]);
+      // Stay in "Existing Customer" (search) mode — treat walk-in as a returning customer
+      setSelectedCustomer(c);
+      setCustomerSearch(c.name);
+      // Build a synthetic saved-vehicle card from the contact's stored vehicle data
+      const syntheticVehicles: SavedVehicleOption[] = [];
+      if (c.prefillMake || c.prefillModel) {
+        syntheticVehicles.push({
+          id: `walkin-${c.contactId}`,
+          make: c.prefillMake ?? null,
+          model: c.prefillModel ?? null,
+          year: c.prefillYear ? parseInt(c.prefillYear, 10) : null,
+          color: c.prefillColor ?? null,
+          vehicleType: null,
+          isDefault: true,
+        });
+      }
+      setSavedVehicles(syntheticVehicles);
+      if (syntheticVehicles.length > 0) {
+        setEntries([{ ...makeEntry(false), selectedVehicleId: syntheticVehicles[0].id, useNewVehicle: false }]);
+      } else {
+        setEntries([makeEntry(false)]);
       }
       // Pre-fill last service address for this walk-in contact
       if (isMobile && c.contactId) fetchContactLastAddress(c.contactId);
@@ -1132,6 +1140,59 @@ export default function NewBookingScreen() {
 
           if (finalError) {
             console.warn("[NewBooking] walk-in booking insert error", finalError);
+            setErrorMsg("Failed to create booking. Please try again.");
+            setSubmitState("error");
+            return;
+          }
+        }
+      } else if (selectedCustomer?.type === "walkin") {
+        // Returning walk-in: link booking to the existing contact row (no new contact or vehicle insert)
+        const contactId = selectedCustomer.contactId!;
+        for (const entry of entries) {
+          const { error: bookingError } = await supabase.from("bookings").insert({
+            contact_id: contactId,
+            vehicle_id: null,
+            detailer_id: detailerId,
+            crew_member_id: selectedCrewMemberId ?? null,
+            package_id: entry.selectedPackageId,
+            status: "confirmed",
+            scheduled_at: scheduledAt,
+            order_id: orderId,
+            service_address: serviceAddress.trim() || null,
+            ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+            ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
+            service_zip: serviceZip || null,
+            has_water_supply: hasWaterSupply,
+            has_electricity_supply: hasElectricitySupply,
+            notes: notes.trim() || null,
+            tip_amount: 0,
+            is_recurring: false,
+            asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+            location_id: selectedSource?.type === "location" ? selectedSource.id : null,
+          });
+          let finalError = bookingError;
+          if (bookingError?.code === "42703") {
+            const { error: retryError } = await supabase.from("bookings").insert({
+              contact_id: contactId,
+              vehicle_id: null,
+              detailer_id: detailerId,
+              crew_member_id: selectedCrewMemberId ?? null,
+              package_id: entry.selectedPackageId,
+              status: "confirmed",
+              scheduled_at: scheduledAt,
+              service_address: serviceAddress.trim() || null,
+              ...(serviceLat !== null ? { service_lat: serviceLat } : {}),
+              ...(serviceLng !== null ? { service_lng: serviceLng } : {}),
+              notes: notes.trim() || null,
+              tip_amount: 0,
+              is_recurring: false,
+              asset_id: selectedSource?.type === "asset" ? selectedSource.id : null,
+              location_id: selectedSource?.type === "location" ? selectedSource.id : null,
+            });
+            finalError = retryError;
+          }
+          if (finalError) {
+            console.warn("[NewBooking] walk-in rebooking error", finalError);
             setErrorMsg("Failed to create booking. Please try again.");
             setSubmitState("error");
             return;
@@ -1569,7 +1630,7 @@ export default function NewBookingScreen() {
                   setServiceLat(result.lat);
                   setServiceLng(result.lng);
                   setServiceZip(result.zip);
-                  if (selectedCustomer?.userId) {
+                  if (selectedCustomer?.userId && selectedCustomer.type !== "walkin") {
                     fetchUtilityPrefsForAddress(selectedCustomer.userId, result.formattedAddress);
                   }
                 }}

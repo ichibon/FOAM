@@ -27,7 +27,7 @@ import { DateTimeDrawer } from "@/components/DateTimeDrawer";
 interface RawSiblingRow {
   id: string;
   vehicles: { make: string | null; model: string | null; year: number | null; color: string | null; vehicle_type: string | null } | null;
-  service_packages: { name: string; description: string | null; duration_mins: number; base_price: number } | null;
+  service_packages: { name: string; description: string | null; duration_mins: number; base_price: number; vehicle_size_pricing: { vehicle_type: string; price_adjustment: number }[] } | null;
   booking_contacts: { vehicle_make: string | null; vehicle_model: string | null; vehicle_year: number | null; vehicle_color: string | null } | null;
 }
 
@@ -73,6 +73,7 @@ interface RawBookingDetail {
     description: string | null;
     duration_mins: number;
     base_price: number;
+    vehicle_size_pricing: { vehicle_type: string; price_adjustment: number }[];
   } | null;
   booking_contacts: {
     full_name: string | null;
@@ -127,11 +128,21 @@ function parseRawBooking(raw: unknown): RawBookingDetail {
     service_packages: r.service_packages
       ? (() => {
           const p = asObj(r.service_packages);
+          const rawPricing = Array.isArray(p.vehicle_size_pricing) ? p.vehicle_size_pricing : [];
           return {
             name: typeof p.name === "string" ? p.name : "Service",
             description: nullableStr(p.description),
             duration_mins: typeof p.duration_mins === "number" ? p.duration_mins : 0,
             base_price: typeof p.base_price === "number" ? p.base_price : 0,
+            vehicle_size_pricing: rawPricing
+              .filter((e: unknown) => e && typeof e === "object")
+              .map((e: unknown) => {
+                const row = e as Record<string, unknown>;
+                return {
+                  vehicle_type: typeof row.vehicle_type === "string" ? row.vehicle_type : "",
+                  price_adjustment: typeof row.price_adjustment === "number" ? row.price_adjustment : 0,
+                };
+              }),
           };
         })()
       : null,
@@ -149,6 +160,16 @@ function parseRawBooking(raw: unknown): RawBookingDetail {
         })()
       : null,
   };
+}
+
+function getEffectivePrice(
+  pkg: { base_price: number; vehicle_size_pricing: { vehicle_type: string; price_adjustment: number }[] } | null,
+  vehicleType: string | null
+): number {
+  if (!pkg) return 0;
+  if (!vehicleType || pkg.vehicle_size_pricing.length === 0) return pkg.base_price;
+  const row = pkg.vehicle_size_pricing.find((r) => r.vehicle_type === vehicleType);
+  return row ? row.price_adjustment : pkg.base_price;
 }
 
 interface RawTeamMemberRow {
@@ -355,7 +376,7 @@ export default function BookingDetailScreen() {
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "has_water_supply, has_electricity_supply," +
           "vehicles(make,model,year,color,vehicle_type)," +
-          "service_packages(name,description,duration_mins,base_price)," +
+          "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
           "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
         )
         .eq("id", id)
@@ -458,7 +479,7 @@ export default function BookingDetailScreen() {
         packageName: b.service_packages?.name ?? "Service",
         packageDescription: b.service_packages?.description ?? null,
         durationMins: b.service_packages?.duration_mins ?? 0,
-        basePrice: b.service_packages?.base_price ?? 0,
+        basePrice: getEffectivePrice(b.service_packages, b.vehicles?.vehicle_type ?? null),
       };
 
       let orderVehicles: OrderVehicle[] = [primaryVehicle];
@@ -469,7 +490,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price)," +
+            "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("order_id", b.order_id)
@@ -491,7 +512,7 @@ export default function BookingDetailScreen() {
             packageName: sib.service_packages?.name ?? "Service",
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
-            basePrice: sib.service_packages?.base_price ?? 0,
+            basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
           };
         });
 
@@ -508,7 +529,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price)," +
+            "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("detailer_id", b.detailer_id)
@@ -536,7 +557,7 @@ export default function BookingDetailScreen() {
             packageName: sib.service_packages?.name ?? "Service",
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
-            basePrice: sib.service_packages?.base_price ?? 0,
+            basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
           };
         });
 
@@ -555,7 +576,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price)," +
+            "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("detailer_id", b.detailer_id)
@@ -583,7 +604,7 @@ export default function BookingDetailScreen() {
             packageName: sib.service_packages?.name ?? "Service",
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
-            basePrice: sib.service_packages?.base_price ?? 0,
+            basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
           };
         });
 
@@ -613,7 +634,7 @@ export default function BookingDetailScreen() {
         packageName: b.service_packages?.name ?? "Service",
         packageDescription: b.service_packages?.description ?? null,
         durationMins: b.service_packages?.duration_mins ?? 0,
-        basePrice: b.service_packages?.base_price ?? 0,
+        basePrice: getEffectivePrice(b.service_packages, b.vehicles?.vehicle_type ?? null),
         subtotal: b.subtotal,
         platformFee: b.platform_fee,
         tipAmount: b.tip_amount,

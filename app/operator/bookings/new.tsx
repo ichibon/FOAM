@@ -43,6 +43,10 @@ interface RawContactRow {
   id: string;
   full_name: string;
   phone: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_year: number | null;
+  vehicle_color: string | null;
 }
 
 interface RawUserDetail {
@@ -105,6 +109,11 @@ interface CustomerOption {
   type?: "registered" | "walkin";
   prefillName?: string;
   prefillPhone?: string | null;
+  prefillMake?: string | null;
+  prefillModel?: string | null;
+  prefillYear?: string | null;
+  prefillColor?: string | null;
+  contactId?: string;
 }
 
 interface SavedVehicleOption {
@@ -668,7 +677,7 @@ export default function NewBookingScreen() {
           .eq("is_active", true),
         supabase
           .from("booking_contacts")
-          .select("id,full_name,phone")
+          .select("id,full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color")
           .eq("detailer_id", dId)
           .order("created_at", { ascending: false })
           .limit(300),
@@ -713,8 +722,13 @@ export default function NewBookingScreen() {
           name: c.full_name.trim(),
           phone: c.phone ?? null,
           type: "walkin" as const,
+          contactId: c.id,
           prefillName: c.full_name.trim(),
           prefillPhone: c.phone ?? null,
+          prefillMake: c.vehicle_make ?? null,
+          prefillModel: c.vehicle_model ?? null,
+          prefillYear: c.vehicle_year != null ? String(c.vehicle_year) : null,
+          prefillColor: c.vehicle_color ?? null,
         }));
 
       // Merge: registered (alpha) then walk-ins (alpha)
@@ -853,6 +867,18 @@ export default function NewBookingScreen() {
       switchToCreate();
       setNewCustomerName(c.name);
       setNewCustomerPhone(c.prefillPhone ?? "");
+      // Pre-fill vehicle details from the most-recent booking_contacts row
+      if (c.prefillMake || c.prefillModel || c.prefillYear || c.prefillColor) {
+        setEntries([{
+          ...makeEntry(true),
+          make: c.prefillMake ?? "",
+          model: c.prefillModel ?? "",
+          year: c.prefillYear ?? "",
+          color: c.prefillColor ?? "",
+        }]);
+      }
+      // Pre-fill last service address for this walk-in contact
+      if (isMobile && c.contactId) fetchContactLastAddress(c.contactId);
       return;
     }
     setSelectedCustomer(c);
@@ -883,6 +909,29 @@ export default function NewBookingScreen() {
       }
     } catch (err) {
       console.warn("[NewBooking] fetchCustomerLastAddress error", err);
+    }
+  }
+
+  async function fetchContactLastAddress(contactId: string) {
+    try {
+      const { getSupabase } = require("@/lib/supabase") as typeof import("@/lib/supabase");
+      const supabase = getSupabase();
+      const { data } = await supabase
+        .from("bookings")
+        .select("service_address, has_water_supply, has_electricity_supply")
+        .eq("contact_id", contactId)
+        .not("service_address", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        const row = data as { service_address: string | null; has_water_supply: boolean | null; has_electricity_supply: boolean | null };
+        if (row.service_address) setServiceAddress(row.service_address);
+        if (row.has_water_supply !== null) setHasWaterSupply(row.has_water_supply ?? false);
+        if (row.has_electricity_supply !== null) setHasElectricitySupply(row.has_electricity_supply ?? false);
+      }
+    } catch (err) {
+      console.warn("[NewBooking] fetchContactLastAddress error", err);
     }
   }
 
@@ -1512,6 +1561,7 @@ export default function NewBookingScreen() {
               <View style={styles.sectionDivider} />
               <FieldLabel>Service address</FieldLabel>
               <AddressAutocomplete
+                key={serviceAddress}
                 placeholder="123 Main St, Atlanta, GA"
                 initialValue={serviceAddress}
                 onAddressSelect={(result: AddressResult) => {

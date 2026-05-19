@@ -168,6 +168,7 @@ export default function OperatorPendingScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
       >
         {/* Hero */}
         <View style={styles.heroSection}>

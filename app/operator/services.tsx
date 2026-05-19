@@ -292,6 +292,7 @@ export default function ServicesScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
         >
           {services.map((svc, idx) => (
             <View key={svc.id} style={[styles.card, styles.shadow]}>

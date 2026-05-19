@@ -471,6 +471,7 @@ export default function MemberProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
       >
         {/* Hero */}
         <View style={styles.heroSection}>

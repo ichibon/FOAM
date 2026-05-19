@@ -88,13 +88,9 @@ export default function OperatorProfileScreen() {
     reviewCount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    void loadProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
@@ -145,7 +141,17 @@ export default function OperatorProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadProfile();
+    setIsRefreshing(false);
+  }, [loadProfile]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
   async function handleSignOut() {
     if (Platform.OS !== "web") {
@@ -172,6 +178,7 @@ export default function OperatorProfileScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
       >
         {/* ── Identity Header ── */}
         <View style={styles.identityCard}>

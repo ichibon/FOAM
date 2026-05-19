@@ -363,6 +363,7 @@ export default function UnassignedJobsScreen() {
         <ScrollView
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
         >
           {filteredJobs.map((job) => (
             <UnassignedJobCard

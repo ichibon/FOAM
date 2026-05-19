@@ -312,6 +312,7 @@ export default function TeamRosterScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
       >
         {members.length === 0 ? (
           <View style={styles.emptyWrapper}>

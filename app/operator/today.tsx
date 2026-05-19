@@ -917,7 +917,7 @@ export default function OperatorTodayScreen() {
           onUnitsPress={storedDetailerId ? () => setUnitsVisible(true) : undefined}
         />
         <UnitPillRow units={units} selectedId={selectedUnitId} onSelect={setSelectedUnitId} />
-        <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}>
           {/* Team status pills */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Team Status</Text>
@@ -1067,7 +1067,7 @@ export default function OperatorTodayScreen() {
       {/* ── Unit pill row ──────────────────────────────────────────────────── */}
       <UnitPillRow units={units} selectedId={selectedUnitId} onSelect={setSelectedUnitId} />
 
-      <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}>
 
         {/* ── Team Right Now ────────────────────────────────────────────── */}
         <View style={styles.section}>

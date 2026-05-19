@@ -194,6 +194,7 @@ export default function LocationsVansScreen() {
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.foamBlue} />}
         >
           {/* Vans Section */}
           <View style={styles.sectionBlock}>

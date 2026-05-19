@@ -1680,9 +1680,6 @@ function NavHeader({ onBack }: { onBack: () => void }) {
       </TouchableOpacity>
       <View style={styles.navTitleRow}>
         <Text style={styles.navTitle}>New Booking</Text>
-        <View style={styles.newBadge}>
-          <Text style={styles.newBadgeText}>NEW</Text>
-        </View>
       </View>
       <View style={styles.navSpacer} />
     </View>
@@ -1718,18 +1715,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.bodySemiBold,
     fontSize: Typography.size.h4,
     color: Colors.light.textPrimary,
-  },
-  newBadge: {
-    backgroundColor: Colors.foamBlue,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radius.pill,
-  },
-  newBadgeText: {
-    fontFamily: Typography.bodySemiBold,
-    fontSize: 9,
-    color: Colors.white,
-    letterSpacing: 0.5,
   },
   navSpacer: { width: 32 },
 

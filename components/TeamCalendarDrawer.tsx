@@ -240,42 +240,84 @@ export function DayView({
   filterCrewId: string | null;
 }) {
   const hasUnassigned = jobs.some((j) => !j.crewMemberId);
+  const totalGridH = TOTAL_HOUR_SLOTS * SLOT_HEIGHT;
 
-  // Solo operator (no team): simple single-column timeline
+  // Compute absolute top offset and clamped block height for a job
+  function jobLayout(job: CalJob): { top: number; height: number } {
+    const h = job.scheduledAt.getHours();
+    const m = job.scheduledAt.getMinutes();
+    const fractHour = h + m / 60;
+    const top = (fractHour - DAY_START_HOUR) * SLOT_HEIGHT;
+    const desired = (job.durationMins / 60) * SLOT_HEIGHT;
+    const maxAvail = (DAY_END_HOUR - fractHour) * SLOT_HEIGHT;
+    const height = Math.max(Math.min(desired, maxAvail), 26);
+    return { top, height };
+  }
+
+  // Reusable time-gutter column (absolute labels at each hour line)
+  function TimeGutter() {
+    return (
+      <View style={{ width: TIME_GUTTER_W }}>
+        {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, i) => (
+          <View
+            key={i}
+            style={{ position: "absolute", top: i * SLOT_HEIGHT + 4, width: TIME_GUTTER_W, alignItems: "flex-end", paddingRight: 8 }}
+          >
+            <Text style={gvStyles.timeLabel}>{formatHour(DAY_START_HOUR + i)}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  // Reusable hour-grid-line background for a column
+  function HourLines() {
+    return (
+      <>
+        {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, i) => (
+          <View
+            key={i}
+            style={{ position: "absolute", top: i * SLOT_HEIGHT, left: 0, right: 0, height: 1, backgroundColor: Colors.light.borderSubtle }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  // Job block for a single job
+  function JobBlock({ job, color }: { job: CalJob; color: string }) {
+    const { top, height } = jobLayout(job);
+    return (
+      <View style={[gvStyles.absJobBlock, { top, height, backgroundColor: color }]}>
+        <Text style={gvStyles.chipCustomer} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
+        {height > 38 && <Text style={gvStyles.chipPkg} numberOfLines={1}>{job.packageName}</Text>}
+      </View>
+    );
+  }
+
+  // Solo operator (no team): single-column absolute timeline
   if (crew.length === 0) {
-    const startSlotMap: Record<number, CalJob[]> = {};
-    for (const job of jobs) {
-      const h = job.scheduledAt.getHours();
-      if (h < DAY_START_HOUR || h >= DAY_END_HOUR) continue;
-      const idx = h - DAY_START_HOUR;
-      if (!startSlotMap[idx]) startSlotMap[idx] = [];
-      startSlotMap[idx].push(job);
-    }
+    const visibleJobs = jobs.filter((j) => {
+      const h = j.scheduledAt.getHours();
+      return h >= DAY_START_HOUR && h < DAY_END_HOUR;
+    });
+
     return (
       <ScrollView style={gvStyles.scroll} contentContainerStyle={gvStyles.content} showsVerticalScrollIndicator={false}>
-        {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, slotIdx) => {
-          const hour = DAY_START_HOUR + slotIdx;
-          const slotJobs = startSlotMap[slotIdx] ?? [];
-          return (
-            <View key={slotIdx} style={gvStyles.row}>
-              <View style={gvStyles.timeGutter}>
-                <Text style={gvStyles.timeLabel}>{formatHour(hour)}</Text>
-              </View>
-              <View style={[gvStyles.cell, { flex: 1 }]}>
-                {slotJobs.map((job) => (
-                  <View key={job.id} style={[gvStyles.jobChip, { backgroundColor: Colors.foamBlue }]}>
-                    <Text style={gvStyles.chipCustomer} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
-                    <Text style={gvStyles.chipPkg} numberOfLines={1}>{job.packageName}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          );
-        })}
-        {jobs.length === 0 && (
+        {jobs.length === 0 ? (
           <View style={gvStyles.empty}>
             <Ionicons name="calendar-outline" size={36} color={Colors.light.textDisabled} />
             <Text style={gvStyles.emptyText}>No jobs scheduled</Text>
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", height: totalGridH }}>
+            <TimeGutter />
+            <View style={{ flex: 1, position: "relative", borderLeftWidth: 1, borderLeftColor: Colors.light.borderSubtle }}>
+              <HourLines />
+              {visibleJobs.map((job) => (
+                <JobBlock key={job.id} job={job} color={Colors.foamBlue} />
+              ))}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -285,18 +327,14 @@ export function DayView({
   // Team view: crew-column grid
   const columns = buildDayColumns(crew, hasUnassigned, filterCrewId);
 
-  // Build slot map: colKey → slotIdx → CalJob[]
-  const slotMap: Record<string, Record<number, CalJob[]>> = {};
-  for (const col of columns) slotMap[col.colKey] = {};
+  // Job map: colKey → CalJob[]
+  const jobsByCol: Record<string, CalJob[]> = {};
+  for (const col of columns) jobsByCol[col.colKey] = [];
   for (const job of jobs) {
     const h = job.scheduledAt.getHours();
     if (h < DAY_START_HOUR || h >= DAY_END_HOUR) continue;
-    const slotIdx = h - DAY_START_HOUR;
     const colKey = job.crewMemberId ?? "__unassigned__";
-    if (slotMap[colKey]) {
-      if (!slotMap[colKey][slotIdx]) slotMap[colKey][slotIdx] = [];
-      slotMap[colKey][slotIdx].push(job);
-    }
+    if (jobsByCol[colKey]) jobsByCol[colKey].push(job);
   }
 
   return (
@@ -314,30 +352,18 @@ export function DayView({
         ))}
       </View>
 
-      {/* Hour rows */}
-      {Array.from({ length: TOTAL_HOUR_SLOTS }).map((_, slotIdx) => {
-        const hour = DAY_START_HOUR + slotIdx;
-        return (
-          <View key={slotIdx} style={gvStyles.row}>
-            <View style={gvStyles.timeGutter}>
-              <Text style={gvStyles.timeLabel}>{formatHour(hour)}</Text>
-            </View>
-            {columns.map((col) => {
-              const cellJobs = slotMap[col.colKey]?.[slotIdx] ?? [];
-              return (
-                <View key={col.colKey} style={gvStyles.cell}>
-                  {cellJobs.map((job) => (
-                    <View key={job.id} style={[gvStyles.jobChip, { backgroundColor: col.color }]}>
-                      <Text style={gvStyles.chipCustomer} numberOfLines={1}>{job.customerName.split(" ")[0]}</Text>
-                      <Text style={gvStyles.chipPkg} numberOfLines={1}>{job.packageName}</Text>
-                    </View>
-                  ))}
-                </View>
-              );
-            })}
+      {/* Grid body — absolutely positioned jobs */}
+      <View style={{ flexDirection: "row", height: totalGridH }}>
+        <TimeGutter />
+        {columns.map((col) => (
+          <View key={col.colKey} style={{ flex: 1, minWidth: CREW_COL_MIN_WIDTH, position: "relative", borderLeftWidth: 1, borderLeftColor: Colors.light.borderSubtle }}>
+            <HourLines />
+            {(jobsByCol[col.colKey] ?? []).map((job) => (
+              <JobBlock key={job.id} job={job} color={col.color} />
+            ))}
           </View>
-        );
-      })}
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -388,6 +414,16 @@ const gvStyles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 3,
     marginBottom: 1,
+    ...Shadows.light.level1,
+  },
+  absJobBlock: {
+    position: "absolute",
+    left: 3,
+    right: 3,
+    borderRadius: Radius.xs,
+    paddingHorizontal: 4,
+    paddingVertical: 3,
+    overflow: "hidden",
     ...Shadows.light.level1,
   },
   chipCustomer: { fontFamily: Typography.bodySemiBold, fontSize: 10, color: Colors.white },

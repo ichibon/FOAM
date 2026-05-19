@@ -84,6 +84,7 @@ interface BookingCard {
   crewName: string | null;
   crewInitials: string | null;
   total: number | null;
+  durationMins: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -418,6 +419,7 @@ export default function OperatorBookingsScreen() {
           crewName: crew?.name ?? null,
           crewInitials: crew?.initials ?? null,
           total: b.total ?? null,
+          durationMins: b.estimated_duration_mins ?? 60,
         };
       }
 
@@ -756,7 +758,7 @@ export default function OperatorBookingsScreen() {
                 return {
                   id: b.id,
                   scheduledAt: b.scheduledAt,
-                  durationMins: 60,
+                  durationMins: b.durationMins,
                   customerName: b.customerName,
                   packageName: b.packageName,
                   status: b.status,

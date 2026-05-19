@@ -531,6 +531,53 @@ export default function BookingDetailScreen() {
         if (siblings.length > 0) {
           orderVehicles = [primaryVehicle, ...siblings];
         }
+      } else if (b.customer_id) {
+        // Fallback: order_id migration not yet applied — group siblings by
+        // customer_id + minute-level scheduled_at (mirrors the migration backfill).
+        const minuteStart = new Date(scheduledAt);
+        minuteStart.setSeconds(0, 0);
+        const minuteEnd = new Date(minuteStart.getTime() + 60_000);
+
+        const { data: siblingsData, error: siblingsErr } = await supabase
+          .from("bookings")
+          .select(
+            "id," +
+            "vehicles(make,model,year,color,vehicle_type)," +
+            "service_packages(name,description,duration_mins,base_price)," +
+            "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
+          )
+          .eq("detailer_id", b.detailer_id)
+          .eq("customer_id", b.customer_id)
+          .gte("scheduled_at", minuteStart.toISOString())
+          .lt("scheduled_at", minuteEnd.toISOString())
+          .neq("id", b.id);
+
+        if (siblingsErr) {
+          console.warn("[BookingDetail] customer_id sibling fetch error", siblingsErr);
+        }
+
+        const siblings: OrderVehicle[] = ((siblingsData as RawSiblingRow[] | null) ?? []).map((sib) => {
+          const v = sib.vehicles;
+          const c = sib.booking_contacts;
+          const sibVehicleDesc = v
+            ? [v.year, v.make, v.model, v.color].filter(Boolean).join(" ") || "Vehicle"
+            : c
+            ? [c.vehicle_year, c.vehicle_make, c.vehicle_model, c.vehicle_color].filter(Boolean).join(" ") || "Vehicle"
+            : "Vehicle";
+          return {
+            bookingId: sib.id,
+            vehicleDesc: sibVehicleDesc,
+            vehicleType: v?.vehicle_type ?? null,
+            packageName: sib.service_packages?.name ?? "Service",
+            packageDescription: sib.service_packages?.description ?? null,
+            durationMins: sib.service_packages?.duration_mins ?? 0,
+            basePrice: sib.service_packages?.base_price ?? 0,
+          };
+        });
+
+        if (siblings.length > 0) {
+          orderVehicles = [primaryVehicle, ...siblings];
+        }
       }
 
       setBooking({
@@ -608,8 +655,8 @@ export default function BookingDetailScreen() {
       const [crewResult, pkgResult] = await Promise.all([
         supabase
           .from("team_members")
-          .select("id, display_name, users(full_name)")
-          .eq("detailer_id", booking.detailerId)
+          .select("id, display_name, users!crew_members_user_id_fkey(full_name)")
+          .eq("manager_id", booking.detailerId)
           .eq("is_active", true),
         supabase
           .from("service_packages")
@@ -617,7 +664,11 @@ export default function BookingDetailScreen() {
           .eq("detailer_id", booking.detailerId)
           .order("name"),
       ]);
-      if (crewResult.error || pkgResult.error) throw new Error("load_failed");
+      if (crewResult.error || pkgResult.error) {
+        console.warn("[BookingDetail] crew error:", crewResult.error);
+        console.warn("[BookingDetail] pkg error:", pkgResult.error);
+        throw new Error("load_failed");
+      }
       setEditCrewMembers(
         ((crewResult.data ?? []) as RawCrewRow[]).map((m) => ({
           id: m.id,

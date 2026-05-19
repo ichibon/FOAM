@@ -99,9 +99,9 @@ export default function StripeConnectScreen() {
 </head>
 <body>
   <div id="mount"></div>
-  <script src="https://connect-js.stripe.com/v1/connect.js"></script>
   <script>
     (function() {
+      function init() {
       try {
         const stripeConnect = StripeConnect.initStripeConnect({
           publishableKey: '${publishableKey}',
@@ -134,6 +134,15 @@ export default function StripeConnectScreen() {
           '<p class="error">Failed to load onboarding: ' + e.message + '</p>';
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.message }));
       }
+      }
+      var s = document.createElement('script');
+      s.src = 'https://connect-js.stripe.com/v1/connect.js';
+      s.onload = init;
+      s.onerror = function() {
+        document.getElementById('mount').innerHTML = '<p class="error">Failed to load Stripe Connect</p>';
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: 'Failed to load Stripe Connect script' }));
+      };
+      document.head.appendChild(s);
     })();
   </script>
 </body>

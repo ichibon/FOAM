@@ -28,7 +28,7 @@ import { DateTimeDrawer } from "@/components/DateTimeDrawer";
 interface RawSiblingRow {
   id: string;
   vehicles: { make: string | null; model: string | null; year: number | null; color: string | null; vehicle_type: string | null } | null;
-  service_packages: { name: string; description: string | null; duration_mins: number; base_price: number; vehicle_size_pricing: { vehicle_type: string; price_adjustment: number }[] } | null;
+  service_packages: { name: string; description: string | null; duration_mins: number; base_price: number; is_addon: boolean; vehicle_size_pricing: { vehicle_type: string; price_adjustment: number }[] } | null;
   booking_contacts: { vehicle_make: string | null; vehicle_model: string | null; vehicle_year: number | null; vehicle_color: string | null } | null;
 }
 
@@ -40,6 +40,7 @@ interface OrderVehicle {
   packageDescription: string | null;
   durationMins: number;
   basePrice: number;
+  isAddon: boolean;
 }
 
 interface RawBookingDetail {
@@ -74,6 +75,7 @@ interface RawBookingDetail {
     description: string | null;
     duration_mins: number;
     base_price: number;
+    is_addon: boolean;
     vehicle_size_pricing: { vehicle_type: string; price_adjustment: number }[];
   } | null;
   booking_contacts: {
@@ -135,6 +137,7 @@ function parseRawBooking(raw: unknown): RawBookingDetail {
             description: nullableStr(p.description),
             duration_mins: typeof p.duration_mins === "number" ? p.duration_mins : 0,
             base_price: typeof p.base_price === "number" ? p.base_price : 0,
+            is_addon: typeof p.is_addon === "boolean" ? p.is_addon : false,
             vehicle_size_pricing: rawPricing
               .filter((e: unknown) => e && typeof e === "object")
               .map((e: unknown) => {
@@ -195,6 +198,7 @@ interface EditPackageRow {
   name: string;
   base_price: number;
   duration_mins: number;
+  is_addon: boolean;
 }
 
 interface EditCrewOption {
@@ -378,7 +382,7 @@ export default function BookingDetailScreen() {
           "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
           "has_water_supply, has_electricity_supply," +
           "vehicles(make,model,year,color,vehicle_type)," +
-          "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
+          "service_packages(name,description,duration_mins,base_price,is_addon,vehicle_size_pricing(vehicle_type,price_adjustment))," +
           "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
         )
         .eq("id", id)
@@ -395,7 +399,7 @@ export default function BookingDetailScreen() {
               "id, status, scheduled_at, estimated_duration_mins, crew_member_id, customer_id, contact_id, detailer_id," +
               "service_address, subtotal, platform_fee, tip_amount, total, notes, is_recurring," +
               "vehicles(make,model,year,color,vehicle_type)," +
-              "service_packages(name,description,duration_mins,base_price)," +
+              "service_packages(name,description,duration_mins,base_price,is_addon)," +
               "booking_contacts(full_name,phone,vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
             )
             .eq("id", id)
@@ -482,6 +486,7 @@ export default function BookingDetailScreen() {
         packageDescription: b.service_packages?.description ?? null,
         durationMins: b.service_packages?.duration_mins ?? 0,
         basePrice: getEffectivePrice(b.service_packages, b.vehicles?.vehicle_type ?? null),
+        isAddon: b.service_packages?.is_addon ?? false,
       };
 
       let orderVehicles: OrderVehicle[] = [primaryVehicle];
@@ -492,7 +497,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
+            "service_packages(name,description,duration_mins,base_price,is_addon,vehicle_size_pricing(vehicle_type,price_adjustment))," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("order_id", b.order_id)
@@ -515,6 +520,7 @@ export default function BookingDetailScreen() {
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
             basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
+            isAddon: sib.service_packages?.is_addon ?? false,
           };
         });
 
@@ -531,7 +537,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
+            "service_packages(name,description,duration_mins,base_price,is_addon,vehicle_size_pricing(vehicle_type,price_adjustment))," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("detailer_id", b.detailer_id)
@@ -560,6 +566,7 @@ export default function BookingDetailScreen() {
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
             basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
+            isAddon: sib.service_packages?.is_addon ?? false,
           };
         });
 
@@ -578,7 +585,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price,vehicle_size_pricing(vehicle_type,price_adjustment))," +
+            "service_packages(name,description,duration_mins,base_price,is_addon,vehicle_size_pricing(vehicle_type,price_adjustment))," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("detailer_id", b.detailer_id)
@@ -607,6 +614,7 @@ export default function BookingDetailScreen() {
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
             basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
+            isAddon: sib.service_packages?.is_addon ?? false,
           };
         });
 
@@ -713,8 +721,10 @@ export default function BookingDetailScreen() {
           .eq("is_active", true),
         supabase
           .from("service_packages")
-          .select("id, name, base_price, duration_mins")
+          .select("id, name, base_price, duration_mins, is_addon")
           .eq("detailer_id", booking.detailerId)
+          .eq("is_active", true)
+          .order("is_addon")
           .order("name"),
       ]);
       if (crewResult.error || pkgResult.error) {
@@ -1294,7 +1304,7 @@ export default function BookingDetailScreen() {
                     {isExpanded && !editDataLoading && editPackages.length > 0 && (
                       <View style={styles.editVehicleExpanded}>
                         <Text style={styles.editVehicleExpandedLabel}>Change Service</Text>
-                        {editPackages.map((pkg) => {
+                        {editPackages.filter(p => !p.is_addon).map((pkg) => {
                           const isSel = editVehiclePackageId === pkg.id;
                           return (
                             <TouchableOpacity
@@ -1315,6 +1325,39 @@ export default function BookingDetailScreen() {
                             </TouchableOpacity>
                           );
                         })}
+                        {editPackages.some(p => p.is_addon) && (
+                          <>
+                            <Text style={styles.editPickerSectionLabel}>ADD-ONS</Text>
+                            {booking.orderVehicles.some(v => !v.isAddon) ? (
+                              editPackages.filter(p => p.is_addon).map((pkg) => {
+                                const isSel = editVehiclePackageId === pkg.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={pkg.id}
+                                    style={[styles.editPickerRow, isSel && styles.editPickerRowSelected]}
+                                    onPress={() => setEditVehiclePackageId(pkg.id)}
+                                    activeOpacity={0.75}
+                                  >
+                                    <View style={{ flex: 1 }}>
+                                      <Text style={[styles.editPickerRowName, isSel && { color: Colors.foamBlue }]}>
+                                        {pkg.name}
+                                      </Text>
+                                      <Text style={styles.editPickerRowSub}>
+                                        {formatDuration(pkg.duration_mins)} · ${pkg.base_price.toFixed(0)}
+                                      </Text>
+                                    </View>
+                                    {isSel && <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />}
+                                  </TouchableOpacity>
+                                );
+                              })
+                            ) : (
+                              <View style={styles.editPickerAddonLocked}>
+                                <Ionicons name="lock-closed-outline" size={13} color={Colors.light.textTertiary} />
+                                <Text style={styles.editPickerAddonLockedText}>Requires a primary service first</Text>
+                              </View>
+                            )}
+                          </>
+                        )}
                         <View style={styles.editAddBtnRow}>
                           <TouchableOpacity
                             style={styles.editAddCancelBtn}
@@ -1402,7 +1445,7 @@ export default function BookingDetailScreen() {
                   {!editDataLoading && editPackages.length > 0 && (
                     <>
                       <Text style={[styles.editAddLabel, { marginTop: 4 }]}>Package</Text>
-                      {editPackages.map((pkg) => {
+                      {editPackages.filter(p => !p.is_addon).map((pkg) => {
                         const isSel = editNewPackageId === pkg.id;
                         return (
                           <TouchableOpacity
@@ -1416,13 +1459,46 @@ export default function BookingDetailScreen() {
                                 {pkg.name}
                               </Text>
                               <Text style={styles.editPickerRowSub}>
-                                {pkg.duration_mins} min · ${pkg.base_price.toFixed(0)}
+                                {formatDuration(pkg.duration_mins)} · ${pkg.base_price.toFixed(0)}
                               </Text>
                             </View>
                             {isSel && <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />}
                           </TouchableOpacity>
                         );
                       })}
+                      {editPackages.some(p => p.is_addon) && (
+                        <>
+                          <Text style={styles.editPickerSectionLabel}>ADD-ONS</Text>
+                          {booking.orderVehicles.some(v => !v.isAddon) ? (
+                            editPackages.filter(p => p.is_addon).map((pkg) => {
+                              const isSel = editNewPackageId === pkg.id;
+                              return (
+                                <TouchableOpacity
+                                  key={pkg.id}
+                                  style={[styles.editPickerRow, isSel && styles.editPickerRowSelected]}
+                                  onPress={() => setEditNewPackageId(pkg.id)}
+                                  activeOpacity={0.75}
+                                >
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={[styles.editPickerRowName, isSel && { color: Colors.foamBlue }]}>
+                                      {pkg.name}
+                                    </Text>
+                                    <Text style={styles.editPickerRowSub}>
+                                      {formatDuration(pkg.duration_mins)} · ${pkg.base_price.toFixed(0)}
+                                    </Text>
+                                  </View>
+                                  {isSel && <Ionicons name="checkmark-circle" size={18} color={Colors.foamBlue} />}
+                                </TouchableOpacity>
+                              );
+                            })
+                          ) : (
+                            <View style={styles.editPickerAddonLocked}>
+                              <Ionicons name="lock-closed-outline" size={13} color={Colors.light.textTertiary} />
+                              <Text style={styles.editPickerAddonLockedText}>Requires a primary service first</Text>
+                            </View>
+                          )}
+                        </>
+                      )}
                     </>
                   )}
                   <View style={styles.editAddBtnRow}>
@@ -1996,6 +2072,30 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.bodyS,
     color: Colors.light.textTertiary,
     marginTop: 2,
+  },
+  editPickerSectionLabel: {
+    fontFamily: Typography.bodySemiBold,
+    fontSize: Typography.size.label,
+    color: Colors.light.textTertiary,
+    letterSpacing: 0.6,
+    marginTop: Spacing.sm,
+    marginBottom: 2,
+  },
+  editPickerAddonLocked: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    padding: Spacing.mdSm,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.light.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    borderStyle: "dashed",
+  },
+  editPickerAddonLockedText: {
+    fontFamily: Typography.body,
+    fontSize: Typography.size.bodyS,
+    color: Colors.light.textTertiary,
   },
   editLoadingRow: {
     paddingVertical: Spacing.lg,

@@ -15,7 +15,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface CalJob {
+export interface CalJob {
   id: string;
   scheduledAt: Date;
   durationMins: number;
@@ -27,7 +27,7 @@ interface CalJob {
   crewIndex: number;
 }
 
-interface CrewMember {
+export interface CrewMember {
   id: string;
   name: string;
   initials: string;
@@ -56,26 +56,26 @@ const CREW_COLORS = [
   "#4A9E6B", "#C76B33", "#C7336B", "#6B9EC7",
 ];
 
-function crewColor(index: number): string {
+export function crewColor(index: number): string {
   return CREW_COLORS[index % CREW_COLORS.length];
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
-function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
 }
 
-function getWeekStart(date: Date): Date {
+export function getWeekStart(date: Date): Date {
   const d = new Date(date);
   d.setDate(d.getDate() - d.getDay());
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-function isSameDay(a: Date, b: Date): boolean {
+export function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear()
     && a.getMonth() === b.getMonth()
     && a.getDate() === b.getDate();
@@ -93,13 +93,13 @@ function dayEnd(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
 }
 
-function formatDayLabel(date: Date): string {
+export function formatDayLabel(date: Date): string {
   return isToday(date)
     ? `Today · ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
     : date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function formatWeekRange(weekStart: Date): string {
+export function formatWeekRange(weekStart: Date): string {
   const weekEnd = addDays(weekStart, 6);
   const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
   if (sameMonth) {
@@ -230,7 +230,7 @@ function buildDayColumns(
   return cols;
 }
 
-function DayView({
+export function DayView({
   jobs,
   crew,
   filterCrewId,
@@ -399,7 +399,7 @@ const gvStyles = StyleSheet.create({
 // ─── Week View ────────────────────────────────────────────────────────────────
 // Each of the 7 days is a column; rows are hour slots.
 
-function WeekView({
+export function WeekView({
   weekStart,
   jobs,
   filterCrewId,

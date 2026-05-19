@@ -16,6 +16,18 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import type { BookingStatus } from "@/types/database";
+import {
+  CalJob,
+  CrewMember as CalCrewMember,
+  DayView,
+  WeekView,
+  addDays,
+  getWeekStart,
+  isSameDay,
+  formatDayLabel,
+  formatWeekRange,
+  crewColor,
+} from "@/components/TeamCalendarDrawer";
 
 // ─── Raw DB row types ─────────────────────────────────────────────────────────
 
@@ -54,11 +66,7 @@ type ScreenState = "loading" | "fetch_error" | "empty" | "main";
 type ViewMode = "list" | "calendar";
 type Segment = "upcoming" | "past";
 
-interface CrewMember {
-  id: string;
-  name: string;
-  initials: string;
-}
+type CrewMember = CalCrewMember;
 
 interface BookingCard {
   id: string;
@@ -252,6 +260,13 @@ export default function OperatorBookingsScreen() {
   const [bookings, setBookings] = useState<BookingCard[]>([]);
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [detailerId, setDetailerId] = useState<string>("");
+
+  // Calendar tab state
+  const [calDate, setCalDate] = useState<Date>(() => new Date());
+  const [calWeekStart, setCalWeekStart] = useState<Date>(() => getWeekStart(new Date()));
+  const [calViewMode, setCalViewMode] = useState<"day" | "week">("day");
+  const [calFilterCrewId, setCalFilterCrewId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -272,6 +287,7 @@ export default function OperatorBookingsScreen() {
       }
 
       const dId: string = (profileData as { id: string }).id;
+      setDetailerId(dId);
 
       const [bookingsRes, membersRes] = await Promise.all([
         supabase
@@ -561,9 +577,7 @@ export default function OperatorBookingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.viewToggleBtn, viewMode === "calendar" && styles.viewToggleBtnActive]}
-            onPress={() => {
-              Alert.alert("Coming Soon", "Calendar view is on the way.");
-            }}
+            onPress={() => setViewMode("calendar")}
             activeOpacity={0.75}
           >
             <Text style={[styles.viewToggleBtnText, viewMode === "calendar" && styles.viewToggleBtnTextActive]}>
@@ -572,7 +586,8 @@ export default function OperatorBookingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Upcoming / Past segment */}
+        {/* Upcoming / Past segment — list mode only */}
+        {viewMode === "list" && (
         <View style={styles.segmentContainer}>
           <TouchableOpacity
             style={[styles.segmentBtn, segment === "upcoming" && styles.segmentBtnActive]}
@@ -593,8 +608,10 @@ export default function OperatorBookingsScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        )}
 
-        {/* Crew filter chips */}
+        {/* Crew filter chips — list mode only */}
+        {viewMode === "list" && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -630,10 +647,142 @@ export default function OperatorBookingsScreen() {
             );
           })}
         </ScrollView>
+        )}
       </View>
 
       {/* ── Body ── */}
-      {screenState === "empty" ? (
+      {viewMode === "calendar" ? (
+        /* ── Calendar view ── */
+        <View style={styles.calBody}>
+          {/* Nav row */}
+          <View style={styles.calNavRow}>
+            <TouchableOpacity
+              style={styles.calNavArrow}
+              onPress={() =>
+                calViewMode === "day"
+                  ? setCalDate((d) => addDays(d, -1))
+                  : setCalWeekStart((w) => addDays(w, -7))
+              }
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-back" size={18} color={Colors.light.textPrimary} />
+            </TouchableOpacity>
+
+            <Text style={styles.calNavLabel}>
+              {calViewMode === "day" ? formatDayLabel(calDate) : formatWeekRange(calWeekStart)}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.calModeToggle}
+              onPress={() => {
+                if (calViewMode === "day") {
+                  setCalWeekStart(getWeekStart(calDate));
+                  setCalViewMode("week");
+                } else {
+                  const today = new Date();
+                  setCalDate(today);
+                  setCalWeekStart(getWeekStart(today));
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.calModeToggleText}>{calViewMode === "day" ? "Week" : "Today"}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.calNavArrow}
+              onPress={() =>
+                calViewMode === "day"
+                  ? setCalDate((d) => addDays(d, 1))
+                  : setCalWeekStart((w) => addDays(w, 7))
+              }
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Crew filter chips */}
+          {crewMembers.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.calChipScroll}
+              contentContainerStyle={styles.calChipRow}
+            >
+              <TouchableOpacity
+                style={[styles.calChip, !calFilterCrewId && styles.calChipActive]}
+                onPress={() => setCalFilterCrewId(null)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.calChipText, !calFilterCrewId && styles.calChipTextActive]}>All</Text>
+              </TouchableOpacity>
+              {crewMembers.map((m, idx) => {
+                const isSelected = calFilterCrewId === m.id;
+                const color = crewColor(idx);
+                return (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.calChip, isSelected && { backgroundColor: color, borderColor: color }]}
+                    onPress={() => setCalFilterCrewId(isSelected ? null : m.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.calCrewDot, { backgroundColor: isSelected ? Colors.white : color }]} />
+                    <Text style={[styles.calChipText, isSelected && { color: Colors.white }]}>
+                      {m.name.split(" ")[0]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          <View style={styles.calDivider} />
+
+          {/* Calendar grid */}
+          {(() => {
+            const calJobs: CalJob[] = (() => {
+              const filtered =
+                calViewMode === "week"
+                  ? bookings.filter((b) => {
+                      const weekEnd = addDays(calWeekStart, 7);
+                      return b.scheduledAt >= calWeekStart && b.scheduledAt < weekEnd;
+                    })
+                  : bookings.filter((b) => isSameDay(b.scheduledAt, calDate));
+              return filtered.map((b) => {
+                const crewIndex = b.crewMemberId
+                  ? crewMembers.findIndex((m) => m.id === b.crewMemberId)
+                  : 0;
+                return {
+                  id: b.id,
+                  scheduledAt: b.scheduledAt,
+                  durationMins: 60,
+                  customerName: b.customerName,
+                  packageName: b.packageName,
+                  status: b.status,
+                  crewMemberId: b.crewMemberId,
+                  crewInitials: b.crewInitials ?? undefined,
+                  crewIndex: crewIndex >= 0 ? crewIndex : 0,
+                } as CalJob;
+              });
+            })();
+
+            return calViewMode === "day" ? (
+              <DayView jobs={calJobs} crew={crewMembers} filterCrewId={calFilterCrewId} />
+            ) : (
+              <WeekView
+                weekStart={calWeekStart}
+                jobs={calJobs}
+                filterCrewId={calFilterCrewId}
+                onDayPress={(date) => {
+                  setCalDate(date);
+                  setCalViewMode("day");
+                }}
+              />
+            );
+          })()}
+        </View>
+      ) : screenState === "empty" ? (
         <View style={styles.centerFill}>
           <View style={styles.emptyIconCircle}>
             <Ionicons name="book" size={40} color={Colors.foamBlue} />
@@ -1068,5 +1217,89 @@ const styles = StyleSheet.create({
   },
   emptyPrimaryBtnText: {
     fontFamily: Typography.bodySemiBold, fontSize: 15, color: Colors.white,
+  },
+
+  // ── Calendar view ──
+  calBody: {
+    flex: 1,
+  },
+  calNavRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderSubtle,
+    gap: 8,
+    backgroundColor: Colors.light.surface,
+  },
+  calNavArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.light.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  calNavLabel: {
+    flex: 1,
+    fontFamily: Typography.bodySemiBold,
+    fontSize: 14,
+    color: Colors.light.textPrimary,
+    textAlign: "center",
+  },
+  calModeToggle: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  calModeToggleText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 14,
+    color: Colors.foamBlue,
+  },
+  calChipScroll: {
+    maxHeight: 50,
+    backgroundColor: Colors.light.surface,
+  },
+  calChipRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  calChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.light.borderSubtle,
+    backgroundColor: Colors.light.surface,
+  },
+  calChipActive: {
+    backgroundColor: Colors.foamBlue,
+    borderColor: Colors.foamBlue,
+  },
+  calChipText: {
+    fontFamily: Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  calChipTextActive: {
+    color: Colors.white,
+  },
+  calCrewDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  calDivider: {
+    height: 1,
+    backgroundColor: Colors.light.borderSubtle,
   },
 });

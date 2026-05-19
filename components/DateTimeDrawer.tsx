@@ -41,6 +41,7 @@ export interface DateTimeDrawerProps {
   onRequestClose: () => void;
   value: string | null;
   onConfirm: (isoString: string) => void;
+  allowPast?: boolean;
 }
 
 interface CalendarDay {
@@ -93,6 +94,7 @@ export function DateTimeDrawer({
   onRequestClose,
   value,
   onConfirm,
+  allowPast = false,
 }: DateTimeDrawerProps) {
   const todayMidnight = useMemo(() => {
     const d = new Date();
@@ -269,7 +271,7 @@ export function DateTimeDrawer({
                       cell.isToday && !isSelected && styles.dayCellToday,
                     ]}
                     onPress={() => selectDay(cell.day)}
-                    disabled={cell.isPast}
+                    disabled={cell.isPast && !allowPast}
                     activeOpacity={0.7}
                   >
                     <Text
@@ -277,7 +279,7 @@ export function DateTimeDrawer({
                         styles.dayCellText,
                         isSelected && styles.dayCellTextSelected,
                         cell.isToday && !isSelected && styles.dayCellTextToday,
-                        cell.isPast && styles.dayCellTextPast,
+                        cell.isPast && !allowPast && styles.dayCellTextPast,
                       ]}
                     >
                       {cell.day}

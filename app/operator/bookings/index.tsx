@@ -512,14 +512,18 @@ export default function OperatorBookingsScreen() {
 
   // ── Filter logic ──────────────────────────────────────────────────────────────
 
-  const PAST_STATUSES: BookingStatus[] = ["completed", "no_show"];
-  const UPCOMING_STATUSES: BookingStatus[] = ["requested", "confirmed", "in_progress", "cancelled"];
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  function isBookingPast(b: BookingCard): boolean {
+    if (b.status === "completed" || b.status === "no_show") return true;
+    if (b.status === "in_progress") return false;
+    return b.scheduledAt < todayStart;
+  }
 
   const filteredBookings = bookings.filter((b) => {
     const matchesSegment =
-      segment === "upcoming"
-        ? UPCOMING_STATUSES.includes(b.status)
-        : PAST_STATUSES.includes(b.status);
+      segment === "upcoming" ? !isBookingPast(b) : isBookingPast(b);
     const matchesCrew = crewFilter === null || b.crewMemberId === crewFilter;
     return matchesSegment && matchesCrew;
   });

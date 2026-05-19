@@ -1582,6 +1582,7 @@ export default function BookingDetailScreen() {
         visible={editDateDrawerVisible}
         onRequestClose={() => setEditDateDrawerVisible(false)}
         value={editScheduledAt}
+        allowPast
         onConfirm={(iso) => {
           setEditScheduledAt(iso);
           setEditDateDrawerVisible(false);

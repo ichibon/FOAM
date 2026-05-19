@@ -215,11 +215,17 @@ export default function StripeConnectScreen() {
       {clientSecret ? (
         <WebView
           ref={webViewRef}
-          source={{ html: buildOnboardingHtml(clientSecret) }}
+          source={{
+            html: buildOnboardingHtml(clientSecret),
+            baseUrl: "https://connect-js.stripe.com",
+          }}
           style={styles.webView}
           onMessage={handleWebViewMessage}
           javaScriptEnabled
           domStorageEnabled
+          mixedContentMode="always"
+          allowUniversalAccessFromFileURLs
+          allowFileAccessFromFileURLs
           startInLoadingState
           renderLoading={() => (
             <View style={styles.webViewLoader}>

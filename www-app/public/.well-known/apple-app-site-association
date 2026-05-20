@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "L44VPK454Y.com.foamauto.app",
+        "paths": ["/join/*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["L44VPK454Y.com.foamauto.app"]
+  }
+}

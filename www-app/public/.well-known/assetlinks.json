@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.foamauto.app",
+      "sha256_cert_fingerprints": ["D2:A9:5C:A0:D7:6D:0E:2D:F8:2F:E5:41:77:CD:25:F3:70:1F:B0:38:B3:A1:FE:1D:ED:83:13:AB:3B:7F:09:B6"]
+    }
+  }
+]

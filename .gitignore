@@ -10,4 +10,4 @@ node_modules/
 .env*.local
 
 # Expo local device state — not project code
-.expo/
+.expo/.expo/devices.json

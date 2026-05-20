@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "@/constants/design";
 import type { BookingStatus } from "@/types/database";
@@ -368,6 +368,24 @@ export default function BookingDetailScreen() {
   const [editVehiclePackageId, setEditVehiclePackageId] = useState<string | null>(null);
   const [editVehicleSaving, setEditVehicleSaving] = useState(false);
 
+  // ── Edit sheet state ──────────────────────────────────────────────────────
+  const [editSheetVisible, setEditSheetVisible] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editScheduledAt, setEditScheduledAt] = useState<string | null>(null);
+  const [editCrewMemberId, setEditCrewMemberId] = useState<string | null>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editPackageId, setEditPackageId] = useState<string | null>(null);
+  const initialEditScheduledAt = useRef<string | null>(null);
+  const initialEditCrewMemberId = useRef<string | null>(null);
+  const initialEditNotes = useRef("");
+  const initialEditPackageId = useRef<string | null>(null);
+  const [editDateDrawerVisible, setEditDateDrawerVisible] = useState(false);
+  const [editPackages, setEditPackages] = useState<EditPackageRow[]>([]);
+  const [editCrewMembers, setEditCrewMembers] = useState<EditCrewOption[]>([]);
+  const [editDataLoading, setEditDataLoading] = useState(false);
+  const [editDataError, setEditDataError] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!user || !id) return;
     setScreenState("loading");
@@ -690,12 +708,46 @@ export default function BookingDetailScreen() {
     }
   }
 
+  function handleDismissEditSheet() {
+    const changed =
+      editScheduledAt !== initialEditScheduledAt.current ||
+      editCrewMemberId !== initialEditCrewMemberId.current ||
+      editNotes !== initialEditNotes.current ||
+      editPackageId !== initialEditPackageId.current;
+
+    if (!changed) {
+      setEditSheetVisible(false);
+      return;
+    }
+
+    Alert.alert(
+      "Discard changes?",
+      "You have unsaved edits. Are you sure you want to discard them?",
+      [
+        { text: "Keep Editing", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => setEditSheetVisible(false),
+        },
+      ]
+    );
+  }
+
   async function openEditSheet() {
     if (!booking) return;
-    setEditScheduledAt(booking.scheduledAt.toISOString());
-    setEditCrewMemberId(booking.crewMemberId);
-    setEditNotes(booking.notes ?? "");
-    setEditPackageId(booking.packageId);
+    const scheduledIso = booking.scheduledAt.toISOString();
+    const crewId = booking.crewMemberId;
+    const notes = booking.notes ?? "";
+    const pkgId = booking.packageId;
+    initialEditScheduledAt.current = scheduledIso;
+    initialEditCrewMemberId.current = crewId;
+    initialEditNotes.current = notes;
+    initialEditPackageId.current = pkgId;
+    setEditScheduledAt(scheduledIso);
+    setEditCrewMemberId(crewId);
+    setEditNotes(notes);
+    setEditPackageId(pkgId);
     setEditError(null);
     setEditDataError(false);
     setEditAddVehicleOpen(false);
@@ -1244,8 +1296,8 @@ export default function BookingDetailScreen() {
       </ScrollView>
 
       {/* ── Edit Appointment Sheet ───────────────────────────────────────────── */}
-      <DrawerModal visible={editSheetVisible} onRequestClose={() => setEditSheetVisible(false)}>
-        <DrawerHeader title="Edit Appointment" onClose={() => setEditSheetVisible(false)} />
+      <DrawerModal visible={editSheetVisible} onRequestClose={handleDismissEditSheet}>
+        <DrawerHeader title="Edit Appointment" onClose={handleDismissEditSheet} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -1632,7 +1684,7 @@ export default function BookingDetailScreen() {
           <View style={styles.editFooterRow}>
             <TouchableOpacity
               style={styles.editCancelBtn}
-              onPress={() => setEditSheetVisible(false)}
+              onPress={handleDismissEditSheet}
               activeOpacity={0.7}
             >
               <Text style={styles.editCancelBtnText}>Cancel</Text>

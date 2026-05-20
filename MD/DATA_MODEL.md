@@ -1,6 +1,7 @@
 # Data Model
-**Version 1.5 — Updated May 2026**
+**Version 1.6 — Updated May 20, 2026**
 
+Changes from v1.5 marked with `[v1.6]`
 Changes from v1.4 marked with `[v1.5]`
 Changes from v1.3 marked with `[v1.4]`
 Changes from v1.2 marked with `[v1.3]`
@@ -9,8 +10,8 @@ Changes from v1.0 marked with `[v1.1]`
 
 Built on Supabase (PostgreSQL 17). All tables use UUID primary keys. Row-level security enforced at the database layer via Supabase RLS policies. Role-based access enforced at both application and database layers.
 
-**Migrations applied through v1.5:**
-`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes` → `v2_1_booking_geo_zip`
+**Migrations applied through v1.6:**
+`002_security_fixes` → `003_revoke_rls` → `004_performance_fixes` → `005_final_policy_cleanup` → `v1_1_*` → `v1_3_multi_unit_*` → `v1_4_first_run_flags` → `v1_5_operator_approval_and_badges` → `v1_6_pay_models_tips_crew_payments` → `v1_7_payment_policy_columns` → `v1_8_subscription_tier` → `v1_9_foam_credit_rpc` → `v2_0_ops_review_ai_checklist` → `v2_0_customer_subscriptions` → `v2_0_events_and_campaigns` → `v2_0_superadmin_role` → `v2_0_security_fixes` → `v2_1_booking_geo_zip` → `v2_2_team_invites`
 
 ---
 
@@ -195,6 +196,46 @@ can_view_team_earnings      boolean DEFAULT false
 commission_rate             decimal(5,2)
 created_at                  timestamptz DEFAULT now()
 ```
+
+---
+
+### team_invites [v1.6 — NEW]
+Tracks pending team member invitations sent by operators. Supports phone and email invite methods. Token-based — invite URL format: `https://getfoam.app/join?token={token}`.
+
+```sql
+id             uuid PRIMARY KEY DEFAULT gen_random_uuid()
+operator_id    uuid NOT NULL REFERENCES detailer_profiles(id) ON DELETE CASCADE
+invite_type    text NOT NULL CHECK (invite_type IN ('phone', 'email'))
+  -- 'phone' = SMS via Twilio from (470) 470-3627
+  -- 'email' = Supabase Auth inviteUserByEmail
+token          text UNIQUE NOT NULL
+  -- UUID v4 generated server-side by send-team-invite edge function
+invitee_phone  text
+  -- E.164 format. Required when invite_type = 'phone'. Null otherwise.
+invitee_email  text
+  -- Required when invite_type = 'email'. Null otherwise.
+status         text NOT NULL DEFAULT 'pending'
+  CHECK (status IN ('pending', 'accepted', 'expired'))
+  -- 'pending'  = invite sent, not yet claimed
+  -- 'accepted' = crew member completed signup and linked to operator
+  -- 'expired'  = token passed expires_at without being claimed
+expires_at     timestamptz NOT NULL
+  -- Set to created_at + 7 days by send-team-invite edge function
+created_at     timestamptz NOT NULL DEFAULT now()
+```
+
+**Indexes:**
+```sql
+CREATE INDEX idx_team_invites_token ON team_invites(token);
+```
+
+**RLS:** Operators read and insert their own rows only. No client-side delete or update — status transitions handled exclusively by edge functions.
+
+**Flow:**
+1. Manager submits invite → `send-team-invite` edge function inserts row, sends SMS or email
+2. Crew member taps link → `validate-team-invite` edge function checks token validity
+3. Crew member completes signup → token status set to `accepted`, `team_members` row created with `pending_approval` status
+4. Manager approves in Team tab → `team_members.is_active` set to true, crew member goes live
 
 ---
 
@@ -821,6 +862,7 @@ users (1) ──── (1) detailer_profiles
 users (1) ──── (1) customer_profiles
 users (1) ──── (1) team_members
 
+detailer_profiles (1) ──── (many) team_invites          [v1.6 — NEW]
 detailer_profiles (1) ──── (many) team_members
 detailer_profiles (1) ──── (many) service_packages
 detailer_profiles (1) ──── (1) detailer_subscriptions
@@ -853,6 +895,7 @@ ops_audit_log (many) ──── (1) users (performed_by)   [v1.4 — NEW]
 
 | Table | Customer | Operator | Team Member | Superadmin |
 |-------|----------|----------|-------------|------------|
+| team_invites | — | own rows (insert + read) | — | all rows |
 | users | own row | own row | own row | all rows |
 | detailer_profiles | read approved only | own row | manager's profile | all rows |
 | customer_profiles | own row | bookings only | — | all rows |
@@ -865,4 +908,4 @@ ops_audit_log (many) ──── (1) users (performed_by)   [v1.4 — NEW]
 
 ---
 
-*Last updated: May 2026 (v1.5). Cross-reference ARCHITECTURE.md for edge functions, PAYMENT_POLICY.md for fee logic, CAPABILITY_LAYER.md for system integrations.*
+*Last updated: May 20, 2026 (v1.6). Cross-reference ARCHITECTURE.md for edge functions, PAYMENT_POLICY.md for fee logic, CAPABILITY_LAYER.md for system integrations.*

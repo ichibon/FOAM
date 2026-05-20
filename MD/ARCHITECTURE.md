@@ -1,5 +1,6 @@
 # FOAM — Architecture
-**Version 1.3 — Updated May 9, 2026**
+**Version 1.4 — Updated May 20, 2026**
+Changes from v1.3 marked with `[v1.4]`
 Changes from v1.2 marked with `[v1.3]`
 Changes from v1.1 marked with `[v1.2]`
 Changes from v1.0 marked with `[v1.1]`
@@ -63,12 +64,86 @@ FOAM is built on four principles that drive every technical decision:
 | Payments | Stripe + Stripe Connect | Industry standard for marketplace payouts. Connect handles split payments between FOAM and detailers. Elements handles PCI-compliant card capture. |
 | File Storage | Supabase Storage | Job photos, profile images, damage documentation, business documents — all stored in Supabase buckets with access controlled by RLS. |
 | Push Notifications | Expo Notifications | Cross-platform push delivery through Expo's notification service. Handles iOS APNs and Android FCM from a single API. |
-| SMS | Twilio | Appointment reminders and booking confirmations via SMS. Falls back for customers who miss push notifications. |
+| SMS | Twilio | Appointment reminders, booking confirmations, and team invite delivery via SMS. FOAM operates a dedicated subaccount isolated from other projects. Two numbers: (470) 470-3627 for platform notifications, (470) 470-3626 for business voice line. A2P 10DLC brand registration in review — required for production SMS delivery at scale. [v1.4] |
 | Maps & Routing | Google Maps API | Three active surfaces: (1) Places Autocomplete on all address input fields — returns structured address, lat, lng, and zip from a single API response; (2) Distance Matrix API for travel time buffers between jobs; (3) Geocoding API for coordinate resolution. All address capture in the app must go through Places Autocomplete — manual text entry is not permitted for geo fields. |
 | Weather Data | Tomorrow.io | Precipitation data by zip code and timestamp for Rain Coverage claim evaluation. Historical and forecast access. |
 | Development | Replit | Cloud-based development environment. Handles hosting and deployment without a dedicated DevOps setup. |
 | UI Design | UXPilot | AI-assisted wireframing and UI generation for React Native screens. |
 | AI Co-Development | Claude | Product decisions, code generation, documentation, and business strategy — governed by AI_RULES.md and AI_CONFIDENCE_MODEL.md. |
+
+---
+
+## Domain Architecture [v1.4 — NEW]
+
+### Primary Domains
+
+| Domain | Purpose | Host |
+|--------|---------|------|
+| `foamauto.com` | Primary marketing website and app home | Vercel |
+| `www.foamauto.com` | Redirects to foamauto.com (307) | Vercel |
+| `getfoam.app` | Team invite deep links, alias on same Vercel project | Vercel |
+
+Both `foamauto.com` and `getfoam.app` are configured as production domains on the same Vercel project. DNS managed via Cloudflare with proxy disabled on Vercel DNS records to allow Vercel SSL provisioning.
+
+### Deep Linking — Team Invites [v1.4 — NEW]
+
+Team invite SMS messages send links in the format `https://getfoam.app/join?token=xxx`. When a crew member taps this link on their phone, the OS opens the FOAM app directly rather than a browser. If the app is not installed, the OS falls back to the App Store or Play Store.
+
+This requires two platform-specific configuration files hosted on the domain:
+
+**iOS — Universal Links**
+File: `https://getfoam.app/.well-known/apple-app-site-association`
+
+The marketing site is a **Vite SPA** — there is no Next.js App Router. The AASA file is served as a static file from `www-app/public/.well-known/apple-app-site-association`. iOS requires `Content-Type: application/json` on this file — handled via a Vercel.json header rule since Vite has no server-side route handler:
+
+```json
+// vercel.json
+{
+  "headers": [{
+    "source": "/.well-known/apple-app-site-association",
+    "headers": [{ "key": "Content-Type", "value": "application/json" }]
+  }]
+}
+```
+
+AASA file contents:
+```json
+{
+  "applinks": {
+    "apps": [],
+    "details": [{
+      "appID": "TEAM_ID.com.foamauto.app",
+      "paths": ["/join/*"]
+    }]
+  },
+  "webcredentials": {
+    "apps": ["TEAM_ID.com.foamauto.app"]
+  }
+}
+```
+
+**Android — App Links**
+File: `https://getfoam.app/.well-known/assetlinks.json`
+Served as a static file from `www-app/public/.well-known/assetlinks.json`.
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.foamauto.app",
+    "sha256_cert_fingerprints": ["YOUR_SHA256_FINGERPRINT"]
+  }
+}]
+```
+
+**Required before deep links go live:**
+- iOS Team ID from Apple Developer account
+- Android SHA256 certificate fingerprint from Expo build
+- Both values substituted into the above files before launch
+
+**App-side handling (Expo):**
+The React Native app uses `expo-linking` to intercept incoming deep links, extract the `token` query parameter, and route the crew member to the join/onboarding screen. The token is validated against the `team_invites` table via the `validate-team-invite` edge function before proceeding.
 
 ---
 
@@ -202,6 +277,8 @@ Operations that require server-side execution run as Supabase Edge Functions (De
 
 | Function | Type | Trigger | Purpose |
 |----------|------|---------|---------|
+| `send-team-invite` | NEW | Manager sends team invite | **[v1.4]** Generates unique token, inserts `team_invites` record with 7-day expiry, sends SMS via Twilio (phone invite) or fires Supabase Auth `inviteUserByEmail` (email invite). Invite URL: `https://getfoam.app/join?token=xxx` |
+| `validate-team-invite` | NEW | Crew member taps invite link | **[v1.4]** Validates token exists, is not expired, and status is `pending`. Returns operator_id and invite_type for app-side onboarding routing. Marks token as `accepted` on successful claim. |
 | `stripe-webhook` | UPDATED | Stripe webhook event | Handle payment confirmations, subscription changes, failed payments. **[v1.1] Now also handles:** `payment_intent.canceled` (release hold, update status), `payment_intent.payment_failed` (notify customer, block confirmation), `charge.dispute.created` (flag booking, alert ops, assemble evidence, notify operator), `charge.dispute.closed` (update status, release or claw back payout) |
 | `stripe-capture` | NEW | Customer taps "Complete Payment" | **[v1.1]** Captures PaymentIntent with final amount including tip. Handles tip adjustment at capture time. Deducts platform fee. Routes net amount to operator's Stripe Connect account. |
 | `stripe-hold-expire` | NEW | Scheduled cron — daily | **[v1.1]** Checks `payments.hold_expires_at` on all authorized payments. Re-authorizes holds at T-48hrs before expiry. If re-auth fails: push + SMS to customer, 24hr window to update payment. If no response: cancels booking, notifies operator, reopens slot. |
@@ -544,6 +621,7 @@ Supabase Edge Function
 
 | Notification | Push | SMS | Customer | Operator | Crew | Notes |
 |-------------|------|-----|----------|----------|------|-------|
+| Team invite SMS | ❌ | ✅ | ❌ | ✅ | ❌ | [v1.4] Sent from (470) 470-3627 via Twilio |
 | Booking confirmed | ✅ | ✅ | ✅ | ✅ | ❌ | |
 | 24-hour reminder | ✅ | ✅ | ✅ | ❌ | ❌ | |
 | 1-hour reminder | ✅ | ❌ | ✅ | ❌ | ❌ | |
@@ -697,9 +775,9 @@ STRIPE_SECRET_KEY          # Server only — never client-side
 STRIPE_WEBHOOK_SECRET      # Edge function webhook validation
 
 # External APIs
-TWILIO_ACCOUNT_SID
-TWILIO_AUTH_TOKEN
-TWILIO_PHONE_NUMBER
+TWILIO_ACCOUNT_SID         # FOAM subaccount SID — isolated from other projects
+TWILIO_AUTH_TOKEN          # FOAM subaccount auth token
+TWILIO_PHONE_NUMBER        # +14704703627 — notifications number (SMS only)
 GOOGLE_MAPS_API_KEY
 TOMORROW_IO_API_KEY
 

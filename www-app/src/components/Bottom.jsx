@@ -283,7 +283,7 @@ export function FoamFooter() {
           </div>
         </div>
         <div style={{ borderTop:'1px solid #E4E4E7', paddingTop:24, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
-          <span style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>© 2026 FOAM, LLC. All rights reserved.</span>
+          <span style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3' }}>© 2026 FOAM. All rights reserved.<br />FOAM is owned and operated by Vantage XO LLC.</span>
           <div style={{ display:'flex', gap:20 }}>
             {['Instagram','TikTok','Facebook'].map(s=>(
               <a key={s} href="#" style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:'#A3A3A3', textDecoration:'none', transition:'color 150ms' }}

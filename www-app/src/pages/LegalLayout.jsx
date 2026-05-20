@@ -120,7 +120,7 @@ export function LegalLayout({ title, effectiveDate, children }) {
         flexWrap: 'wrap', gap: 12,
       }}>
         <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#A3A3A3' }}>
-          © 2026 FOAM, LLC. All rights reserved.
+          © 2026 FOAM. All rights reserved.<br />FOAM is owned and operated by Vantage XO LLC.
         </span>
         <div style={{ display: 'flex', gap: 20 }}>
           <Link to="/privacy" style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#A3A3A3', textDecoration: 'none' }}>Privacy Policy</Link>

@@ -5,7 +5,7 @@ export function PrivacyPolicy() {
     <LegalLayout title="Privacy Policy" effectiveDate="May 9, 2026">
 
       <H2>1. Introduction</H2>
-      <P>FOAM, LLC ("FOAM," "we," "us," "our") is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, who we share it with, and the choices you have about your information when you use the FOAM mobile application, website, and related services (collectively, the "Platform").</P>
+      <P>FOAM Technologies, Inc. ("FOAM," "we," "us," "our") is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, who we share it with, and the choices you have about your information when you use the FOAM mobile application, website, and related services (collectively, the "Platform").</P>
       <P>By using the Platform, you agree to the collection and use of information in accordance with this Policy. This Policy applies to all users including Customers, Operators, Managers, and Crew Members.</P>
       <P>This Privacy Policy is written to comply with the California Consumer Privacy Act (CCPA), applicable Google Play and Apple App Store requirements, and GDPR baseline standards for international users.</P>
 
@@ -131,7 +131,11 @@ export function PrivacyPolicy() {
         <LI>Control push notifications through your device's notification settings</LI>
         <LI>Request account deletion by contacting support@foamauto.com</LI>
       </UL>
-      <H3>6.2 California Residents (CCPA)</H3>
+      <H3>6.2 SMS Communications and Mobile Number Consent</H3>
+      <P>When you provide your mobile phone number to FOAM, you may receive SMS text messages related to your use of the Platform. These messages include booking confirmations, appointment reminders, status updates, and account notifications. Message and data rates may apply. Message frequency varies based on your activity on the Platform.</P>
+      <P>Mobile numbers collected for SMS communications will not be shared with third parties for their marketing purposes. Your mobile number is used solely to deliver transactional messages related to your FOAM account and bookings. SMS consent is not a condition of purchasing or using any service.</P>
+      <P>To opt out of SMS messages at any time, reply STOP to any message you receive from FOAM. Reply HELP for assistance. You may also update your notification preferences in the app under Settings. Opting out of SMS does not affect your ability to use the Platform, but you will no longer receive text message reminders for upcoming bookings.</P>
+      <H3>6.3 California Residents (CCPA)</H3>
       <P>If you are a California resident, you have the following rights under the California Consumer Privacy Act:</P>
       <UL>
         <LI><strong>Right to Know:</strong> You may request information about the categories and specific pieces of personal information we have collected about you in the past 12 months.</LI>
@@ -140,7 +144,7 @@ export function PrivacyPolicy() {
         <LI><strong>Right to Non-Discrimination:</strong> We will not discriminate against you for exercising your CCPA rights.</LI>
       </UL>
       <P>To exercise your CCPA rights, contact us at legal@foamauto.com. We will respond to verified requests within 45 days.</P>
-      <H3>6.3 International Users (GDPR Basis)</H3>
+      <H3>6.4 International Users (GDPR Basis)</H3>
       <P>If you are located in the European Economic Area, United Kingdom, or Switzerland, we process your personal data under the following legal bases:</P>
       <UL>
         <LI><strong>Contract:</strong> processing necessary to perform the services you have requested</LI>
@@ -154,7 +158,7 @@ export function PrivacyPolicy() {
       <P>The Platform is not intended for users under the age of 18. We do not knowingly collect personal information from anyone under 18. If we become aware that a person under 18 has created an account, we will delete that account and associated data. If you believe a minor has submitted information to us, contact legal@foamauto.com.</P>
 
       <H2>8. Cookies and Tracking (foamauto.com)</H2>
-      <P>The FOAM website uses cookies and similar tracking technologies for the following purposes:</P>
+      <P>The FOAM website (foamauto.com) uses cookies and similar tracking technologies for the following purposes:</P>
       <UL>
         <LI><strong>Essential cookies:</strong> required for the website to function, including session management and security</LI>
         <LI><strong>Analytics cookies:</strong> we use analytics tools to understand how visitors use the site and improve it. These tools may collect IP address, browser type, and pages visited.</LI>
@@ -170,7 +174,7 @@ export function PrivacyPolicy() {
 
       <H2>11. Contact Us</H2>
       <P>For questions, requests, or concerns about this Privacy Policy or our data practices, contact us at:</P>
-      <P>FOAM, LLC · Atlanta, Georgia<br />
+      <P>FOAM Technologies, Inc. · Atlanta, Georgia<br />
         Privacy inquiries: <a href="mailto:legal@foamauto.com" style={{ color: '#339DC7' }}>legal@foamauto.com</a><br />
         Support: <a href="mailto:support@foamauto.com" style={{ color: '#339DC7' }}>support@foamauto.com</a>
       </P>

@@ -603,7 +603,7 @@ export default function BookingDetailScreen() {
           .select(
             "id," +
             "vehicles(make,model,year,color,vehicle_type)," +
-            "service_packages(name,description,duration_mins,base_price,is_addon,vehicle_size_pricing(vehicle_type,price_adjustment))," +
+            "service_packages(name,description,duration_mins,base_price)," +
             "booking_contacts(vehicle_make,vehicle_model,vehicle_year,vehicle_color)"
           )
           .eq("detailer_id", b.detailer_id)
@@ -631,8 +631,7 @@ export default function BookingDetailScreen() {
             packageName: sib.service_packages?.name ?? "Service",
             packageDescription: sib.service_packages?.description ?? null,
             durationMins: sib.service_packages?.duration_mins ?? 0,
-            basePrice: getEffectivePrice(sib.service_packages, v?.vehicle_type ?? null),
-            isAddon: sib.service_packages?.is_addon ?? false,
+            basePrice: sib.service_packages?.base_price ?? 0,
           };
         });
 

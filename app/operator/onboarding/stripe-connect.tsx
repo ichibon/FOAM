@@ -99,14 +99,20 @@ export default function StripeConnectScreen() {
 </head>
 <body>
   <div id="mount"></div>
-  <script src="https://connect-js.stripe.com/v1/connect.js"></script>
   <script>
-    window.addEventListener('load', function() {
-    (function() {
+    function postError(msg) {
+      document.getElementById('mount').innerHTML = '<p class="error">Error: ' + msg + '</p>';
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: msg }));
+    }
+
+    var s = document.createElement('script');
+    s.src = 'https://connect-js.stripe.com/v1/connect.js';
+    s.onerror = function() { postError('Failed to load Stripe script'); };
+    s.onload = function() {
       try {
-        const stripeConnect = StripeConnect.initStripeConnect({
+        var stripeConnect = StripeConnect.initStripeConnect({
           publishableKey: '${publishableKey}',
-          fetchClientSecret: async () => '${secret}',
+          fetchClientSecret: async function() { return '${secret}'; },
           appearance: {
             overlays: 'dialog',
             variables: {
@@ -119,9 +125,9 @@ export default function StripeConnectScreen() {
           },
         });
 
-        const accountOnboarding = stripeConnect.create('account-onboarding');
+        var accountOnboarding = stripeConnect.create('account-onboarding');
 
-        accountOnboarding.setOnExit(() => {
+        accountOnboarding.setOnExit(function() {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'onboarding_exit' }));
         });
 
@@ -130,13 +136,11 @@ export default function StripeConnectScreen() {
         accountOnboarding.setPrivacyPolicyUrl('https://foam.app/privacy');
 
         document.getElementById('mount').appendChild(accountOnboarding);
-      } catch (e) {
-        document.getElementById('mount').innerHTML =
-          '<p class="error">Failed to load onboarding: ' + e.message + '</p>';
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.message }));
+      } catch(e) {
+        postError(e.message);
       }
-    })();
-    });
+    };
+    document.head.appendChild(s);
   </script>
 </body>
 </html>`;
@@ -208,7 +212,7 @@ export default function StripeConnectScreen() {
       {clientSecret ? (
         <WebView
           ref={webViewRef}
-          source={{ html: buildOnboardingHtml(clientSecret), baseUrl: 'https://connect-js.stripe.com' }}
+          source={{ html: buildOnboardingHtml(clientSecret), baseUrl: 'https://getfoam.app' }}
           style={styles.webView}
           onMessage={handleWebViewMessage}
           javaScriptEnabled

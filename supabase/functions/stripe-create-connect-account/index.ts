@@ -80,17 +80,17 @@ Deno.serve(async (req) => {
         .eq('id', operator_id)
     }
 
-    // Create an Account Session for embedded onboarding
-    const accountSession = await stripe.accountSessions.create({
+    // Create a hosted Account Link for onboarding (works reliably in mobile WebViews)
+    const accountLink = await stripe.accountLinks.create({
       account: connectAccountId,
-      components: {
-        account_onboarding: { enabled: true },
-      },
+      refresh_url: 'https://getfoam.app/stripe/refresh',
+      return_url: 'https://getfoam.app/stripe/return',
+      type: 'account_onboarding',
     })
 
     return jsonResponse({
       account_id: connectAccountId,
-      client_secret: accountSession.client_secret,
+      account_link_url: accountLink.url,
     })
   } catch (err) {
     console.error('stripe-create-connect-account error:', err)

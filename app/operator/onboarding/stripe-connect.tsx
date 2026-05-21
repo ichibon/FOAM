@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -19,13 +19,8 @@ type OnboardingStatus = "loading" | "ready" | "complete" | "error";
 export default function StripeConnectScreen() {
   const { session } = useAuth();
   const [status, setStatus] = useState<OnboardingStatus>("loading");
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [publishableKey] = useState(
-    process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
-  );
+  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const webViewRef = useRef<WebView>(null);
-
   useEffect(() => {
     initOnboarding();
   }, []);
@@ -59,10 +54,10 @@ export default function StripeConnectScreen() {
       );
 
       if (error) throw new Error(error.message);
-      if (!data?.client_secret)
-        throw new Error("No client secret returned from server");
+      if (!data?.account_link_url)
+        throw new Error("No onboarding URL returned from server");
 
-      setClientSecret(data.client_secret);
+      setOnboardingUrl(data.account_link_url);
       setStatus("ready");
     } catch (err) {
       console.error("Stripe Connect init error:", err);
@@ -73,91 +68,12 @@ export default function StripeConnectScreen() {
     }
   }
 
-  function buildOnboardingHtml(secret: string): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0F2F3C;
-      font-family: -apple-system, sans-serif;
-      min-height: 100vh;
-    }
-    #mount {
-      min-height: 100vh;
-    }
-    .error {
-      color: #ff6b6b;
-      padding: 24px;
-      text-align: center;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-  <div id="mount"></div>
-  <script>
-    function postError(msg) {
-      document.getElementById('mount').innerHTML = '<p class="error">Error: ' + msg + '</p>';
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: msg }));
-    }
-
-    var s = document.createElement('script');
-    s.src = 'https://connect-js.stripe.com/v1/connect.js';
-    s.onerror = function() { postError('Failed to load Stripe script'); };
-    s.onload = function() {
-      try {
-        var stripeConnect = StripeConnect.initStripeConnect({
-          publishableKey: '${publishableKey}',
-          fetchClientSecret: async function() { return '${secret}'; },
-          appearance: {
-            overlays: 'dialog',
-            variables: {
-              colorPrimary: '#339DC7',
-              colorBackground: '#0F2F3C',
-              colorText: '#FFFFFF',
-              borderRadius: '12px',
-              fontFamily: '-apple-system, sans-serif',
-            },
-          },
-        });
-
-        var accountOnboarding = stripeConnect.create('account-onboarding');
-
-        accountOnboarding.setOnExit(function() {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'onboarding_exit' }));
-        });
-
-        accountOnboarding.setFullTermsOfServiceUrl('https://foam.app/terms');
-        accountOnboarding.setRecipientTermsOfServiceUrl('https://foam.app/terms/connect');
-        accountOnboarding.setPrivacyPolicyUrl('https://foam.app/privacy');
-
-        document.getElementById('mount').appendChild(accountOnboarding);
-      } catch(e) {
-        postError(e.message);
-      }
-    };
-    document.head.appendChild(s);
-  </script>
-</body>
-</html>`;
-  }
-
-  function handleWebViewMessage(event: { nativeEvent: { data: string } }) {
-    try {
-      const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === "onboarding_exit") {
-        setStatus("complete");
-        router.replace("/operator/today");
-      } else if (msg.type === "error") {
-        setErrorMessage(msg.message ?? "Unknown error in onboarding");
-        setStatus("error");
-      }
-    } catch {
-      // Non-JSON postMessage — ignore
+  function handleNavigationStateChange(navState: { url: string }) {
+    if (navState.url.includes("getfoam.app/stripe/return")) {
+      setStatus("complete");
+      router.replace("/operator/today");
+    } else if (navState.url.includes("getfoam.app/stripe/refresh")) {
+      initOnboarding();
     }
   }
 
@@ -209,17 +125,15 @@ export default function StripeConnectScreen() {
         <View style={styles.backBtn} />
       </View>
 
-      {clientSecret ? (
+      {onboardingUrl ? (
         <WebView
           ref={webViewRef}
-          source={{ html: buildOnboardingHtml(clientSecret), baseUrl: 'https://getfoam.app' }}
+          source={{ uri: onboardingUrl }}
           style={styles.webView}
-          onMessage={handleWebViewMessage}
           javaScriptEnabled
           domStorageEnabled
           startInLoadingState
-          originWhitelist={['*']}
-          mixedContentMode="always"
+          onNavigationStateChange={handleNavigationStateChange}
           renderLoading={() => (
             <View style={styles.webViewLoader}>
               <ActivityIndicator size="large" color={Colors.foamBlue} />

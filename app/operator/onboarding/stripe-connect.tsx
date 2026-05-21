@@ -101,6 +101,7 @@ export default function StripeConnectScreen() {
   <div id="mount"></div>
   <script src="https://connect-js.stripe.com/v1/connect.js"></script>
   <script>
+    window.addEventListener('load', function() {
     (function() {
       try {
         const stripeConnect = StripeConnect.initStripeConnect({
@@ -135,6 +136,7 @@ export default function StripeConnectScreen() {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.message }));
       }
     })();
+    });
   </script>
 </body>
 </html>`;
@@ -206,12 +208,14 @@ export default function StripeConnectScreen() {
       {clientSecret ? (
         <WebView
           ref={webViewRef}
-          source={{ html: buildOnboardingHtml(clientSecret) }}
+          source={{ html: buildOnboardingHtml(clientSecret), baseUrl: 'https://connect-js.stripe.com' }}
           style={styles.webView}
           onMessage={handleWebViewMessage}
           javaScriptEnabled
           domStorageEnabled
           startInLoadingState
+          originWhitelist={['*']}
+          mixedContentMode="always"
           renderLoading={() => (
             <View style={styles.webViewLoader}>
               <ActivityIndicator size="large" color={Colors.foamBlue} />

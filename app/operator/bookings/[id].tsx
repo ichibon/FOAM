@@ -352,6 +352,10 @@ export default function BookingDetailScreen() {
   const [editCrewMemberId, setEditCrewMemberId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState("");
   const [editPackageId, setEditPackageId] = useState<string | null>(null);
+  const initialEditScheduledAt = useRef<string | null>(null);
+  const initialEditCrewMemberId = useRef<string | null>(null);
+  const initialEditNotes = useRef("");
+  const initialEditPackageId = useRef<string | null>(null);
   const [editDateDrawerVisible, setEditDateDrawerVisible] = useState(false);
   const [editPackages, setEditPackages] = useState<EditPackageRow[]>([]);
   const [editCrewMembers, setEditCrewMembers] = useState<EditCrewOption[]>([]);
@@ -367,24 +371,6 @@ export default function BookingDetailScreen() {
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [editVehiclePackageId, setEditVehiclePackageId] = useState<string | null>(null);
   const [editVehicleSaving, setEditVehicleSaving] = useState(false);
-
-  // ── Edit sheet state ──────────────────────────────────────────────────────
-  const [editSheetVisible, setEditSheetVisible] = useState(false);
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editScheduledAt, setEditScheduledAt] = useState<string | null>(null);
-  const [editCrewMemberId, setEditCrewMemberId] = useState<string | null>(null);
-  const [editNotes, setEditNotes] = useState("");
-  const [editPackageId, setEditPackageId] = useState<string | null>(null);
-  const initialEditScheduledAt = useRef<string | null>(null);
-  const initialEditCrewMemberId = useRef<string | null>(null);
-  const initialEditNotes = useRef("");
-  const initialEditPackageId = useRef<string | null>(null);
-  const [editDateDrawerVisible, setEditDateDrawerVisible] = useState(false);
-  const [editPackages, setEditPackages] = useState<EditPackageRow[]>([]);
-  const [editCrewMembers, setEditCrewMembers] = useState<EditCrewOption[]>([]);
-  const [editDataLoading, setEditDataLoading] = useState(false);
-  const [editDataError, setEditDataError] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user || !id) return;

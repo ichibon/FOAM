@@ -127,7 +127,6 @@ export default function StripeConnectScreen() {
 
       {onboardingUrl ? (
         <WebView
-          ref={webViewRef}
           source={{ uri: onboardingUrl }}
           style={styles.webView}
           javaScriptEnabled

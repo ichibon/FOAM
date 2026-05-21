@@ -35,6 +35,7 @@
                         brandBlueHover: '#2B85A9',
                         brandBlueSubtle: 'rgba(51, 157, 199, 0.10)',
                         success: '#16A34A',
+                        successSubtle: 'rgba(22, 163, 74, 0.10)',
                         warning: '#D97706',
                         warningSubtle: 'rgba(217, 119, 6, 0.08)',
                         error: '#DC2626',
@@ -56,239 +57,517 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .photo-carousel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+        }
+        .photo-carousel.active {
+            display: flex;
+        }
+        .photo-carousel img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
     </style>
 </head>
-<body class="text-textPrimary h-screen flex flex-col overflow-hidden w-full max-w-[430px] mx-auto bg-primary relative m-0 p-0">
+<body class="text-textPrimary h-screen flex flex-col overflow-hidden w-full max-w-[375px] sm:max-w-[430px] mx-auto bg-primary relative m-0 p-0">
 
     <header id="header" class="w-full bg-surface border-b border-borderSubtle sticky top-0 z-40">
         <div class="px-4 py-4 flex items-center justify-between">
-            <button class="w-8 h-8 flex items-center justify-center text-textPrimary active:opacity-70 transition-opacity">
+            <button class="w-11 h-11 flex items-center justify-center text-textPrimary active:opacity-70 transition-opacity -ml-2">
                 <i class="fa-solid fa-chevron-left text-[20px]"></i>
             </button>
-            <h1 class="font-sans text-[17px] font-semibold text-textPrimary">Booking Detail</h1>
-            <div class="w-8"></div>
+            <h1 class="font-serif text-[20px] font-bold text-textPrimary">Booking Detail</h1>
+            <button class="text-brandBlue font-sans text-[15px] font-semibold active:opacity-70 transition-opacity">
+                Edit
+            </button>
         </div>
     </header>
 
     <main class="flex-1 overflow-y-auto px-4 pb-32 flex flex-col space-y-3 pt-4">
         
-        <section id="status-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <div class="flex items-center justify-between mb-3">
+        <section id="status-time-card" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <p class="font-sans text-[13px] text-textTertiary mb-1">STATUS</p>
+                        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2 tracking-wide">STATUS</p>
                         <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-brandBlueSubtle">
-                            <span class="font-sans text-[13px] font-medium text-brandBlue">In Progress</span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-brandBlue mr-2"></div>
+                            <span class="font-sans text-[13px] font-semibold text-brandBlue">In Progress</span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="font-sans text-[13px] text-textTertiary mb-1">TIME</p>
-                        <p class="font-sans text-[15px] font-semibold text-textPrimary">9:00 AM</p>
-                        <p class="font-sans text-[13px] text-textSecondary">Today</p>
+                        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2 tracking-wide">TIME</p>
+                        <p class="font-sans text-[17px] font-bold text-textPrimary">9:00 AM</p>
+                        <p class="font-sans text-[13px] text-textSecondary mt-0.5">Today, May 2</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <section id="customer-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3">CUSTOMER</p>
-                <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-brandBlue flex items-center justify-center text-white text-[16px] font-semibold">
-                            TW
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3 tracking-wide">CUSTOMER</p>
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-brandBlue flex items-center justify-center text-white text-[16px] font-bold flex-shrink-0">
+                        TW
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-sans text-[17px] font-bold text-textPrimary mb-0.5">Terrence W.</p>
+                        <div class="flex items-center gap-1 text-textSecondary">
+                            <i class="fa-solid fa-star text-warning text-[12px]"></i>
+                            <span class="font-sans text-[13px] font-medium">4.8</span>
+                            <span class="font-sans text-[13px]">· 12 bookings</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <a href="tel:5551234567" class="flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-9 h-9 rounded-full bg-brandBlueSubtle flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-phone text-brandBlue text-[14px]"></i>
+                        </div>
+                        <p class="font-sans text-[15px] text-brandBlue font-medium">(555) 123-4567</p>
+                    </a>
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-full bg-borderSubtle flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fa-solid fa-location-dot text-textTertiary text-[14px]"></i>
                         </div>
                         <div>
-                            <p class="font-sans text-[16px] font-semibold text-textPrimary">Terrence W.</p>
-                            <p class="font-sans text-[13px] text-textSecondary">★ 4.8 · 12 bookings</p>
+                            <p class="font-sans text-[15px] text-textPrimary font-medium">742 Evergreen Terrace</p>
+                            <p class="font-sans text-[13px] text-textSecondary">Springfield, IL 62701</p>
                         </div>
                     </div>
-                </div>
-                <div class="space-y-2 mb-4">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-phone text-textTertiary text-[14px]"></i>
-                        <p class="font-sans text-[14px] text-textSecondary">(555) 123-4567</p>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <i class="fa-solid fa-location-dot text-textTertiary text-[14px] mt-0.5"></i>
-                        <p class="font-sans text-[14px] text-textSecondary">742 Evergreen Terrace<br>Springfield, IL 62701</p>
-                    </div>
-                </div>
-                <div class="pt-3 border-t border-borderSubtle">
-                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2">VEHICLE</p>
-                    <p class="font-sans text-[15px] font-semibold text-textPrimary">2021 BMW X5</p>
-                    <p class="font-sans text-[13px] text-textSecondary">Black · SUV</p>
                 </div>
             </div>
         </section>
 
         <section id="assignment-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3">ASSIGNED TO</p>
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3 tracking-wide">ASSIGNED TO</p>
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-brandBlue flex items-center justify-center text-white text-[14px] font-semibold">
+                    <div class="w-10 h-10 rounded-full bg-success flex items-center justify-center text-white text-[14px] font-bold flex-shrink-0">
                         JK
                     </div>
                     <div class="flex-1">
-                        <p class="font-sans text-[15px] font-semibold text-textPrimary">Jordan K.</p>
-                        <p class="font-sans text-[13px] text-textSecondary">2 other jobs today · 4.9 ★</p>
+                        <p class="font-sans text-[16px] font-bold text-textPrimary">Jordan K.</p>
+                        <div class="flex items-center gap-1 text-textSecondary mt-0.5">
+                            <span class="font-sans text-[13px]">2 other jobs today</span>
+                            <span class="text-textTertiary">·</span>
+                            <i class="fa-solid fa-star text-warning text-[11px]"></i>
+                            <span class="font-sans text-[13px] font-medium">4.9</span>
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button class="flex-1 h-[40px] border border-brandBlue text-brandBlue rounded-[8px] font-sans text-[13px] font-semibold active:bg-brandBlueSubtle transition-colors">
+                    <button class="flex-1 h-[44px] border-2 border-brandBlue text-brandBlue rounded-[8px] font-sans text-[14px] font-semibold active:bg-brandBlueSubtle transition-colors">
                         Reassign
                     </button>
-                    <button class="flex-1 h-[40px] border border-brandBlue text-brandBlue rounded-[8px] font-sans text-[13px] font-semibold active:bg-brandBlueSubtle transition-colors flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-message text-[14px]"></i>
-                        Message Jordan
+                    <button class="flex-1 h-[44px] border-2 border-brandBlue text-brandBlue rounded-[8px] font-sans text-[14px] font-semibold active:bg-brandBlueSubtle transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-message text-[15px]"></i>
+                        <span>Message</span>
                     </button>
                 </div>
             </div>
         </section>
 
-        <section id="service-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3">SERVICE</p>
-                <div class="flex items-start justify-between mb-3">
+        <section id="vehicle-service-1" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start gap-3 pb-4 border-b border-borderSubtle mb-4">
+                    <div class="w-9 h-9 rounded-full bg-borderSubtle flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-car text-textTertiary text-[14px]"></i>
+                    </div>
+                    <div>
+                        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-1 tracking-wide">VEHICLE</p>
+                        <p class="font-sans text-[16px] font-bold text-textPrimary">2021 BMW X5</p>
+                        <p class="font-sans text-[13px] text-textSecondary">Black · SUV</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start justify-between mb-4">
                     <div class="flex-1">
-                        <p class="font-sans text-[15px] font-semibold text-textPrimary mb-1">Full Interior Detail</p>
-                        <p class="font-sans text-[13px] text-textSecondary mb-3">Deep vacuum, steam clean, leather conditioning, odor removal</p>
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-clock text-textTertiary text-[14px]"></i>
-                                <p class="font-sans text-[13px] text-textSecondary">2-3 hours</p>
+                        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2 tracking-wide">SERVICE</p>
+                        <p class="font-sans text-[17px] font-bold text-textPrimary mb-2">Full Interior Detail</p>
+                        <p class="font-sans text-[13px] text-textSecondary leading-relaxed mb-4">Deep vacuum, steam clean, leather conditioning, odor removal</p>
+                        
+                        <div class="space-y-2.5">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-brandBlueSubtle flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-clock text-brandBlue text-[13px]"></i>
+                                </div>
+                                <p class="font-sans text-[14px] text-textSecondary">2-3 hours</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-droplet text-textTertiary text-[14px]"></i>
-                                <p class="font-sans text-[13px] text-textSecondary">Water connection required</p>
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-brandBlueSubtle flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-droplet text-brandBlue text-[13px]"></i>
+                                </div>
+                                <p class="font-sans text-[14px] text-textSecondary">Water connection required</p>
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="font-serif text-[24px] font-bold text-textPrimary">$120</p>
+                    <div class="text-right ml-4">
+                        <p class="font-serif text-[28px] font-bold text-textPrimary">$120</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="checklist-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3">SERVICE CHECKLIST</p>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-5 h-5 rounded border-2 border-brandBlue bg-brandBlue flex items-center justify-center">
-                            <i class="fa-solid fa-check text-white text-[10px]"></i>
+        <section id="checklist-card-1" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide">SERVICE CHECKLIST</p>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-lock text-textTertiary text-[11px]"></i>
+                        <span class="font-sans text-[11px] text-textTertiary">Operator only</span>
+                    </div>
+                </div>
+                <div class="space-y-3.5">
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-brandBlue bg-brandBlue flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-check text-white text-[12px]"></i>
                         </div>
-                        <p class="font-sans text-[14px] text-textPrimary">Deep vacuum and steam clean</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-5 h-5 rounded border-2 border-brandBlue bg-brandBlue flex items-center justify-center">
-                            <i class="fa-solid fa-check text-white text-[10px]"></i>
+                        <p class="font-sans text-[15px] text-textPrimary text-left">Deep vacuum and steam clean</p>
+                    </button>
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-brandBlue bg-brandBlue flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-check text-white text-[12px]"></i>
                         </div>
-                        <p class="font-sans text-[14px] text-textPrimary">Leather conditioning</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-5 h-5 rounded border-2 border-borderDefault"></div>
-                        <p class="font-sans text-[14px] text-textSecondary">Odor removal treatment</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-5 h-5 rounded border-2 border-borderDefault"></div>
-                        <p class="font-sans text-[14px] text-textSecondary">Final inspection and photos</p>
-                    </div>
+                        <p class="font-sans text-[15px] text-textPrimary text-left">Leather conditioning</p>
+                    </button>
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-borderDefault flex-shrink-0"></div>
+                        <p class="font-sans text-[15px] text-textSecondary text-left">Odor removal treatment</p>
+                    </button>
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-borderDefault flex-shrink-0"></div>
+                        <p class="font-sans text-[15px] text-textSecondary text-left">Final inspection and photos</p>
+                    </button>
                 </div>
             </div>
         </section>
 
-        <section id="photos-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary">JOB PHOTOS</p>
+        <section id="photos-card-1" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide">JOB PHOTOS</p>
                     <div class="flex gap-2">
-                        <button class="photo-tab px-3 py-1.5 rounded-[6px] bg-brandBlue text-white font-sans text-[12px] font-medium transition-all">
+                        <button class="photo-tab-1 px-4 py-2 rounded-[8px] bg-brandBlue text-white font-sans text-[13px] font-semibold transition-all" data-tab="before" data-vehicle="1">
                             Before
                         </button>
-                        <button class="photo-tab px-3 py-1.5 rounded-[6px] text-textSecondary font-sans text-[12px] font-medium transition-all">
+                        <button class="photo-tab-1 px-4 py-2 rounded-[8px] bg-borderSubtle text-textSecondary font-sans text-[13px] font-semibold transition-all" data-tab="after" data-vehicle="1">
                             After
                         </button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden">
-                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/a04c002623-6c294b4e791df0bddf7b.png" alt="BMW X5 black SUV interior before detailing, dirty seats and floor mats, realistic photo" />
+                <div id="before-photos-1" class="grid grid-cols-2 gap-2.5">
+                    <button class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden active:opacity-90 transition-opacity photo-trigger" data-photo="0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/a04c002623-6c294b4e791df0bddf7b.png" alt="Before photo 1" />
+                    </button>
+                    <button class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden active:opacity-90 transition-opacity photo-trigger" data-photo="1">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/73e336d255-38eb119516080a133b71.png" alt="Before photo 2" />
+                    </button>
+                    <button class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden relative active:opacity-90 transition-opacity">
+                        <div class="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-borderDefault rounded-[12px]">
+                            <i class="fa-solid fa-plus text-textTertiary text-[20px]"></i>
+                            <span class="font-sans text-[12px] font-medium text-textTertiary">Add Photo</span>
+                        </div>
+                    </button>
+                </div>
+                <div id="after-photos-1" class="hidden grid-cols-2 gap-2.5">
+                    <button class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden relative">
+                        <div class="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-borderDefault rounded-[12px]">
+                            <i class="fa-solid fa-camera text-textTertiary text-[20px]"></i>
+                            <span class="font-sans text-[12px] font-medium text-textTertiary">Take Photo</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="vehicle-service-2" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-start gap-3 pb-4 border-b border-borderSubtle mb-4">
+                    <div class="w-9 h-9 rounded-full bg-borderSubtle flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-car text-textTertiary text-[14px]"></i>
                     </div>
-                    <div class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden">
-                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/73e336d255-38eb119516080a133b71.png" alt="BMW X5 black SUV interior dashboard before detailing, dusty console, realistic photo" />
+                    <div>
+                        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-1 tracking-wide">VEHICLE</p>
+                        <p class="font-sans text-[16px] font-bold text-textPrimary">2019 Tesla Model 3</p>
+                        <p class="font-sans text-[13px] text-textSecondary">White · Sedan</p>
                     </div>
+                </div>
+
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2 tracking-wide">SERVICE</p>
+                        <p class="font-sans text-[17px] font-bold text-textPrimary mb-2">Exterior Wash + Wax</p>
+                        <p class="font-sans text-[13px] text-textSecondary leading-relaxed mb-4">Hand wash, clay bar treatment, premium wax application</p>
+                        
+                        <div class="space-y-2.5">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-brandBlueSubtle flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-clock text-brandBlue text-[13px]"></i>
+                                </div>
+                                <p class="font-sans text-[14px] text-textSecondary">1-2 hours</p>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-brandBlueSubtle flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-droplet text-brandBlue text-[13px]"></i>
+                                </div>
+                                <p class="font-sans text-[14px] text-textSecondary">Water connection required</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right ml-4">
+                        <p class="font-serif text-[28px] font-bold text-textPrimary">$85</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="checklist-card-2" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide">SERVICE CHECKLIST</p>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-lock text-textTertiary text-[11px]"></i>
+                        <span class="font-sans text-[11px] text-textTertiary">Operator only</span>
+                    </div>
+                </div>
+                <div class="space-y-3.5">
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-borderDefault flex-shrink-0"></div>
+                        <p class="font-sans text-[15px] text-textSecondary text-left">Pre-rinse and hand wash</p>
+                    </button>
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-borderDefault flex-shrink-0"></div>
+                        <p class="font-sans text-[15px] text-textSecondary text-left">Clay bar treatment</p>
+                    </button>
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-borderDefault flex-shrink-0"></div>
+                        <p class="font-sans text-[15px] text-textSecondary text-left">Premium wax application</p>
+                    </button>
+                    <button class="w-full flex items-center gap-3 active:opacity-70 transition-opacity">
+                        <div class="w-6 h-6 rounded-md border-2 border-borderDefault flex-shrink-0"></div>
+                        <p class="font-sans text-[15px] text-textSecondary text-left">Tire shine and final inspection</p>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="photos-card-2" class="w-full">
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="font-sans text-[11px] font-medium uppercase text-textTertiary tracking-wide">JOB PHOTOS</p>
+                    <div class="flex gap-2">
+                        <button class="photo-tab-2 px-4 py-2 rounded-[8px] bg-brandBlue text-white font-sans text-[13px] font-semibold transition-all" data-tab="before" data-vehicle="2">
+                            Before
+                        </button>
+                        <button class="photo-tab-2 px-4 py-2 rounded-[8px] bg-borderSubtle text-textSecondary font-sans text-[13px] font-semibold transition-all" data-tab="after" data-vehicle="2">
+                            After
+                        </button>
+                    </div>
+                </div>
+                <div id="before-photos-2" class="grid grid-cols-2 gap-2.5">
+                    <button class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden relative active:opacity-90 transition-opacity">
+                        <div class="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-borderDefault rounded-[12px]">
+                            <i class="fa-solid fa-camera text-textTertiary text-[20px]"></i>
+                            <span class="font-sans text-[12px] font-medium text-textTertiary">Take Photo</span>
+                        </div>
+                    </button>
+                </div>
+                <div id="after-photos-2" class="hidden grid-cols-2 gap-2.5">
+                    <button class="aspect-[4/3] bg-borderSubtle rounded-[12px] overflow-hidden relative">
+                        <div class="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-borderDefault rounded-[12px]">
+                            <i class="fa-solid fa-camera text-textTertiary text-[20px]"></i>
+                            <span class="font-sans text-[12px] font-medium text-textTertiary">Take Photo</span>
+                        </div>
+                    </button>
                 </div>
             </div>
         </section>
 
         <section id="notes-card" class="w-full">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-2">CUSTOMER NOTES</p>
-                <p class="font-sans text-[14px] text-textSecondary italic">"Please pay extra attention to the back seats - kids spilled juice last week. Also, the trunk needs vacuuming."</p>
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3 tracking-wide">CUSTOMER NOTES</p>
+                <div class="bg-warningSubtle border-l-4 border-warning rounded-r-[8px] p-3">
+                    <p class="font-sans text-[14px] text-textSecondary leading-relaxed italic">"Please pay extra attention to the back seats - kids spilled juice last week. Also, the trunk needs vacuuming."</p>
+                </div>
             </div>
         </section>
 
         <section id="payment-card" class="w-full mb-4">
-            <div class="bg-surface rounded-[16px] border border-borderSubtle shadow-level1 p-4">
-                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-3">PAYMENT</p>
-                <div class="flex items-center justify-between mb-2">
-                    <p class="font-sans text-[14px] text-textSecondary">Service charge</p>
-                    <p class="font-sans text-[14px] text-textPrimary">$120.00</p>
+            <div class="bg-surface rounded-[12px] border border-borderSubtle shadow-level1 p-4">
+                <p class="font-sans text-[11px] font-medium uppercase text-textTertiary mb-4 tracking-wide">PAYMENT</p>
+                <div class="space-y-2.5 mb-4">
+                    <div class="flex items-center justify-between">
+                        <p class="font-sans text-[14px] text-textSecondary">Service charges</p>
+                        <p class="font-sans text-[15px] font-semibold text-textPrimary">$205.00</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <p class="font-sans text-[14px] text-textSecondary">Platform fee (8%)</p>
+                        <p class="font-sans text-[15px] font-semibold text-textPrimary">$16.40</p>
+                    </div>
                 </div>
-                <div class="flex items-center justify-between mb-2">
-                    <p class="font-sans text-[14px] text-textSecondary">Platform fee (8%)</p>
-                    <p class="font-sans text-[14px] text-textPrimary">$9.60</p>
+                <div class="h-px bg-borderSubtle mb-4"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <p class="font-sans text-[16px] font-bold text-textPrimary">Total</p>
+                    <p class="font-serif text-[24px] font-bold text-textPrimary">$221.40</p>
                 </div>
-                <div class="h-px bg-borderSubtle my-3"></div>
-                <div class="flex items-center justify-between mb-3">
-                    <p class="font-sans text-[15px] font-semibold text-textPrimary">Total</p>
-                    <p class="font-serif text-[20px] font-bold text-textPrimary">$129.60</p>
-                </div>
-                <div class="flex items-center gap-2 text-textTertiary">
-                    <i class="fa-solid fa-credit-card text-[14px]"></i>
-                    <p class="font-sans text-[13px]">Visa ····4242 · Charged on completion</p>
+                <div class="flex items-center gap-2.5 p-3 bg-primary rounded-[8px]">
+                    <div class="w-8 h-8 rounded-full bg-surface border border-borderSubtle flex items-center justify-center flex-shrink-0">
+                        <i class="fa-brands fa-cc-visa text-info text-[16px]"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-sans text-[13px] text-textSecondary">Visa ····4242</p>
+                        <p class="font-sans text-[12px] text-textTertiary">Charged on completion</p>
+                    </div>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[430px] mx-auto bg-surface border-t border-borderSubtle flex justify-between items-center px-6 pb-safe pt-3 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
-            <i class="fa-solid fa-calendar-days text-[20px]"></i>
+    <div id="action-bar" class="fixed bottom-0 left-0 right-0 w-full max-w-[375px] sm:max-w-[430px] mx-auto bg-surface border-t border-borderSubtle z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+        <div class="px-4 py-3 pb-safe">
+            <div class="flex items-center gap-2 mb-3">
+                <button class="flex-1 h-[48px] bg-brandBlue text-white rounded-[8px] font-sans text-[15px] font-bold active:bg-brandBlueHover transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check text-[16px]"></i>
+                    <span>Complete Job</span>
+                </button>
+                <button class="w-[48px] h-[48px] border-2 border-error text-error rounded-[8px] active:bg-errorSubtle transition-colors flex items-center justify-center">
+                    <i class="fa-solid fa-flag text-[16px]"></i>
+                </button>
+            </div>
+            <button class="w-full h-[44px] border-2 border-brandBlue text-brandBlue rounded-[8px] font-sans text-[14px] font-semibold active:bg-brandBlueSubtle transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-location-arrow text-[14px]"></i>
+                <span>Navigate to Location</span>
+            </button>
+        </div>
+    </div>
+
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-[375px] sm:max-w-[430px] mx-auto bg-surface border-t border-borderSubtle flex justify-around items-center px-4 pb-safe pt-2 z-40 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] hidden">
+        <a href="#" class="flex flex-col items-center gap-1 py-2 text-textTertiary hover:text-textSecondary transition-colors min-w-[60px]">
+            <i class="fa-solid fa-calendar-days text-[22px]"></i>
             <span class="font-sans text-[10px] font-medium">Today</span>
         </a>
-        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
-            <i class="fa-solid fa-users text-[20px]"></i>
-            <span class="font-sans text-[10px] font-medium">Team</span>
-        </a>
-        <a href="#" class="flex flex-col items-center gap-1 text-brandBlue">
-            <i class="fa-solid fa-clipboard-list text-[20px]"></i>
+        <a href="#" class="flex flex-col items-center gap-1 py-2 text-textTertiary hover:text-textSecondary transition-colors min-w-[60px]">
+            <i class="fa-solid fa-clipboard-list text-[22px]"></i>
             <span class="font-sans text-[10px] font-medium">Bookings</span>
         </a>
-        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
-            <i class="fa-solid fa-chart-line text-[20px]"></i>
+        <a href="#" class="flex flex-col items-center gap-1 py-2 text-brandBlue min-w-[60px]">
+            <i class="fa-solid fa-users text-[22px]"></i>
+            <span class="font-sans text-[10px] font-medium">Customers</span>
+        </a>
+        <a href="#" class="flex flex-col items-center gap-1 py-2 text-textTertiary hover:text-textSecondary transition-colors min-w-[60px]">
+            <i class="fa-solid fa-chart-line text-[22px]"></i>
             <span class="font-sans text-[10px] font-medium">Business</span>
         </a>
-        <a href="#" class="flex flex-col items-center gap-1 text-textTertiary hover:text-textSecondary transition-colors">
-            <i class="fa-regular fa-circle-user text-[20px]"></i>
+        <a href="#" class="flex flex-col items-center gap-1 py-2 text-textTertiary hover:text-textSecondary transition-colors min-w-[60px]">
+            <i class="fa-regular fa-circle-user text-[22px]"></i>
             <span class="font-sans text-[10px] font-medium">Profile</span>
         </a>
     </nav>
 
+    <div id="photo-carousel" class="photo-carousel">
+        <button class="absolute top-4 right-4 w-11 h-11 bg-surface rounded-full flex items-center justify-center text-textPrimary z-10" id="close-carousel">
+            <i class="fa-solid fa-times text-[20px]"></i>
+        </button>
+        <div class="w-full h-full flex items-center justify-center p-4">
+            <img id="carousel-image" src="" alt="Full size photo" />
+        </div>
+    </div>
+
     <script>
-        const photoTabs = document.querySelectorAll('.photo-tab');
-        photoTabs.forEach(tab => {
+        const photoTabs1 = document.querySelectorAll('.photo-tab-1');
+        const beforePhotos1 = document.getElementById('before-photos-1');
+        const afterPhotos1 = document.getElementById('after-photos-1');
+        
+        photoTabs1.forEach(tab => {
             tab.addEventListener('click', function() {
-                photoTabs.forEach(t => {
+                const tabType = this.getAttribute('data-tab');
+                
+                photoTabs1.forEach(t => {
                     t.classList.remove('bg-brandBlue', 'text-white');
-                    t.classList.add('text-textSecondary');
+                    t.classList.add('bg-borderSubtle', 'text-textSecondary');
                 });
+                
+                this.classList.remove('bg-borderSubtle', 'text-textSecondary');
                 this.classList.add('bg-brandBlue', 'text-white');
-                this.classList.remove('text-textSecondary');
+                
+                if (tabType === 'before') {
+                    beforePhotos1.classList.remove('hidden');
+                    beforePhotos1.classList.add('grid');
+                    afterPhotos1.classList.remove('grid');
+                    afterPhotos1.classList.add('hidden');
+                } else {
+                    afterPhotos1.classList.remove('hidden');
+                    afterPhotos1.classList.add('grid');
+                    beforePhotos1.classList.remove('grid');
+                    beforePhotos1.classList.add('hidden');
+                }
             });
+        });
+
+        const photoTabs2 = document.querySelectorAll('.photo-tab-2');
+        const beforePhotos2 = document.getElementById('before-photos-2');
+        const afterPhotos2 = document.getElementById('after-photos-2');
+        
+        photoTabs2.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabType = this.getAttribute('data-tab');
+                
+                photoTabs2.forEach(t => {
+                    t.classList.remove('bg-brandBlue', 'text-white');
+                    t.classList.add('bg-borderSubtle', 'text-textSecondary');
+                });
+                
+                this.classList.remove('bg-borderSubtle', 'text-textSecondary');
+                this.classList.add('bg-brandBlue', 'text-white');
+                
+                if (tabType === 'before') {
+                    beforePhotos2.classList.remove('hidden');
+                    beforePhotos2.classList.add('grid');
+                    afterPhotos2.classList.remove('grid');
+                    afterPhotos2.classList.add('hidden');
+                } else {
+                    afterPhotos2.classList.remove('hidden');
+                    afterPhotos2.classList.add('grid');
+                    beforePhotos2.classList.remove('grid');
+                    beforePhotos2.classList.add('hidden');
+                }
+            });
+        });
+
+        const photoTriggers = document.querySelectorAll('.photo-trigger');
+        const carousel = document.getElementById('photo-carousel');
+        const carouselImage = document.getElementById('carousel-image');
+        const closeCarousel = document.getElementById('close-carousel');
+        
+        photoTriggers.forEach(trigger => {
+            trigger.addEventListener('click', function() {
+                const img = this.querySelector('img');
+                carouselImage.src = img.src;
+                carousel.classList.add('active');
+            });
+        });
+        
+        closeCarousel.addEventListener('click', function() {
+            carousel.classList.remove('active');
+        });
+        
+        carousel.addEventListener('click', function(e) {
+            if (e.target === carousel) {
+                carousel.classList.remove('active');
+            }
         });
     </script>
 </body>
